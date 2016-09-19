@@ -54,9 +54,9 @@ void ShutDownBackend (ComputeCaps::Flag flag);
 #endif
 
 #ifdef WANT_METAL
-#include <metal.h> // ?
+//#include <metal.h> // ?
 
-id<MTLDevice> GetMetalDevice ();
+//id<MTLDevice> GetMetalDevice ();
 #endif
 
 #ifdef WANT_OPENCL

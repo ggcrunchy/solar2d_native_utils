@@ -53,7 +53,7 @@ struct ComputeDevices {
 #endif
 
 #ifdef WANT_METAL
-	id<MTLDevice> mMetalDevice;
+//    MTLDevice mMetalDevice;
 #endif
 };
 
@@ -71,7 +71,7 @@ typedef CUresult _CUDA_API_ (*cuInit_pt)(unsigned int Flags);
 typedef CUresult _CUDA_API_ (*cuDeviceGetCount_pt)(int * count);
 typedef CUresult _CUDA_API_ (*cuDeviceComputeCapability_pt)(int * major, int * minor, CUdevice dev);
 
-static nullptr_t Fail (COMPUTE_LIB lib)
+static std::nullptr_t Fail (COMPUTE_LIB lib)
 {
 	if (lib) FreeLib(lib);
 
@@ -133,9 +133,11 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 	#endif
 
 	#ifdef WANT_METAL
+    /*
 		cd->mMetalDevice = MTLCreateSystemDefaultDevice();
 
 		if (cd->mMetalDevice) caps.mFlags |= ComputeCaps::eMetal;
+    */
 	#endif
 
 	AttachGC(L, "compute_devices", [](lua_State * L)
@@ -175,9 +177,9 @@ void ShutDownBackend (ComputeCaps::Flag flag)
 		break;
 	case ComputeCaps::eMetal:
 	#ifdef WANT_METAL
-		if (mMetalDevice) ;
+	/*	if (mMetalDevice) ;
 
-		mMetalDevice = NULL;
+		mMetalDevice = NULL;*/
 	#endif
 		break;
 	case ComputeCaps::eOpenCL:
