@@ -13,6 +13,7 @@ struct LuaAddParams {
 	}
 };
 
+bool IsMainState (lua_State * L);
 bool IsType (lua_State * L, const char * name, int index = -1);
 bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
 

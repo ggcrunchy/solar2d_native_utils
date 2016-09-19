@@ -1,5 +1,38 @@
 #include "LuaUtils.h"
 
+bool IsMainState (lua_State * L)
+{
+	int top = lua_gettop(L);
+
+	const char * levels[] = { "package", "loaded", "luaproc", "is_main_state" };
+
+	for (int i = 0; i < sizeof(levels) / sizeof(const char *); ++i)
+	{
+		int index = i > 0 ? -1 : LUA_GLOBALSINDEX;
+
+		if (!lua_istable(L, index))
+		{
+			if (i < 3) printf("globals, package, or package.loaded not a table\n");
+
+			lua_settop(L, top);	// ...
+
+			return true;// main state if luaproc not loaded, or best guess in case of error
+		}
+
+		lua_getfield(L, index, levels[i]);	// ..., t[key]
+	}
+
+	bool bOK = lua_isfunction(L, -1) != 0 && lua_pcall(L, 0, 1, 0) == 0;
+
+	if (!bOK) printf("luaproc.is_main_state() failed\n");
+
+	bool bMainState = !bOK || lua_toboolean(L, -1) != 0; // if something went wrong, main state as good a guess as any
+
+	lua_settop(L, top);	// ...
+
+	return bMainState;
+}
+
 static bool AuxEq (lua_State * L, const char * name)
 {
 	luaL_getmetatable(L, name);	// ..., object_mt, named_mt

@@ -251,6 +251,7 @@ void PushTLS (MemoryTLS * tls, void * ptr, const char * type, bool as_userdata, 
 #include <pthread.h>
 #include <cpu-features.h>
 #endif
+
 bool CanUseNeon (void)
 {
 #ifdef _WIN32
