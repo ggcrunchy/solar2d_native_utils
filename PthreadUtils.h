@@ -17,18 +17,19 @@
 #define TLS_STATIC_GETTER(prefix, type) TLS(prefix);	\
 							static TLS_GETTER(prefix, type)
 
-#define TLS_INIT(prefix, type)	pthread_once(&prefix##_TLS_key_once, []()					\
-								{															\
-									pthread_key_create(&prefix##_TLS_Key, NULL);			\
-									atexit([]() { pthread_key_delete(prefix##_TLS_Key); });	\
-								});															\
-																							\
-								lua_pushlightuserdata(L, &prefix##_TLS_Key);				\
-																							\
-								type * tls = (type *)lua_newuserdata(L, sizeof(type));		\
-																							\
-								pthread_setspecific(prefix##_TLS_Key, tls);					\
-																							\
+#define TLS_INIT_NO_REGISTER(prefix, type)	pthread_once(&prefix##_TLS_key_once, []()					\
+											{															\
+												pthread_key_create(&prefix##_TLS_Key, NULL);			\
+												atexit([]() { pthread_key_delete(prefix##_TLS_Key); });	\
+											});															\
+																										\
+											lua_pushlightuserdata(L, &prefix##_TLS_Key);				\
+																										\
+											type * tls = (type *)lua_newuserdata(L, sizeof(type));		\
+																										\
+											pthread_setspecific(prefix##_TLS_Key, tls)
+
+#define TLS_INIT(prefix, type)	TLS_INIT_NO_REGISTER(prefix, type);	\
 								lua_settable(L, LUA_REGISTRYINDEX)
 
 #define TLS_MEMORY_INIT(prefix, type)	TLS_INIT(prefix, type);	\
