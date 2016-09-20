@@ -126,6 +126,8 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 
 	ComputeDevices * cd = (ComputeDevices *)lua_newuserdata(L, sizeof(ComputeDevices));	// ..., devices
 
+	// TODO: Check C++ AMP support? (DirectX11 caps? otherwise have to include that .exe...)
+
 	#ifdef WANT_CUDA
 		cd->mCUDA = CheckCUDA(caps);
 
@@ -185,11 +187,16 @@ void ShutDownBackend (ComputeCaps::Flag flag)
 	case ComputeCaps::eOpenCL:
 	#ifdef WANT_OPENCL
 		// TODO!
+		// http://arrayfire.com/getting-started-with-opencl-on-android/
+		// http://arrayfire.com/opencl-on-mobile-devices/
+		// https://stackoverflow.com/questions/26795921/does-android-support-opencl
+		// https://streamcomputing.eu/blog/2014-06-30/opencl-support-recent-android-smartphones/
 	#endif
 		break;
 	case ComputeCaps::eRenderScript:
 	#ifdef WANT_RENDERSCRIPT
 		// TODO!
+		// https://possiblemobile.com/2013/10/renderscript-for-all/
 	#endif
 		break;
 	}
