@@ -18,6 +18,7 @@ bool IsType (lua_State * L, const char * name, int index = -1);
 bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
 
 void AddClosures (lua_State * L, luaL_Reg closures[], int n, const LuaAddParams & params = LuaAddParams());
+void AttachGC (lua_State * L, lua_CFunction gc);
 void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const LuaAddParams & params = LuaAddParams());

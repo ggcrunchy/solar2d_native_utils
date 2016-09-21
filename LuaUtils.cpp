@@ -122,6 +122,14 @@ void AddClosures (lua_State * L, luaL_Reg closures[], int n, const LuaAddParams 
 	if (params.mLeaveTableAtTop) lua_settop(L, tpos);	// ..., t
 }
 
+void AttachGC (lua_State * L, lua_CFunction gc)
+{
+	lua_newtable(L);// ..., ud, mt
+	lua_pushcfunction(L, gc);	// ..., ud, mt, gc
+	lua_setfield(L, -2, "__gc");// ..., ud, mt = { __gc = gc }
+	lua_setmetatable(L, -2);// ..., ud
+}
+
 void AttachGC (lua_State * L, const char * type, lua_CFunction gc)
 {
 	if (luaL_newmetatable(L, type))	// ..., ud, meta
