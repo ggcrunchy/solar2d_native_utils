@@ -5,6 +5,12 @@
 #include <vector>
 
 #ifdef _WIN32
+	#ifndef IGNORE_AMP
+		#include <amp.h>
+
+		#define WANT_AMP
+	#endif
+
 	#ifndef IGNORE_CUDA
 		#define WANT_CUDA
 	#endif
@@ -33,9 +39,13 @@
 #endif
 
 struct ComputeCaps {
-	typedef enum { eCUDA, eMetal, eOpenCL, eRenderScript } Flag;
+	typedef enum { eAMP, eCUDA, eMetal, eOpenCL, eRenderScript, eVULKAN } Flag;
 
 	unsigned int mFlags;// Which backends are supported?
+
+#ifdef WANT_AMP
+	std::vector<concurrency::accelerator> mAccelerators;// List of AMP accelerators
+#endif
 
 #ifdef WANT_CUDA
 	struct DeviceInfoCUDA {
