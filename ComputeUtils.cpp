@@ -49,7 +49,7 @@ static pthread_mutex_t s_DevicesInit = PTHREAD_MUTEX_INITIALIZER;
 #ifdef WANT_CUDA
 
 #include <cuda.h>
-#include <cuda_runtime_api.h>
+//#include <cuda_runtime_api.h>
 
 static bool CheckCUDA (ComputeCaps & caps)
 {
