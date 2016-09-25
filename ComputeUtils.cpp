@@ -12,6 +12,8 @@
 	}
 #else
 	#include <dlfcn.h>
+
+	bool TryToLoad (const char * name);
 #endif
 
 //
