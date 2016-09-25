@@ -4,12 +4,23 @@
 
 #ifdef _WIN32
 	#include <Windows.h>
+	#include <delayimp.h>
+
+	bool TryToLoad (const char * name)
+	{
+		return !FAILED(__HrLoadAllImportsForDll(name));
+	}
 #else
 	#include <dlfcn.h>
 #endif
 
 //
 struct ComputeDevices {
+#ifdef WANT_AMP
+	// best double-accelerator (if any)
+	// best all-around (most dedicated memory, etc.)
+#endif
+
 #ifdef WANT_CUDA
 //	COMPUTE_LIB mCUDA;	//
 #endif
@@ -53,7 +64,7 @@ static pthread_mutex_t s_DevicesInit = PTHREAD_MUTEX_INITIALIZER;
 
 static bool CheckCUDA (ComputeCaps & caps)
 {
-	if (!Exists(
+	if (!TryToLoad(
 #ifdef _WIN32
 		"nvcuda.dll"
 #else
@@ -124,25 +135,29 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 	caps.mFlags = 0;
 
 	ComputeDevices * cd = (ComputeDevices *)lua_newuserdata(L, sizeof(ComputeDevices));	// ..., devices
-
-	// TODO: Check C++ AMP support? (DirectX11 caps? otherwise have to include that .exe...)
-	// vs. https://github.com/debdattabasu/amp-radix-sort/blob/master/amp_sort/main.cpp#L14
+	
+	//
 	#ifdef WANT_AMP
-		caps.mAccelerators = concurrency::accelerator::get_all();
-/*
-http://stackoverflow.com/a/7533864
-TODO: investigate some more, suss out most useful fields
-    std::for_each(begin(caps.mAccelerators), end(caps.mAccelerators),[=](concurrency::accelerator acc){ 
-        std::wcout << "New accelerator: " << acc.description << std::endl;
-        std::wcout << "is_debug = " << acc.is_debug << std::endl;
-        std::wcout << "is_emulated = " << acc.is_emulated <<std::endl;
-        std::wcout << "dedicated_memory = " << acc.dedicated_memory << std::endl;
-        std::wcout << "device_path = " << acc.device_path << std::endl;
-        std::wcout << "has_display = " << acc.has_display << std::endl;                
-        std::wcout << "version = " << (acc.version >> 16) << '.' << (acc.version & 0xFFFF) << std::endl;
-    });
-*/
-		if (!caps.mAccelerators.empty()) caps.mFlags |= ComputeCaps::eAMP; // Probably too liberal (e.g. emulated stuff unlikely to be much good)
+	printf("YES?\n");
+		if (TryToLoad("vcamp120.dll"))
+		{
+			printf("AM\n");
+			auto accs = concurrency::accelerator::get_all();
+
+			accs.erase(std::remove_if(begin(accs), end(accs),
+				[](concurrency::accelerator acc) { return acc.is_debug || acc.is_emulated; }
+			), end(accs));
+
+			for (auto acc : accs)
+			{
+			//	if (acc.has_display) wprintf(L"OH? %s\n", acc.description);
+			}
+
+			caps.mAccelerators = accs;
+
+			if (!caps.mAccelerators.empty()) caps.mFlags |= ComputeCaps::eAMP; // Probably too liberal (e.g. emulated stuff unlikely to be much good)
+		}
+		else printf("NO :(\n");
 	#endif
 
 	#ifdef WANT_CUDA
