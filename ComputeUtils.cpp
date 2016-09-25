@@ -13,7 +13,7 @@
 #else
 	#include <dlfcn.h>
 
-	bool TryToLoad (const char * name);
+	bool TryToLoad (const char * name) { return false; }
 #endif
 
 //
