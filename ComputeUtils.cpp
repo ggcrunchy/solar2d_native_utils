@@ -1,20 +1,7 @@
 #include "ComputeUtils.h"
 #include "LuaUtils.h"
+#include "PathUtils.h"
 #include <pthread.h>
-
-#ifdef _WIN32
-	#include <Windows.h>
-	#include <delayimp.h>
-
-	bool TryToLoad (const char * name)
-	{
-		return !FAILED(__HrLoadAllImportsForDll(name));
-	}
-#else
-	#include <dlfcn.h>
-
-	bool TryToLoad (const char * name) { return false; }
-#endif
 
 //
 struct ComputeDevices {
@@ -32,27 +19,6 @@ struct ComputeDevices {
 #endif
 };
 
-//
-static bool Exists (const char * name)
-{
-#ifdef _WIN32
-	HMODULE lib = LoadLibraryA(name);
-#else
-	void * lib = dlopen(name, RTLD_NOW);
-#endif
-
-	if (lib != NULL)
-	{
-#ifdef _WIN32
-		FreeLibrary(lib);
-#else
-		dlclose(lib);
-#endif
-	}
-
-	return lib != NULL;
-}
-
 // Global device info
 static ComputeDevices * sDevices;
 
@@ -66,18 +32,29 @@ static pthread_mutex_t s_DevicesInit = PTHREAD_MUTEX_INITIALIZER;
 
 static bool CheckCUDA (ComputeCaps & caps)
 {
-	if (!TryToLoad(
-#ifdef _WIN32
+	LibLoader cuda_lib(
+	#ifdef _WIN32
 		"nvcuda.dll"
-#else
+	#elif __APPLE__ // see ComputeUtils.h, which currently filters out iPhone and tvOS
+		"libcuda.dylib"
+	#else
 		"libcuda.so"
-#endif
-	)) return false;
+	#endif
+	);
+	
+	if (!cuda_lib.IsLoaded()) return false;
+
+	#define CUDA_BIND(name, ...) CUresult (CUDAAPI *name)(##__VA_ARGS__); LIB_BIND(cuda_lib, cu, name)
+	#define CUDA_CALL(name, ...) if (CUDA_SUCCESS != name(##__VA_ARGS__)) return false
+
+	CUDA_BIND(Init, unsigned int);
+	CUDA_BIND(DeviceGetCount, int *);
+	CUDA_BIND(DeviceComputeCapability, int *, int *, CUdevice);
 
 	int count;
 
-    if (CUDA_SUCCESS != cuInit(0)) return false;
-    if (CUDA_SUCCESS != cuDeviceGetCount(&count)) return false;
+    CUDA_CALL(Init, 0);
+    CUDA_CALL(DeviceGetCount, &count);
 
 	caps.mDevicesCUDA.resize(size_t(count));
 
@@ -120,10 +97,14 @@ if(cudaGetDeviceProperties(&deviceProp,i) == CUDA_SUCCESS)
 
   }
   */
-        if (CUDA_SUCCESS != cuDeviceComputeCapability(&dev.mMajor, &dev.mMinor, i)) return false;
+        CUDA_CALL(DeviceComputeCapability, &dev.mMajor, &dev.mMinor, i);
 printf("%i, %i, %i!\n", i, dev.mMajor, dev.mMinor);
 		// ^^ TODO: Detect minimum acceptable version... (test on better device!)
+
     }
+
+	#undef CUDA_BIND
+	#undef CUDA_CALL
 
 	return true;
 }
@@ -140,10 +121,8 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 	
 	//
 	#ifdef WANT_AMP
-	printf("YES?\n");
 		if (TryToLoad("vcamp120.dll"))
 		{
-			printf("AM\n");
 			auto accs = concurrency::accelerator::get_all();
 
 			accs.erase(std::remove_if(begin(accs), end(accs),
@@ -159,7 +138,6 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 
 			if (!caps.mAccelerators.empty()) caps.mFlags |= ComputeCaps::eAMP; // Probably too liberal (e.g. emulated stuff unlikely to be much good)
 		}
-		else printf("NO :(\n");
 	#endif
 
 	#ifdef WANT_CUDA

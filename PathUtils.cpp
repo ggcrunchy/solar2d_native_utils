@@ -51,3 +51,36 @@ const char * PathData::Canonicalize (lua_State * L, bool bRead)
 
 	return lua_tostring(L, 1);
 }
+
+#ifdef _WIN32
+	#include <Windows.h>
+	#include <delayimp.h>
+
+	bool TryToLoad (const char * name)
+	{
+		return !FAILED(__HrLoadAllImportsForDll(name));
+	}
+#endif
+
+LibLoader::LibLoader (const char * name)
+{
+#ifdef _WIN32
+	mLib = LoadLibraryExA(name, NULL, 0); // following nvcore/Library.h...
+#else
+	mLib = dlopen(name, RTLD_NOW);
+#endif
+}
+
+void LibLoader::Close (void)
+{
+	if (IsLoaded())
+	{
+#ifdef _WIN32
+		FreeLibrary(mLib);
+#else
+		dlclose(mLib);
+#endif
+	}
+
+	mLib = NULL;
+}
