@@ -6,17 +6,19 @@
 //
 struct ComputeDevices {
 #ifdef WANT_AMP
+	LibLoader mLibAMP;	// C++ AMP dynamic library
 	// best double-accelerator (if any)
 	// best all-around (most dedicated memory, etc.)
 #endif
 
 #ifdef WANT_CUDA
-//	COMPUTE_LIB mCUDA;	//
+	LibLoader mLibCUDA;	// CUDA dynamic library
 #endif
 
 #ifdef WANT_METAL
 //    MTLDevice mMetalDevice;
 #endif
+	ComputeCaps mCaps;	// Various capabilities
 };
 
 // Global device info
@@ -25,14 +27,45 @@ static ComputeDevices * sDevices;
 // Avoid conflicts while launching device queries
 static pthread_mutex_t s_DevicesInit = PTHREAD_MUTEX_INITIALIZER;
 
+#ifdef WANT_AMP
+
+static bool CheckAMP (LibLoader & amp_lib, ComputeCaps & caps)
+{
+	amp_lib.Load("vcamp120.dll");
+
+	if (amp_lib.LateLoad())
+	{
+		auto accs = concurrency::accelerator::get_all();
+
+		accs.erase(std::remove_if(begin(accs), end(accs),
+			[](concurrency::accelerator acc) { return acc.is_debug || acc.is_emulated; }
+		), end(accs));
+
+		for (auto acc : accs)
+		{
+		//	if (acc.has_display) wprintf(L"OH? %s\n", acc.description);
+		}
+
+		caps.mAccelerators = accs;
+
+		if (!caps.mAccelerators.empty()) return true; // Probably too liberal (e.g. emulated stuff unlikely to be much good)
+	}
+
+	amp_lib.Close();
+
+	return false;
+}
+
+#endif
+
 #ifdef WANT_CUDA
 
 #include <cuda.h>
 //#include <cuda_runtime_api.h>
 
-static bool CheckCUDA (ComputeCaps & caps)
+static bool CheckCUDA (LibLoader & cuda_lib, ComputeCaps & caps)
 {
-	LibLoader cuda_lib(
+	cuda_lib.Load(
 	#ifdef _WIN32
 		"nvcuda.dll"
 	#elif __APPLE__ // see ComputeUtils.h, which currently filters out iPhone and tvOS
@@ -41,11 +74,11 @@ static bool CheckCUDA (ComputeCaps & caps)
 		"libcuda.so"
 	#endif
 	);
-	
+
 	if (!cuda_lib.IsLoaded()) return false;
 
 	#define CUDA_BIND(name, ...) CUresult (CUDAAPI *name)(##__VA_ARGS__); LIB_BIND(cuda_lib, cu, name)
-	#define CUDA_CALL(name, ...) if (CUDA_SUCCESS != name(##__VA_ARGS__)) return false
+	#define CUDA_CALL(name, ...) if (!name || CUDA_SUCCESS != name(##__VA_ARGS__)) return false
 
 	CUDA_BIND(Init, unsigned int);
 	CUDA_BIND(DeviceGetCount, int *);
@@ -110,54 +143,41 @@ printf("%i, %i, %i!\n", i, dev.mMajor, dev.mMinor);
 }
 
 #endif
-//#include <iostream>
-bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
+
+bool CheckComputeSupport (lua_State * L)
 {
 	if (!IsMainState(L)) return false;
 
-	caps.mFlags = 0;
-
 	ComputeDevices * cd = (ComputeDevices *)lua_newuserdata(L, sizeof(ComputeDevices));	// ..., devices
 	
-	//
-	#ifdef WANT_AMP
-		if (TryToLoad("vcamp120.dll"))
-		{
-			auto accs = concurrency::accelerator::get_all();
+	new (cd) ComputeDevices;
 
-			accs.erase(std::remove_if(begin(accs), end(accs),
-				[](concurrency::accelerator acc) { return acc.is_debug || acc.is_emulated; }
-			), end(accs));
+#ifdef WANT_AMP
+	if (CheckAMP(cd->mLibAMP, cd->mCaps)) cd->mCaps.mSupported |= ComputeCaps::eAMP;
+#endif
 
-			for (auto acc : accs)
-			{
-			//	if (acc.has_display) wprintf(L"OH? %s\n", acc.description);
-			}
+#ifdef WANT_CUDA
+	if (CheckCUDA(cd->mLibCUDA, cd->mCaps)) cd->mCaps.mSupported |= ComputeCaps::eCUDA;
+#endif
 
-			caps.mAccelerators = accs;
+#ifdef WANT_METAL
+/*
+	cd->mMetalDevice = MTLCreateSystemDefaultDevice();
 
-			if (!caps.mAccelerators.empty()) caps.mFlags |= ComputeCaps::eAMP; // Probably too liberal (e.g. emulated stuff unlikely to be much good)
-		}
-	#endif
+	if (cd->mMetalDevice) caps.mFlags |= ComputeCaps::eMetal;
+*/
+#endif
 
-	#ifdef WANT_CUDA
-		if (CheckCUDA(caps)) caps.mFlags |= ComputeCaps::eCUDA;
-	#endif
-
-	#ifdef WANT_METAL
-    /*
-		cd->mMetalDevice = MTLCreateSystemDefaultDevice();
-
-		if (cd->mMetalDevice) caps.mFlags |= ComputeCaps::eMetal;
-    */
-	#endif
+	cd->mCaps.mEnabled = cd->mCaps.mSupported;
 
 	AttachGC(L, "compute_devices", [](lua_State * L)
 	{
+		ShutDownBackend(ComputeCaps::eAMP);
 		ShutDownBackend(ComputeCaps::eCUDA);
 		ShutDownBackend(ComputeCaps::eMetal);
 		ShutDownBackend(ComputeCaps::eOpenCL);
 		ShutDownBackend(ComputeCaps::eRenderScript);
+		ShutDownBackend(ComputeCaps::eVULKAN);
 
 		return 0;
 	});
@@ -171,6 +191,19 @@ bool CheckComputeSupport (lua_State * L, ComputeCaps & caps)
 	return true;
 }
 
+
+bool GetComputeCaps (lua_State * L, ComputeCaps & caps)
+{
+	pthread_mutex_lock(&s_DevicesInit);	// wait for any initialization
+	pthread_mutex_unlock(&s_DevicesInit);
+
+	if (!sDevices) return false;
+
+	caps = sDevices->mCaps;
+
+	return true;
+}
+
 void ShutDownBackend (ComputeCaps::Flag flag)
 {
 	pthread_mutex_lock(&s_DevicesInit);	// wait for any initialization
@@ -178,16 +211,19 @@ void ShutDownBackend (ComputeCaps::Flag flag)
 
 	if (!sDevices) return;
 
+	// TODO: This is not even remotely safe (can it be?), both thread-wise and just "pulling out the rug"-wise
+	// Maybe all the WANT_* stuff should be read out of the preferences and thus start-up only?
+
 	switch (flag)
 	{
 	case ComputeCaps::eAMP:
 	#ifdef WANT_AMP
-		// TODO!
+		sDevices->mLibAMP.Close();
 	#endif
 		break;
 	case ComputeCaps::eCUDA:
 	#ifdef WANT_CUDA
-		// TODO!
+		sDevices->mLibCUDA.Close();
 	#endif
 		break;
 	case ComputeCaps::eMetal:
@@ -212,9 +248,14 @@ void ShutDownBackend (ComputeCaps::Flag flag)
 		// https://possiblemobile.com/2013/10/renderscript-for-all/
 	#endif
 		break;
+	case ComputeCaps::eVULKAN:
+	#ifdef WANT_VULKAN
+		// TODO!
+	#endif
+		break;
+	default:	// ????
+		return;
 	}
-}
 
-#undef COMPUTE_LIB
-#undef COMPUTE_PROC
-#undef _CUDA_API_
+	sDevices->mCaps.mEnabled &= ~(1 << flag);
+}

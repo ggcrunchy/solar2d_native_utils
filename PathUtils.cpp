@@ -55,19 +55,22 @@ const char * PathData::Canonicalize (lua_State * L, bool bRead)
 #ifdef _WIN32
 	#include <Windows.h>
 	#include <delayimp.h>
-
-	bool TryToLoad (const char * name)
-	{
-		return !FAILED(__HrLoadAllImportsForDll(name));
-	}
 #endif
 
-LibLoader::LibLoader (const char * name)
+bool LibLoader::LateLoad (void)
 {
+	if (!mLib) return false;
+
 #ifdef _WIN32
-	mLib = LoadLibraryExA(name, NULL, 0); // following nvcore/Library.h...
+	char file[1024];
+
+	DWORD n = GetModuleFileNameA(mLib, file, sizeof(file));
+
+	for (; n > 0 && file[n - 1] != '\\' || file[n - 1] == '/'; --n);
+
+	return !FAILED(__HrLoadAllImportsForDll(file + n));
 #else
-	mLib = dlopen(name, RTLD_NOW);
+	return false;
 #endif
 }
 
@@ -83,4 +86,15 @@ void LibLoader::Close (void)
 	}
 
 	mLib = NULL;
+}
+
+void LibLoader::Load (const char * name)
+{
+	Close();
+
+#ifdef _WIN32
+	mLib = LoadLibraryExA(name, NULL, 0); // following nvcore/Library.h...
+#else
+	mLib = dlopen(name, RTLD_LAZY);
+#endif
 }

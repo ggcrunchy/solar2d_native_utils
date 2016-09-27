@@ -41,7 +41,8 @@
 struct ComputeCaps {
 	typedef enum { eAMP, eCUDA, eMetal, eOpenCL, eRenderScript, eVULKAN } Flag;
 
-	unsigned int mFlags;// Which backends are supported?
+	unsigned int mSupported;// Which backends are supported?
+	unsigned int mEnabled;	// Which backends are enabled? (i.e. supported and not shut down)
 
 #ifdef WANT_AMP
 	std::vector<concurrency::accelerator> mAccelerators;// List of AMP accelerators
@@ -54,9 +55,12 @@ struct ComputeCaps {
 
 	std::vector<DeviceInfoCUDA> mDevicesCUDA;	// List of devices (index = device id) along with CUDA driver info
 #endif
+
+	ComputeCaps (void) : mSupported(0), mEnabled(0) {}
 };
 
-bool CheckComputeSupport (lua_State * L, ComputeCaps & caps);
+bool CheckComputeSupport (lua_State * L);
+bool GetComputeCaps (lua_State * L, ComputeCaps & caps);
 void ShutDownBackend (ComputeCaps::Flag flag);
 
 #ifdef WANT_CUDA

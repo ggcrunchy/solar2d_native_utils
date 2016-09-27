@@ -13,12 +13,9 @@ struct PathData {
 	const char * Canonicalize (lua_State * L, bool bRead);
 };
 
+
 #ifdef _WIN32
 	#include <Windows.h>
-
-	bool TryToLoad (const char * name);
-#else
-	#define TryToLoad(name) #error "TryToLoad(" name ") failed: not supported outside Windows"
 #endif
 
 struct LibLoader {
@@ -28,10 +25,12 @@ struct LibLoader {
 	void * mLib;
 #endif
 
-	LibLoader (const char * name);
-
+	LibLoader (void) : mLib(NULL) {}
+	
 	bool IsLoaded (void) const { return mLib != NULL; }
+	bool LateLoad (void);
 	void Close (void);
+	void Load (const char * name);
 
 	template<typename F> bool Bind (F * func, const char * name)
 	{
