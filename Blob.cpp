@@ -21,6 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
+#include "ByteReader.h"
 #include "ByteUtils.h"
 #include "LuaUtils.h"
 #include "aligned_allocator.h"
@@ -63,36 +64,40 @@ bool IsBlob (lua_State * L, int arg, const char * type)
 	return bEq;
 }
 
+struct BlobProps {
+	size_t mAlign;
+	bool mResizable;
+
+	BlobProps (lua_State * L, int arg)
+	{
+		luaL_checktype(L, arg, LUA_TUSERDATA);
+		lua_getfenv(L, arg);// ..., env
+		lua_getfield(L, -1, "align");	// ..., env, align
+		lua_getfield(L, -2, "resizable");	// ..., env, align, resizable
+
+		mAlign = luaL_optinteger(L, -2, 0);
+		mResizable = lua_toboolean(L, -1) != 0;
+
+		lua_pop(L, 3);	// ...
+	}
+};
+
 size_t GetBlobAlignment (lua_State * L, int arg)
 {
-	luaL_checktype(L, arg, LUA_TUSERDATA);
-	lua_getfenv(L, arg);// ..., env
-	lua_getfield(L, -1, "align");	// ..., env, align
-
-	size_t align = luaL_optinteger(L, -1, 0);
-
-	lua_pop(L, 2);	// ...
-
-	return align;
+	return BlobProps(L, arg).mAlign;
 }
 
 size_t GetBlobSize (lua_State * L, int arg, bool bNSized)
 {
-	arg = CoronaLuaNormalize(L, arg);
+	BlobProps props(L, arg);
+	size_t size;
 
-	luaL_checktype(L, arg, LUA_TUSERDATA);
-	lua_getfenv(L, arg);// ..., env
-	lua_getfield(L, -1, "align");	// ..., env, align
-	lua_getfield(L, -2, "resizable");	// ..., env, align, resizable
-
-	size_t align = luaL_optinteger(L, -2, 0), size;
-
-	if (lua_toboolean(L, -1))
+	if (props.mResizable)
 	{
 		#define ALIGNED(n) size = ((VectorType<n>::type *)lua_touserdata(L, arg))->size()
 		#define UNALIGNED() size = ((ucvec *)lua_touserdata(L, arg))->size()
 
-		switch (align)
+		switch (props.mAlign)
 		{
 			WITH_VECTOR();
 		}
@@ -105,34 +110,25 @@ size_t GetBlobSize (lua_State * L, int arg, bool bNSized)
 	{
 		void * ud = lua_touserdata(L, arg);
 
-		if (align) std::align(align, lua_objlen(L, arg), ud, size);
+		if (props.mAlign) std::align(props.mAlign, lua_objlen(L, arg), ud, size);
 	}
 
-	lua_pop(L, 3);	// ...
-
-	if (bNSized && align) size /= align;
+	if (bNSized && props.mAlign) size /= props.mAlign;
 
 	return size;
 }
 
 unsigned char * GetBlobData (lua_State * L, int arg)
 {
-	arg = CoronaLuaNormalize(L, arg);
-
-	luaL_checktype(L, arg, LUA_TUSERDATA);
-	lua_getfenv(L, arg);// ..., env
-	lua_getfield(L, -1, "align");	// ..., env, align
-	lua_getfield(L, -2, "resizable");	// ..., env, align, resizable
-
-	size_t align = luaL_optinteger(L, -2, 0);
+	BlobProps props(L, arg);
 	unsigned char * data;
 
-	if (lua_toboolean(L, -1))
+	if (props.mResizable)
 	{
 		#define ALIGNED(n) data = ((VectorType<n>::type *)lua_touserdata(L, arg))->data()
 		#define UNALIGNED() data = ((ucvec *)lua_touserdata(L, arg))->data()
 
-		switch (align)
+		switch (props.mAlign)
 		{
 			WITH_VECTOR();
 		}
@@ -146,29 +142,17 @@ unsigned char * GetBlobData (lua_State * L, int arg)
 		void * ud = lua_touserdata(L, arg);
 		size_t size = lua_objlen(L, arg), junk;
 
-		if (align) std::align(align, size, ud, junk);
+		if (props.mAlign) std::align(props.mAlign, size, ud, junk);
 
-		data = (unsigned char *)data;
+		data = (unsigned char *)ud;
 	}
-
-	lua_pop(L, 3);	// ...
 
 	return data;
 }
 
 void * GetBlobVector (lua_State * L, int arg)
 {
-	arg = CoronaLuaNormalize(L, arg);
-
-	luaL_checktype(L, arg, LUA_TUSERDATA);
-	lua_getfenv(L, arg);// ..., env
-	lua_getfield(L, -1, "resizable");	// ..., env, resizable
-
-	void * ud = lua_toboolean(L, -1) ? lua_touserdata(L, arg) : NULL;
-
-	lua_pop(L, 2);	// ...
-
-	return ud;
+	return BlobProps(L, arg).mResizable ? lua_touserdata(L, arg) : NULL;
 }
 
 template<typename T> void * Alloc (lua_State * L)
@@ -241,45 +225,63 @@ void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
 
 	else lua_newuserdata(L, size);	// ..., ud
 
-	BytesMetatableOpts bmopts;
-
-	#define ALIGNED(n) GC<VectorType<n>::type>(L) // n.b. freaks out preprocessor if nested deeper :P
-	#define UNALIGNED() GC<ucvec>(L)
-
-	bmopts.mMetatableName = "blob_mt";
-	bmopts.mMore = [](lua_State * L)
+	AttachMethods(L, type, [](lua_State * L)
 	{
-		// STUFF!
-		lua_pushcfunction(L, [](lua_State * L)
-		{
-			lua_getfenv(L, 1);	// blob, env
-			lua_getfield(L, -1, "resizable");	// blob, env, resizable?
-
-			if (lua_toboolean(L, -1))
+		luaL_Reg blob_methods[] = {
 			{
-				lua_getfield(L, -2, "align");	// blob, env, resizable, align
-
-				switch (lua_tointeger(L, -1))
+				"__gc", [](lua_State * L)
 				{
-					WITH_VECTOR();
+					BlobProps props(L, 1);
+
+					if (props.mResizable)
+					{
+						#define ALIGNED(n) GC<VectorType<n>::type>(L) // n.b. freaks out preprocessor if nested deeper :P
+						#define UNALIGNED() GC<ucvec>(L)
+
+						switch (props.mAlign)
+						{
+							WITH_VECTOR();
+						}
+						
+						#undef ALIGNED
+						#undef UNALIGNED
+					}
+
+					return 0;
 				}
-			}
+			}, {
+				"__len", [](lua_State * L)
+				{
+					lua_pushinteger(L, GetBlobSize(L, 1));	// blob, size
 
-			return 0;
-		});	// ..., ud, mt, GC
-		lua_setfield(L, -2, "__gc");// ..., ud, mt = { __gc = GC }
-	};
+					return 1;
+				}
+			},
+			{ NULL, NULL }
+		};
 
-	#undef ALIGNED
-	#undef UNALIGNED
+		luaL_register(L, NULL, blob_methods);
 
-	AddBytesMetatable(L, type, &bmopts);
+		ByteReaderFunc * func = ByteReader::Register(L);
+
+		func->mGetBytes = [](lua_State * L, ByteReader & reader, int arg, void *)
+		{
+			reader.mBytes = GetBlobData(L, arg);
+			reader.mCount = GetBlobSize(L, arg);
+		};
+		func->mContext = NULL;
+
+		lua_pushlightuserdata(L, func);	// ..., mt, reader_func
+		lua_setfield(L, -2, "__bytes");	// ..., mt = { ..., __bytes = reader_func }
+		lua_pushliteral(L, "blob_mt");	// ..., mt, "blob_mt"
+		lua_setfield(L, -2, "__metatable");	// ..., mt = { ..., __bytes, __metatable = "blob_mt" }
+	});
 
 	// Store the blob traits as small tables in the metatable, creating these on the first
 	// instance of any particular configuration. For lookup purposes, keep a reference as
 	// the blob userdata's environment as well.
 	lua_getmetatable(L, -1);// ..., ud, mt
-	lua_pushfstring(L, "%i:%s", align, bCanResize ? "true" : "false");	// ..., ud, mt, key
+	lua_pushfstring(L, "%d:%s", align, bCanResize ? "true" : "false");	// ..., ud, mt, key
 	lua_pushvalue(L, -1);	// ..., ud, mt, key, key
 	lua_rawget(L, -3);	// ..., ud, mt, key, t?
 
@@ -307,4 +309,3 @@ void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
 
 #undef WITH_SIZE
 #undef WITH_VECTOR
-// suggests implementing a revised ByteReader, that is some sort of point_to rather than "vector", etc. (would also obviate offsets)
