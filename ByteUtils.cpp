@@ -1,3 +1,26 @@
+/*
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*
+* [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
+*/
+
 #include "ByteUtils.h"
 
 BlobState::BlobState (lua_State * L, int arg, const char * key, bool bLeave) : mW(0), mH(0), mBPP(0), mStride(0), mLength(0), mBlob(NULL), mData(NULL)
@@ -67,13 +90,13 @@ void BlobState::Bind (lua_State * L, int arg)
 	mLength = lua_objlen(L, arg);
 }
 
-void BlobState::Instantiate (lua_State * L, size_t size)
+void BlobState::Instantiate (lua_State * L, size_t size, const char * name)
 {
 	void * ud = lua_newuserdata(L, size);	// ..., ud
 
 	memset(ud, 0, size);
 
-	AddBytesMetatable(L, "xs.blob");
+	AddBytesMetatable(L, name);
 }
 
 unsigned char * BlobState::PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero, int bpp)
@@ -204,7 +227,7 @@ float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, in
 	return pfloats;
 }
 
-void AddBytesMetatable (lua_State * L, const char * type)
+void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts)
 {
 	luaL_argcheck(L, lua_isuserdata(L, -1), -1, "Non-userdata on top of stack");
 
@@ -219,6 +242,15 @@ void AddBytesMetatable (lua_State * L, const char * type)
 			return 1;
 		});	// ..., ud, mt, len
 		lua_setfield(L, -2, "__len");	// ..., ud, mt = { __bytes, __len = len }
+
+		const char * name = "bytes_mt";
+
+		if (opts && opts->mMetatableName) name = opts->mMetatableName;
+
+		lua_pushstring(L, name);// ..., ud, mt
+		lua_setfield(L, -1, "__metatable");	// ..., ud, mt = { __bytes, __len, __metatable = name }
+
+		if (opts && opts->mMore) opts->mMore(L);
 	}
 
 	lua_setmetatable(L, -2);// ..., ud
