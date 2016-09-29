@@ -166,7 +166,7 @@ template<typename T> void * Alloc (lua_State * L)
 
 template<int A> void * AllocN (lua_State * L)
 {
-	return Alloc<VectorType<A>::type>(L);
+	return Alloc<typename VectorType<A>::type>(L);
 }
 
 template<typename T> void GC (lua_State * L)

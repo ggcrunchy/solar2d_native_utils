@@ -58,8 +58,8 @@ struct BlobOpts {
 	BlobOpts (void) : mAlignment(0), mType(NULL), mResizable(false) {}
 };
 
-template<size_t N> struct VectorType {
-	using type = typename std::vector<unsigned char, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<unsigned char, N>>;
+template<size_t N, typename T = unsigned char> struct VectorType {
+	typedef std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N>> type;
 };
 
 bool IsBlob (lua_State * L, int arg, const char * type = NULL);
