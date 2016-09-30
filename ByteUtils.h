@@ -63,6 +63,9 @@ template<size_t N, typename T = unsigned char> struct VectorType {
 };
 
 bool IsBlob (lua_State * L, int arg, const char * type = NULL);
+bool IsBlobLocked (lua_State * L, int arg);
+bool LockBlob (lua_State * L, int arg, void * key);
+bool UnlockBlob (lua_State * L, int arg, void * key);
 size_t GetBlobAlignment (lua_State * L, int arg);
 size_t GetBlobSize (lua_State * L, int arg, bool bNSized = false);
 unsigned char * GetBlobData (lua_State * L, int arg);

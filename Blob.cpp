@@ -49,6 +49,7 @@ using ucvec = std::vector<unsigned char>;
 bool IsBlob (lua_State * L, int arg, const char * type)
 {
 	if (lua_type(L, arg) != LUA_TUSERDATA) return false;
+	if (type && !IsType(L, type, arg)) return false;
 	if (!luaL_getmetafield(L, arg, "__bytes")) return false;// ...[, bytes]
 
 	lua_pop(L, 1);	// ...
@@ -62,6 +63,110 @@ bool IsBlob (lua_State * L, int arg, const char * type)
 	lua_pop(L, 2);	// ...
 
 	return bEq;
+}
+
+static bool GetLock (lua_State * L, int arg)
+{
+	lua_getfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks?
+
+	if (lua_isnil(L, -1))
+	{
+		lua_pop(L, 1);	// ...
+
+		return false;
+	}
+
+	lua_pushvalue(L, arg);	// ..., locks, blob
+	lua_rawget(L, -2);	// ..., locks, lock?
+
+	return true;
+}
+
+bool IsBlobLocked (lua_State * L, int arg)
+{
+	arg = CoronaLuaNormalize(L, arg);
+
+	if (!IsBlob(L, arg) || !GetLock(L, arg)) return false;	// ...[, locks, lock?]
+
+	bool bLocked = !lua_isnil(L, -1);
+
+	lua_pop(L, 2);	// ...
+
+	return bLocked;
+}
+
+bool LockBlob (lua_State * L, int arg, void * key)
+{
+	arg = CoronaLuaNormalize(L, arg);
+
+	int top = lua_gettop(L);
+
+	if (!IsBlob(L, arg) || !key) return false;
+
+	lua_getfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks?
+
+	if (!lua_isnil(L, -1))
+	{
+		lua_pushvalue(L, arg);	// ..., locks, blob
+		lua_rawget(L, -2);	// ..., locks, lock?
+
+		if (!lua_isnil(L, -1))
+		{
+			lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
+
+			bool bOK = lua_equal(L, -2, -1) != 0;
+
+			lua_pop(L, 3);	// ...
+
+			return bOK;
+		}
+
+		lua_pop(L, 1);	// ..., locks
+	}
+
+	else
+	{
+		lua_pop(L, 1);	// ...
+		lua_newtable(L);// ..., locks
+		lua_createtable(L, 0, 1);	// ..., locks, locks_mt
+		lua_pushliteral(L, "k");// ..., locks, locks_mt, "k"
+		lua_setfield(L, -2, "__mode");	// ..., locks, locks_mt = { __mode = "k" }
+		lua_setmetatable(L, -2);// ..., locks
+		lua_pushvalue(L, -1);	// ..., locks, locks
+		lua_setfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks; registry.BLOB_LOCKS = locks
+	}
+
+	lua_pushvalue(L, arg);	// ..., locks, blob
+	lua_pushlightuserdata(L, key);	// ..., locks, blob, key
+	lua_rawset(L, -3);	// ..., locks = { [blob] = key }
+	lua_pop(L, 1);	// ...
+
+	return true;
+}
+
+bool UnlockBlob (lua_State * L, int arg, void * key)
+{
+	arg = CoronaLuaNormalize(L, arg);
+
+	int top = lua_gettop(L);
+
+	if (!IsBlob(L, arg) || !key || !GetLock(L, arg)) return false;	// ...[, locks, lock?]
+
+	lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
+
+	bool bFound = lua_equal(L, -2, -1) != 0;
+
+	if (bFound)
+	{
+		lua_pop(L, 2);	// ..., locks
+		lua_pushvalue(L, arg);	// ..., locks, blob
+		lua_pushnil(L);	// ..., locks, blob, nil
+		lua_rawset(L, -3);	// ..., locks
+	}
+
+	lua_settop(L, top);	// ...
+
+	return bFound;
 }
 
 struct BlobProps {
