@@ -100,8 +100,8 @@ static bool CheckCUDA (LibLoader & cuda_lib, ComputeCaps & caps)
 
 	if (!cuda_lib.IsLoaded()) return false;
 
-	#define CUDA_BIND(name, ...) CUresult (CUDAAPI *name)(##__VA_ARGS__); LIB_BIND(cuda_lib, cu, name)
-	#define CUDA_CALL(name, ...) if (!name || CUDA_SUCCESS != name(##__VA_ARGS__)) return false
+	#define CUDA_BIND(name, ...) CUresult (CUDAAPI *name)(__VA_ARGS__); LIB_BIND(cuda_lib, cu, name)
+	#define CUDA_CALL(name, ...) if (!name || CUDA_SUCCESS != name(__VA_ARGS__)) return false
 
 	CUDA_BIND(Init, unsigned int);
 	CUDA_BIND(DeviceGetCount, int *);
