@@ -23,7 +23,7 @@
 
 #include "ByteUtils.h"
 
-BlobState::BlobState (lua_State * L, int arg, const char * key, bool bLeave) : mW(0), mH(0), mBPP(0), mStride(0), mLength(0), mBlob(NULL), mData(NULL)
+BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mW(0), mH(0), mBPP(0), mStride(0), mLength(0), mBlob(NULL), mData(NULL)
 {
 	if (key && lua_istable(L, arg))
 	{
@@ -37,7 +37,7 @@ BlobState::BlobState (lua_State * L, int arg, const char * key, bool bLeave) : m
 	else Bind(L, arg);
 }
 
-bool BlobState::Fit (int x, int y, int w, int h)
+bool BlobXS::State::Fit (int x, int y, int w, int h)
 {
 	if (!mBlob || mStride == 0) return false;
 	if (x < 0 || y < 0 || w <= 0 || h <= 0) return false;
@@ -48,7 +48,7 @@ bool BlobState::Fit (int x, int y, int w, int h)
 	return true;
 }
 
-bool BlobState::InterpretAs (int w, int h, int bpp, int stride)
+bool BlobXS::State::InterpretAs (int w, int h, int bpp, int stride)
 {
 	if (!mBlob || w <= 0 || h <= 0 || bpp <= 0) return false;
 
@@ -68,7 +68,7 @@ bool BlobState::InterpretAs (int w, int h, int bpp, int stride)
 	return true;
 }
 
-int BlobState::GetOffset (lua_State * L, int t, const char * key)
+int BlobXS::State::GetOffset (lua_State * L, int t, const char * key)
 {
 	int offset = 0;
 
@@ -84,13 +84,13 @@ int BlobState::GetOffset (lua_State * L, int t, const char * key)
 	return offset;
 }
 
-void BlobState::Bind (lua_State * L, int arg)
+void BlobXS::State::Bind (lua_State * L, int arg)
 {
 	mBlob = !lua_isnoneornil(L, arg) ? (unsigned char *)luaL_checkudata(L, arg, "xs.blob") : NULL;
 	mLength = lua_objlen(L, arg);
 }
 
-void BlobState::Instantiate (lua_State * L, size_t size, const char * name)
+void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
 {
 	void * ud = lua_newuserdata(L, size);	// ..., ud
 
@@ -99,11 +99,11 @@ void BlobState::Instantiate (lua_State * L, size_t size, const char * name)
 	AddBytesMetatable(L, name);
 }
 
-unsigned char * BlobState::PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero, int bpp)
+unsigned char * BlobXS::State::PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero, int bpp)
 {
 	size_t size = GetSizeWithStride(L, w, h, stride, bpp);
 
-	BlobState blob(L, opts, "blob");// ...[, blob]
+	State blob(L, opts, "blob");// ...[, blob]
 
     was_blob = blob.Bound() ? 1 : 0;
     
@@ -126,7 +126,7 @@ unsigned char * BlobState::PointToData (lua_State * L, int opts, int w, int h, i
 	return out;
 }
 
-int BlobState::PushData (lua_State * L, unsigned char * out, const char * btype, int was_blob, bool bAsUserdata)
+int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * btype, int was_blob, bool bAsUserdata)
 {
 	if (!was_blob)
 	{
@@ -193,7 +193,7 @@ float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, in
 
 			pfloats = (float *)lua_newuserdata(L, nfloats * sizeof(float));	// ..., float_bytes, ..., floats
 
-			for (size_t i = 0; i < std::min(reader.mCount, nfloats); ++i) pfloats[i] = float(bytes[i]) / 255.0f;
+			for (size_t i = 0; i < (std::min)(reader.mCount, nfloats); ++i) pfloats[i] = float(bytes[i]) / 255.0f;
 			for (size_t i = reader.mCount; i < nfloats; ++i) pfloats[i] = 0.0f;
 
 			lua_replace(L, arg);// ..., floats, ...
@@ -208,7 +208,7 @@ float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, in
 		
 		pfloats = (float *)lua_newuserdata(L, nfloats * sizeof(float));	// ..., float_table, ..., floats
 
-		for (size_t i = 0; i < std::min(n, nfloats); ++i)
+		for (size_t i = 0; i < (std::min)(n, nfloats); ++i)
 		{
 			lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
 

@@ -46,7 +46,7 @@
 using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
 using ucvec = std::vector<unsigned char>;
 
-bool IsBlob (lua_State * L, int arg, const char * type)
+bool BlobXS::IsBlob (lua_State * L, int arg, const char * type)
 {
 	if (lua_type(L, arg) != LUA_TUSERDATA) return false;
 	if (type && !IsType(L, type, arg)) return false;
@@ -82,20 +82,29 @@ static bool GetLock (lua_State * L, int arg)
 	return true;
 }
 
-bool IsBlobLocked (lua_State * L, int arg)
+bool BlobXS::IsLocked (lua_State * L, int arg, void * key)
 {
 	arg = CoronaLuaNormalize(L, arg);
 
 	if (!IsBlob(L, arg) || !GetLock(L, arg)) return false;	// ...[, locks, lock?]
 
-	bool bLocked = !lua_isnil(L, -1);
+	bool bLocked;
+	
+	if (key)
+	{
+		lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
 
-	lua_pop(L, 2);	// ...
+		bLocked = lua_equal(L, -2, -1) != 0;
+	}
+	
+	else bLocked = !lua_isnil(L, -1);
+
+	lua_pop(L, key ? 3 : 2);// ...
 
 	return bLocked;
 }
 
-bool LockBlob (lua_State * L, int arg, void * key)
+bool BlobXS::Lock (lua_State * L, int arg, void * key)
 {
 	arg = CoronaLuaNormalize(L, arg);
 
@@ -144,7 +153,7 @@ bool LockBlob (lua_State * L, int arg, void * key)
 	return true;
 }
 
-bool UnlockBlob (lua_State * L, int arg, void * key)
+bool BlobXS::Unlock (lua_State * L, int arg, void * key)
 {
 	arg = CoronaLuaNormalize(L, arg);
 
@@ -187,12 +196,12 @@ struct BlobProps {
 	}
 };
 
-size_t GetBlobAlignment (lua_State * L, int arg)
+size_t BlobXS::GetAlignment (lua_State * L, int arg)
 {
 	return BlobProps(L, arg).mAlign;
 }
 
-size_t GetBlobSize (lua_State * L, int arg, bool bNSized)
+size_t BlobXS::GetSize (lua_State * L, int arg, bool bNSized)
 {
 	BlobProps props(L, arg);
 	size_t size;
@@ -223,7 +232,7 @@ size_t GetBlobSize (lua_State * L, int arg, bool bNSized)
 	return size;
 }
 
-unsigned char * GetBlobData (lua_State * L, int arg)
+unsigned char * BlobXS::GetData (lua_State * L, int arg)
 {
 	BlobProps props(L, arg);
 	unsigned char * data;
@@ -255,7 +264,7 @@ unsigned char * GetBlobData (lua_State * L, int arg)
 	return data;
 }
 
-void * GetBlobVector (lua_State * L, int arg)
+void * BlobXS::GetVector (lua_State * L, int arg)
 {
 	return BlobProps(L, arg).mResizable ? lua_touserdata(L, arg) : NULL;
 }
@@ -281,7 +290,7 @@ template<typename T> void GC (lua_State * L)
 	v->~T();
 }
 
-void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
+void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 {
 	size_t align = 0;
 	const char * type = "xs.blob";
@@ -334,6 +343,32 @@ void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
 	{
 		luaL_Reg blob_methods[] = {
 			{
+				"Clone", [](lua_State * L)
+				{
+					BlobProps props(L, 1);
+					CreateOpts copts;
+
+					copts.mAlignment = props.mAlign;
+					copts.mResizable = props.mResizable;
+					copts.mType = NULL;
+
+					lua_getmetatable(L, 1);	// blob, mt
+
+					for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1)) // blob, mt[, key, value]
+					{
+						if (lua_equal(L, -3, -1) && lua_type(L, -2) == LUA_TSTRING)
+						{
+							copts.mType = lua_tostring(L, -2);
+
+							break;
+						}
+					}
+
+					NewBlob(L, GetSize(L, 1), &copts);	// blob, mt[, key, value], new_blob
+
+					return 1;
+				}
+			}, {
 				"__gc", [](lua_State * L)
 				{
 					BlobProps props(L, 1);
@@ -357,7 +392,18 @@ void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
 			}, {
 				"__len", [](lua_State * L)
 				{
-					lua_pushinteger(L, GetBlobSize(L, 1));	// blob, size
+					lua_pushinteger(L, GetSize(L, 1));	// blob, size
+
+					return 1;
+				}
+			}, {
+				"__tostring", [](lua_State * L)
+				{
+					ByteReader reader(L, 1);
+
+					if (!reader.mBytes) lua_pushliteral(L, "");	// blob, ""
+
+					else lua_pushlstring(L, (const char *)reader.mBytes, reader.mCount);// blob, data
 
 					return 1;
 				}
@@ -371,8 +417,8 @@ void NewBlob (lua_State * L, size_t size, const BlobOpts * opts)
 
 		func->mGetBytes = [](lua_State * L, ByteReader & reader, int arg, void *)
 		{
-			reader.mBytes = GetBlobData(L, arg);
-			reader.mCount = GetBlobSize(L, arg);
+			reader.mBytes = GetData(L, arg);
+			reader.mCount = GetSize(L, arg);
 		};
 		func->mContext = NULL;
 
