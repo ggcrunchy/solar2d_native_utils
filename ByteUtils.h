@@ -81,6 +81,9 @@ namespace BlobXS {
 
 	void NewBlob (lua_State * L, size_t size, const CreateOpts * opts);
 
+	const int Version = 1;	// Since the blob API is available to other plugins, but not frozen, the version
+							// (incrementing from 1) is added to the properties of new blobs, allowing mixed
+							// implementations some measure of interop
 	// TODO: Investigate shared memory blobs, necessary locking mechanisms, etc.
 };
 

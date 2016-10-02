@@ -48,10 +48,6 @@ using ucvec = std::vector<unsigned char>;
 
 #define BLOBXS_PROPS "BLOBXS_PROPS"
 
-static const int Version = 1;	// Since the blob API is available to other plugins, but not frozen, the version
-								// (incrementing from 1) is added to the properties of new blobs, allowing mixed
-								// implementations some measure of interop
-
 static bool AuxIsBlob (lua_State * L, int arg)
 {
 	if (lua_type(L, arg) != LUA_TUSERDATA) return false;
@@ -89,7 +85,7 @@ struct BlobProps {
 	int mVersion;	// Version of API used to create blob
 	void * mKey;// If locked, the key
 
-	BlobProps (void) : mVersion(Version), mKey(NULL) {}
+	BlobProps (void) : mVersion(BlobXS::Version), mKey(NULL) {}
 };
 
 struct BlobPropViewer {
