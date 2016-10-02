@@ -247,8 +247,8 @@ void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOp
 
 		if (opts && opts->mMetatableName) name = opts->mMetatableName;
 
-		lua_pushstring(L, name);// ..., ud, mt
-		lua_setfield(L, -1, "__metatable");	// ..., ud, mt = { __bytes, __len, __metatable = name }
+		lua_pushstring(L, name);// ..., ud, mt, name
+		lua_setfield(L, -2, "__metatable");	// ..., ud, mt = { __bytes, __len, __metatable = name }
 
 		if (opts && opts->mMore) opts->mMore(L);
 	}
