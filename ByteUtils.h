@@ -70,6 +70,7 @@ namespace BlobXS {
 	bool Unlock (lua_State * L, int arg, void * key);
 	size_t GetAlignment (lua_State * L, int arg);
 	size_t GetSize (lua_State * L, int arg, bool bNSized = false);
+	int GetVersion (lua_State * L, int arg);
 	unsigned char * GetData (lua_State * L, int arg);
 	void * GetVector (lua_State * L, int arg);
 

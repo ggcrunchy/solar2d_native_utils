@@ -218,3 +218,12 @@ void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const LuaAddParams & par
 
 	if (params.mLeaveTableAtTop) lua_settop(L, tpos);	// ..., t
 }
+
+void NewWeakKeyedTable (lua_State * L)
+{
+	lua_newtable(L);// ..., t
+	lua_createtable(L, 0, 1);	// ..., t, mt
+	lua_pushliteral(L, "k");// ..., t, mt, "k"
+	lua_setfield(L, -2, "__mode");	// ..., t, mt = { __mode = "k" }
+	lua_setmetatable(L, -2);// ..., t
+}

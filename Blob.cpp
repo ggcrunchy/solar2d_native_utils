@@ -46,172 +46,125 @@
 using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
 using ucvec = std::vector<unsigned char>;
 
-bool BlobXS::IsBlob (lua_State * L, int arg, const char * type)
+#define BLOBXS_PROPS "BLOBXS_PROPS"
+
+static const int Version = 1;	// Since the blob API is available to other plugins, but not frozen, the version
+								// (incrementing from 1) is added to the properties of new blobs, allowing mixed
+								// implementations some measure of interop
+
+static bool AuxIsBlob (lua_State * L, int arg)
 {
 	if (lua_type(L, arg) != LUA_TUSERDATA) return false;
-	if (type && !IsType(L, type, arg)) return false;
-	if (!luaL_getmetafield(L, arg, "__bytes")) return false;// ...[, bytes]
 
-	lua_pop(L, 1);	// ...
+	lua_pushvalue(L, arg);	// ..., blob?
+	lua_getfield(L, LUA_REGISTRYINDEX, BLOBXS_PROPS);	// ..., blob?, props
 
-	if (!luaL_getmetafield(L, arg, "__metatable")) return false;// ...[, name]
-
-	lua_pushliteral(L, "blob_mt");	// ..., name, "blob_mt"
-
-	bool bEq = lua_equal(L, -2, -1) != 0;
-
-	lua_pop(L, 2);	// ...
-
-	return bEq;
-}
-
-static bool GetLock (lua_State * L, int arg)
-{
-	lua_getfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks?
-
-	if (lua_isnil(L, -1))
+	if (lua_istable(L, -1))
 	{
-		lua_pop(L, 1);	// ...
+		lua_insert(L, -2);	// ..., props, blob?
+		lua_rawget(L, -2);	// ..., props, prop?
 
-		return false;
+		return lua_type(L, -1) == LUA_TUSERDATA;
 	}
 
-	lua_pushvalue(L, arg);	// ..., locks, blob
-	lua_rawget(L, -2);	// ..., locks, lock?
-
-	return true;
+	return false;
 }
+
+bool BlobXS::IsBlob (lua_State * L, int arg, const char * type)
+{
+	if (type && !IsType(L, type, arg)) return false;
+
+	int top = lua_gettop(L);
+	bool bIsBlob = AuxIsBlob(L, arg);
+
+	lua_settop(L, top);	// ...
+
+	return bIsBlob;
+}
+
+// Various per-blob properties (corresponding to `Version`)
+struct BlobProps {
+	size_t mAlign;	// Size of which memory will be aligned to some multiple
+	bool mResizable;// Is the memory resizable?
+	int mVersion;	// Version of API used to create blob
+	void * mKey;// If locked, the key
+
+	BlobProps (void) : mVersion(Version), mKey(NULL) {}
+};
+
+struct BlobPropViewer {
+	BlobProps * mProps;	// Properties being viewed
+	lua_State * mL;	// Current state
+	int mArg, mTop;	// Argument position; stack top
+
+	BlobPropViewer (lua_State * L, int arg) : mProps(NULL), mL(L)
+	{
+		mArg = CoronaLuaNormalize(L, arg);
+		mTop = lua_gettop(L);
+
+		if (AuxIsBlob(L, arg)) mProps = (BlobProps *)lua_touserdata(L, -1);	// ...[, props, prop]
+	}
+
+	~BlobPropViewer (void)
+	{
+		lua_settop(mL, mTop);
+	}
+};
 
 bool BlobXS::IsLocked (lua_State * L, int arg, void * key)
 {
-	arg = CoronaLuaNormalize(L, arg);
+	BlobPropViewer bpv(L, arg);
 
-	if (!IsBlob(L, arg) || !GetLock(L, arg)) return false;	// ...[, locks, lock?]
-
-	bool bLocked;
-	
-	if (key)
-	{
-		lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
-
-		bLocked = lua_equal(L, -2, -1) != 0;
-	}
-	
-	else bLocked = !lua_isnil(L, -1);
-
-	lua_pop(L, key ? 3 : 2);// ...
-
-	return bLocked;
+	if (!bpv.mProps) return false;
+	if (key) return bpv.mProps->mKey == key;
+	else return bpv.mProps->mKey != NULL;
 }
 
 bool BlobXS::Lock (lua_State * L, int arg, void * key)
 {
-	arg = CoronaLuaNormalize(L, arg);
+	BlobPropViewer bpv(L, arg);
 
-	int top = lua_gettop(L);
+	if (!bpv.mProps || !key) return false;
+	if (bpv.mProps->mKey) return bpv.mProps->mKey == key;
 
-	if (!IsBlob(L, arg) || !key) return false;
-
-	lua_getfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks?
-
-	if (!lua_isnil(L, -1))
-	{
-		lua_pushvalue(L, arg);	// ..., locks, blob
-		lua_rawget(L, -2);	// ..., locks, lock?
-
-		if (!lua_isnil(L, -1))
-		{
-			lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
-
-			bool bOK = lua_equal(L, -2, -1) != 0;
-
-			lua_pop(L, 3);	// ...
-
-			return bOK;
-		}
-
-		lua_pop(L, 1);	// ..., locks
-	}
-
-	else
-	{
-		lua_pop(L, 1);	// ...
-		lua_newtable(L);// ..., locks
-		lua_createtable(L, 0, 1);	// ..., locks, locks_mt
-		lua_pushliteral(L, "k");// ..., locks, locks_mt, "k"
-		lua_setfield(L, -2, "__mode");	// ..., locks, locks_mt = { __mode = "k" }
-		lua_setmetatable(L, -2);// ..., locks
-		lua_pushvalue(L, -1);	// ..., locks, locks
-		lua_setfield(L, LUA_REGISTRYINDEX, "BLOB_LOCKS");	// ..., locks; registry.BLOB_LOCKS = locks
-	}
-
-	lua_pushvalue(L, arg);	// ..., locks, blob
-	lua_pushlightuserdata(L, key);	// ..., locks, blob, key
-	lua_rawset(L, -3);	// ..., locks = { [blob] = key }
-	lua_pop(L, 1);	// ...
+	bpv.mProps->mKey = key;
 
 	return true;
 }
 
 bool BlobXS::Unlock (lua_State * L, int arg, void * key)
 {
-	arg = CoronaLuaNormalize(L, arg);
+	BlobPropViewer bpv(L, arg);
 
-	int top = lua_gettop(L);
+	if (!bpv.mProps || !key || !bpv.mProps->mKey) return false;
+	if (bpv.mProps->mKey != key) return false;
 
-	if (!IsBlob(L, arg) || !key || !GetLock(L, arg)) return false;	// ...[, locks, lock?]
+	bpv.mProps->mKey = NULL;
 
-	lua_pushlightuserdata(L, key);	// ..., locks, lock?, key
-
-	bool bFound = lua_equal(L, -2, -1) != 0;
-
-	if (bFound)
-	{
-		lua_pop(L, 2);	// ..., locks
-		lua_pushvalue(L, arg);	// ..., locks, blob
-		lua_pushnil(L);	// ..., locks, blob, nil
-		lua_rawset(L, -3);	// ..., locks
-	}
-
-	lua_settop(L, top);	// ...
-
-	return bFound;
+	return true;
 }
-
-struct BlobProps {
-	size_t mAlign;
-	bool mResizable;
-
-	BlobProps (lua_State * L, int arg)
-	{
-		luaL_checktype(L, arg, LUA_TUSERDATA);
-		lua_getfenv(L, arg);// ..., env
-		lua_getfield(L, -1, "align");	// ..., env, align
-		lua_getfield(L, -2, "resizable");	// ..., env, align, resizable
-
-		mAlign = luaL_optinteger(L, -2, 0);
-		mResizable = lua_toboolean(L, -1) != 0;
-
-		lua_pop(L, 3);	// ...
-	}
-};
 
 size_t BlobXS::GetAlignment (lua_State * L, int arg)
 {
-	return BlobProps(L, arg).mAlign;
+	BlobPropViewer bpv(L, arg);
+
+	return bpv.mProps ? bpv.mProps->mAlign : 0U;
 }
 
 size_t BlobXS::GetSize (lua_State * L, int arg, bool bNSized)
 {
-	BlobProps props(L, arg);
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps) return 0U;
+
 	size_t size;
 
-	if (props.mResizable)
+	if (bpv.mProps->mResizable)
 	{
-		#define ALIGNED(n) size = ((VectorType<n>::type *)lua_touserdata(L, arg))->size()
-		#define UNALIGNED() size = ((ucvec *)lua_touserdata(L, arg))->size()
+		#define ALIGNED(n) size = ((VectorType<n>::type *)lua_touserdata(L, bpv.mArg))->size()
+		#define UNALIGNED() size = ((ucvec *)lua_touserdata(L, bpv.mArg))->size()
 
-		switch (props.mAlign)
+		switch (bpv.mProps->mAlign)
 		{
 			WITH_VECTOR();
 		}
@@ -222,27 +175,39 @@ size_t BlobXS::GetSize (lua_State * L, int arg, bool bNSized)
 
 	else
 	{
-		void * ud = lua_touserdata(L, arg);
+		void * ud = lua_touserdata(L, bpv.mArg);
 
-		if (props.mAlign) std::align(props.mAlign, lua_objlen(L, arg), ud, size);
+		if (bpv.mProps->mAlign) std::align(bpv.mProps->mAlign, lua_objlen(L, bpv.mArg), ud, size);
 	}
 
-	if (bNSized && props.mAlign) size /= props.mAlign;
+	if (bNSized && bpv.mProps->mAlign) size /= bpv.mProps->mAlign;
 
 	return size;
 }
 
+int BlobXS::GetVersion (lua_State * L, int arg)
+{
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps) return 0;
+
+	return bpv.mProps->mVersion;
+}
+
 unsigned char * BlobXS::GetData (lua_State * L, int arg)
 {
-	BlobProps props(L, arg);
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps) return NULL;
+
 	unsigned char * data;
 
-	if (props.mResizable)
+	if (bpv.mProps->mResizable)
 	{
-		#define ALIGNED(n) data = ((VectorType<n>::type *)lua_touserdata(L, arg))->data()
-		#define UNALIGNED() data = ((ucvec *)lua_touserdata(L, arg))->data()
+		#define ALIGNED(n) data = ((VectorType<n>::type *)lua_touserdata(L, bpv.mArg))->data()
+		#define UNALIGNED() data = ((ucvec *)lua_touserdata(L, bpv.mArg))->data()
 
-		switch (props.mAlign)
+		switch (bpv.mProps->mAlign)
 		{
 			WITH_VECTOR();
 		}
@@ -253,10 +218,10 @@ unsigned char * BlobXS::GetData (lua_State * L, int arg)
 
 	else
 	{
-		void * ud = lua_touserdata(L, arg);
-		size_t size = lua_objlen(L, arg), junk;
+		void * ud = lua_touserdata(L, bpv.mArg);
+		size_t size = lua_objlen(L, bpv.mArg), junk;
 
-		if (props.mAlign) std::align(props.mAlign, size, ud, junk);
+		if (bpv.mProps->mAlign) std::align(bpv.mProps->mAlign, size, ud, junk);
 
 		data = (unsigned char *)ud;
 	}
@@ -266,7 +231,11 @@ unsigned char * BlobXS::GetData (lua_State * L, int arg)
 
 void * BlobXS::GetVector (lua_State * L, int arg)
 {
-	return BlobProps(L, arg).mResizable ? lua_touserdata(L, arg) : NULL;
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps || !bpv.mProps->mResizable) return NULL;
+
+	return lua_touserdata(L, bpv.mArg);
 }
 
 template<typename T> void * Alloc (lua_State * L)
@@ -345,16 +314,20 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 			{
 				"Clone", [](lua_State * L)
 				{
-					BlobProps props(L, 1);
+					BlobPropViewer bpv(L, 1);
 					CreateOpts copts;
 
-					copts.mAlignment = props.mAlign;
-					copts.mResizable = props.mResizable;
+					if (bpv.mProps)
+					{
+						copts.mAlignment = bpv.mProps->mAlign;
+						copts.mResizable = bpv.mProps->mResizable;
+					}
+
 					copts.mType = NULL;
 
-					lua_getmetatable(L, 1);	// blob, mt
+					lua_getmetatable(L, 1);	// blob[, props, prop], mt
 
-					for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1)) // blob, mt[, key, value]
+					for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1)) // blob[, props, prop], mt[, key, value]
 					{
 						if (lua_equal(L, -3, -1) && lua_type(L, -2) == LUA_TSTRING)
 						{
@@ -364,21 +337,21 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 						}
 					}
 
-					NewBlob(L, GetSize(L, 1), &copts);	// blob, mt[, key, value], new_blob
+					NewBlob(L, GetSize(L, 1), &copts);	// blob[, props, prop], mt[, key, value], new_blob
 
 					return 1;
 				}
 			}, {
 				"__gc", [](lua_State * L)
 				{
-					BlobProps props(L, 1);
+					BlobPropViewer bpv(L, 1);
 
-					if (props.mResizable)
+					if (bpv.mProps && bpv.mProps->mResizable)
 					{
 						#define ALIGNED(n) GC<VectorType<n>::type>(L) // n.b. freaks out preprocessor if nested deeper :P
 						#define UNALIGNED() GC<ucvec>(L)
 
-						switch (props.mAlign)
+						switch (bpv.mProps->mAlign)
 						{
 							WITH_VECTOR();
 						}
@@ -424,38 +397,35 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 		lua_pushlightuserdata(L, func);	// ..., mt, reader_func
 		lua_setfield(L, -2, "__bytes");	// ..., mt = { ..., __bytes = reader_func }
-		lua_pushliteral(L, "blob_mt");	// ..., mt, "blob_mt"
+		lua_pushliteral(L, "blob");	// ..., mt, "blob"
 		lua_setfield(L, -2, "__metatable");	// ..., mt = { ..., __bytes, __metatable = "blob_mt" }
 	});
 
-	// Store the blob traits as small tables in the metatable, creating these on the first
-	// instance of any particular configuration. For lookup purposes, keep a reference as
-	// the blob userdata's environment as well.
-	lua_getmetatable(L, -1);// ..., ud, mt
-	lua_pushfstring(L, "%d:%s", align, bCanResize ? "true" : "false");	// ..., ud, mt, key
-	lua_pushvalue(L, -1);	// ..., ud, mt, key, key
-	lua_rawget(L, -3);	// ..., ud, mt, key, t?
+	// Create the blob properties table, if necessary.
+	lua_getfield(L, LUA_REGISTRYINDEX, BLOBXS_PROPS);	// ..., ud, props?
 
-	if (!lua_isnil(L, -1))
+	if (lua_isnil(L, -1))
 	{
-		lua_setfenv(L, -4);	// ..., ud, mt, key
-		lua_pop(L, 2);	// ..., ud
+		lua_pop(L, 1);	// ..., ud
+
+		NewWeakKeyedTable(L);	// ..., ud, props
+
+		lua_pushvalue(L, -1);	// ..., ud, props, props
+		lua_setfield(L, LUA_REGISTRYINDEX, BLOBXS_PROPS);	// ..., ud, props; registry[BLOBXS_PROPS] = props
 	}
 
-	else
-	{
-		lua_pop(L, 1);	// ..., ud, mt, key
-		lua_createtable(L, 0, 2);	// ..., ud, mt, key, info
-		lua_pushboolean(L, bCanResize ? 1 : 0);	// ..., ud, mt, key, info, can_resize
-		lua_pushinteger(L, align);	// ..., ud, mt, key, info, can_resize, align
-		lua_setfield(L, -3, "align");	// ..., ud, mt, key, info = { align = align }, can_resize
-		lua_setfield(L, -2, "resizable");	// ..., ud, mt, key, info = { align, resizable = can_resize }
-		lua_pushvalue(L, -1);	// ..., ud, mt, key, info, info
-		lua_insert(L, -4);	// ..., ud, info, mt, key, info
-		lua_rawset(L, -3);	// ..., ud, info, mt = { ..., key = info }
-		lua_pop(L, 1);	// ..., ud, info
-		lua_setfenv(L, -2);	// ..., ud
-	}
+	lua_pushvalue(L, -2);	// ..., ud, props, ud
+
+	// Create a property object and store it in that table, hooked up to the blob.
+	BlobProps * props = (BlobProps *)lua_newuserdata(L, sizeof(BlobProps));	// ..., ud, props, ud, prop
+
+	new (props) BlobProps;
+
+	props->mAlign = align;
+	props->mResizable = bCanResize;
+
+	lua_rawset(L, -3);	// ..., ud, props = { ..., [ud] = prop }
+	lua_pop(L, 1);	// ..., ud
 }
 
 #undef WITH_SIZE

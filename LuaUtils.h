@@ -46,6 +46,7 @@ void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const LuaAddParams & params = LuaAddParams());
 void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const LuaAddParams & params = LuaAddParams());
+void NewWeakKeyedTable (lua_State * L);
 
 template<typename T> int ArrayN (lua_State * L, int arg = 1)
 {
