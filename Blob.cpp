@@ -46,7 +46,8 @@
 using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
 using ucvec = std::vector<unsigned char>;
 
-#define BLOBXS_PROPS "BLOBXS_PROPS"
+#define BLOBXS_PROPS "BLOBXS_PROPS" // n.b. please do not change or hijack this :) Exposed as a string in case the
+									// blob API is defined in multiple compilation units, namely plugins
 
 static bool AuxIsBlob (lua_State * L, int arg)
 {
@@ -85,7 +86,7 @@ struct BlobProps {
 	int mVersion;	// Version of API used to create blob
 	void * mKey;// If locked, the key
 
-	BlobProps (void) : mVersion(BlobXS::Version), mKey(NULL) {}
+	BlobProps (void) : mAlign(0U), mResizable(false), mVersion(BlobXS::Version), mKey(NULL) {}
 };
 
 struct BlobPropViewer {
@@ -289,6 +290,20 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 		#undef ALIGNED
 		#undef UNALIGNED
+
+		if (size > 0U)
+		{
+			#define ALIGNED(n) GetVectorN<n>(L, -1)->resize(size)
+			#define UNALIGNED() ((ucvec *)GetVector(L, -1))->resize(size)
+
+			switch (align)
+			{
+				WITH_VECTOR();
+			}	// ..., ud
+
+			#undef ALIGNED
+			#undef UNALIGNED
+		}
 	}
 
 	else if (align > std::alignment_of<double>::value)	// Lua gives back double-aligned memory
@@ -359,6 +374,38 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					return 0;
 				}
 			}, {
+				"GetProperties", [](lua_State * L)
+				{
+					lua_settop(L, 2);	// blob, out?
+
+					if (!lua_istable(L, 2))
+					{
+						lua_newtable(L);// blob, ???, out
+						lua_replace(L, 2);	// blob, out
+					}
+
+					BlobPropViewer bpv(L, 1);
+					BlobProps props;
+
+					if (bpv.mProps) props = *bpv.mProps;
+
+					lua_pushinteger(L, props.mAlign);	// blob, out, alignment
+					lua_setfield(L, 2, "alignment");// blob, out = { alignment = alignment }
+					lua_pushboolean(L, props.mResizable ? 1 : 0);	// blob, out, resizable
+					lua_setfield(L, 2, "resizable");// blob, out = { alignment, resizable = resizable }
+					lua_pushinteger(L, props.mVersion);	// blob, out, version
+					lua_setfield(L, 2, "version");	// blob, out = { alignment, resizable, version = version }
+
+					return 1;
+				}
+			}, {
+				"IsLocked", [](lua_State * L)
+				{
+					lua_toboolean(L, IsLocked(L, 1) ? 1 : 0);	// blob, is_locked
+
+					return 1;
+				}
+			}, {
 				"__len", [](lua_State * L)
 				{
 					lua_pushinteger(L, GetSize(L, 1));	// blob, size
@@ -366,7 +413,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					return 1;
 				}
 			}, {
-				"__tostring", [](lua_State * L)
+				"ToBytes", [](lua_State * L)
 				{
 					ByteReader reader(L, 1);
 
