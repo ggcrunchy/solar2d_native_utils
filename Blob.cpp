@@ -233,7 +233,7 @@ void * BlobXS::GetVector (lua_State * L, int arg)
 
 template<typename T> void * Alloc (lua_State * L)
 {
-	void * ud = lua_newuserdata(L, sizeof(T));
+	void * ud = lua_newuserdata(L, sizeof(T));	// ..., ud
 
 	new (ud) T;
 
@@ -242,14 +242,12 @@ template<typename T> void * Alloc (lua_State * L)
 
 template<int A> void * AllocN (lua_State * L)
 {
-	return Alloc<typename VectorType<A>::type>(L);
+	return Alloc<typename VectorType<A>::type>(L);	// ..., ud
 }
 
 template<typename T> void GC (lua_State * L)
 {
-	T * v = (T *)lua_touserdata(L, 1);
-
-	v->~T();
+	((T *)lua_touserdata(L, 1))->~T();
 }
 
 static int AddBytesReturn (lua_State * L, size_t count)
@@ -305,7 +303,7 @@ static void Resize (lua_State * L, size_t align, int arg, size_t size)
 	{
 		WITH_VECTOR();
 	}
-
+		
 	#undef ALIGNED
 	#undef UNALIGNED
 }
@@ -344,8 +342,6 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 		#undef ALIGNED
 		#undef UNALIGNED
-
-		if (size > 0U) Resize(L, align, -1, size);
 	}
 
 	else if (align > std::alignment_of<double>::value)	// Lua gives back double-aligned memory
@@ -381,6 +377,8 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 			}, {
 				"Clone", [](lua_State * L)
 				{
+					lua_pushboolean(L, 0);	// blob, false
+
 					BlobPropViewer bpv(L, 1);
 					CreateOpts copts;
 
@@ -392,9 +390,9 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 					copts.mType = NULL;
 
-					lua_getmetatable(L, 1);	// blob[, props, prop], mt
+					lua_getmetatable(L, 1);	// blob, false[, props, prop], mt
 
-					for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1)) // blob[, props, prop], mt[, key, value]
+					for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1)) // blob, false[, props, prop], mt[, key, value]
 					{
 						if (lua_equal(L, -3, -1) && lua_type(L, -2) == LUA_TSTRING)
 						{
@@ -404,7 +402,13 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 						}
 					}
 
-					NewBlob(L, GetSize(L, 1), &copts);	// blob[, props, prop], mt[, key, value], new_blob
+					size_t size = GetSize(L, 1);
+
+					NewBlob(L, size, &copts);	// blob, false[, props, prop], mt[, key, value], new_blob
+
+					memcpy(BlobXS::GetData(L, -1), BlobXS::GetData(L, 1), size);
+
+					lua_replace(L, bpv.mTop);	// blob, new_blob[, props, prop], mt[, key, value]
 
 					return 1;
 				}
@@ -660,6 +664,9 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 	lua_rawset(L, -3);	// ..., ud, props = { ..., [ud] = prop }
 	lua_pop(L, 1);	// ..., ud
+
+	// If requested, give resizable blobs an initial size (done after properties are bound).
+	if (bCanResize && size > 0U) Resize(L, align, -1, size);
 }
 
 #undef WITH_SIZE
