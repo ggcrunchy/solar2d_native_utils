@@ -82,11 +82,12 @@ bool BlobXS::IsBlob (lua_State * L, int arg, const char * type)
 // Various per-blob properties (corresponding to `Version`)
 struct BlobProps {
 	size_t mAlign;	// Size of which memory will be aligned to some multiple
+	size_t mShift;	// Align-related memory shift
 	bool mResizable;// Is the memory resizable?
 	int mVersion;	// Version of API used to create blob
 	void * mKey;// If locked, the key
 
-	BlobProps (void) : mAlign(0U), mResizable(false), mVersion(BlobXS::Version), mKey(NULL) {}
+	BlobProps (void) : mAlign(0U), mShift(0U), mResizable(false), mVersion(BlobXS::Version), mKey(NULL) {}
 };
 
 struct BlobPropViewer {
@@ -170,12 +171,7 @@ size_t BlobXS::GetSize (lua_State * L, int arg, bool bNSized)
 		#undef UNALIGNED
 	}
 
-	else
-	{
-		void * ud = lua_touserdata(L, bpv.mArg);
-
-		if (bpv.mProps->mAlign) std::align(bpv.mProps->mAlign, lua_objlen(L, bpv.mArg), ud, size);
-	}
+	else size = lua_objlen(L, bpv.mArg) - bpv.mProps->mShift;
 
 	if (bNSized && bpv.mProps->mAlign) size /= bpv.mProps->mAlign;
 
@@ -216,7 +212,7 @@ unsigned char * BlobXS::GetData (lua_State * L, int arg)
 	else
 	{
 		void * ud = lua_touserdata(L, bpv.mArg);
-		size_t size = lua_objlen(L, bpv.mArg), junk;
+		size_t size = lua_objlen(L, bpv.mArg), junk = size;
 
 		if (bpv.mProps->mAlign) std::align(bpv.mProps->mAlign, size, ud, junk);
 
@@ -316,7 +312,7 @@ static void Resize (lua_State * L, size_t align, int arg, size_t size)
 
 void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 {
-	size_t align = 0;
+	size_t align = 0, extra = 0;
 	const char * type = "xs.blob";
 	bool bCanResize = false;
 
@@ -358,7 +354,11 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 		void * ud = lua_newuserdata(L, cushioned);	// ..., ud
 
+		extra = cushioned;
+
 		std::align(align, size, ud, cushioned);
+
+		extra -= cushioned;
 
 		luaL_argcheck(L, ud, -1, "Unable to align blob");
 	}
@@ -573,9 +573,8 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					else
 					{
 						unsigned char * data = BlobXS::GetData(L, 1);
-						size_t available = count - size_t(i2); // TODO: verify these indices
 
-						memmove(data + i1, data + i2 + 1, available - count);
+						memmove(data + i1, data + i2 + 1, count - size_t(i2) - 1);
 					}
 
 					return AddBytesReturn(L, size_t(i2 - i1) + 1);	// blob[, i1[, i2]], count
@@ -603,7 +602,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 						
 						if (!bpv.mProps->mResizable) count = (std::min)(count, size - size_t(pos));
 
-						else if (count + pos > size) Resize(L, bpv.mProps->mAlign, 1, size);
+						else if (count + pos > size) Resize(L, bpv.mProps->mAlign, 1, count + pos);
 
 						unsigned char * data = BlobXS::GetData(L, 1) + pos; // do here in case resize changes address
 
@@ -656,6 +655,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 	new (props) BlobProps;
 
 	props->mAlign = align;
+	props->mShift = extra;
 	props->mResizable = bCanResize;
 
 	lua_rawset(L, -3);	// ..., ud, props = { ..., [ud] = prop }
