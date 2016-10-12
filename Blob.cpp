@@ -25,9 +25,37 @@
 #include "ByteUtils.h"
 #include "LuaUtils.h"
 #include "aligned_allocator.h"
-#include <memory>
-#include <type_traits>
 #include <vector>
+
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
+
+#ifdef TARGET_OS_IPHONE
+#include <tr1/type_traits>
+#include <stdlib.h>
+
+static void * Align (size_t align, size_t size, void *& ptr, size_t & space)
+{
+    uintptr_t p = uintptr_t(ptr);
+    uintptr_t q = (p + align - 1) & align;
+    
+    space -= q - p;
+    
+    if (space < size) return nullptr;
+    
+    ptr = ((unsigned char *)ptr) + q - p;
+    
+    return ptr;
+}
+
+#define ALIGN(align, size, ud, n) Align(align, size, ud, n)
+#else
+#include <type_traits>
+#include <memory>
+#define ALIGN(align, size, ud, n) std::align(align, size, ud, n)
+#endif
+
 
 #define WITH_SIZE(n)	case n:					\
 							ALIGNED(n);	break
@@ -214,7 +242,7 @@ unsigned char * BlobXS::GetData (lua_State * L, int arg)
 		void * ud = lua_touserdata(L, bpv.mArg);
 		size_t size = lua_objlen(L, bpv.mArg), junk = size;
 
-		if (bpv.mProps->mAlign) std::align(bpv.mProps->mAlign, size, ud, junk);
+		if (bpv.mProps->mAlign) ALIGN(bpv.mProps->mAlign, size, ud, junk);
 
 		data = (unsigned char *)ud;
 	}
@@ -344,7 +372,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 		#undef UNALIGNED
 	}
 
-	else if (align > std::alignment_of<double>::value)	// Lua gives back double-aligned memory
+    else if (align > std::tr1::alignment_of<double>::value)	// Lua gives back double-aligned memory
 	{
 		size_t cushioned = size + align - 1;
 
@@ -352,7 +380,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 		extra = cushioned;
 
-		std::align(align, size, ud, cushioned);
+		ALIGN(align, size, ud, cushioned);
 
 		extra -= cushioned;
 
@@ -669,5 +697,6 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 	if (bCanResize && size > 0U) Resize(L, align, -1, size);
 }
 
+#undef ALIGN
 #undef WITH_SIZE
 #undef WITH_VECTOR

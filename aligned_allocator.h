@@ -10,7 +10,20 @@
 
 #include <memory>
 #include <cstddef>
+// STEVE CHANGE
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
+#if TARGET_OS_IPHONE
+#include <stdint.h>
+#define STD(name) name
+#else
+// /STEVE CHAAGE
 #include <cstdint>
+// STEVE CHANGE
+#include STD(name) std::name
+#endif
+// /STEVE CHANGE
 #include <stdexcept>
 
 namespace simdpp {
@@ -91,10 +104,11 @@ public:
             To ensure that there is always at least @a sizeof(void*) space
             there, @a alignment is at least 2*sizoef(void*)
         */
-        std::size_t al = A < 2*sizeof(void*) ? 2*sizeof(void*) : A;
+       std::size_t al = A < 2*sizeof(void*) ? 2*sizeof(void*) : A;
 
         char* pv = new char[n*sizeof(T) + al];
-        std::uintptr_t upv = reinterpret_cast<std::uintptr_t>(pv);
+        
+        STD(uintptr_t) upv = reinterpret_cast<STD(uintptr_t)>(pv);
         upv = (upv + al) & ~(al - 1);
         char** aligned_pv = reinterpret_cast<char**>(upv);
 
@@ -123,5 +137,7 @@ public:
 
 } // namespace SIMDPP_ARCH_NAMESPACE
 } // namespace simdpp
+
+#undef STD // <- STEVE CHANGE
 
 #endif
