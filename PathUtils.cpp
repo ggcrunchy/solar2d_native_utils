@@ -21,6 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
+#include "ByteUtils.h"
 #include "PathUtils.h"
 
 static int FromSystem (lua_State * L, const char * name)
@@ -98,4 +99,24 @@ void LibLoader::Load (const char * name)
 #else
 	mLib = dlopen(name, RTLD_LAZY);
 #endif
+}
+
+WriteAux::WriteAux (lua_State * L, int w, int h, PathData * pd) : mFilename(NULL), mW(w), mH(h)
+{
+	if (pd) mFilename = pd->Canonicalize(L, false);
+}
+
+const char * WriteAux::GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const
+{
+	return FitData(L, reader, barg, w, size_t(mH) * size);
+}
+
+WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, PathData * pd) : WriteAux(L, w, h, pd), mReader(L, barg), mBArg(barg)
+{
+	if (!mReader.mBytes) lua_error(L);
+}
+
+const char * WriteAuxReader::GetBytes (lua_State * L, size_t w, size_t size)
+{
+	return WriteAux::GetBytes(L, mReader, w, size, mBArg);
 }

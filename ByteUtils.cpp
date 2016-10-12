@@ -23,10 +23,6 @@
 
 #include "ByteUtils.h"
 
-#ifndef PATHUTILS_NOWRITEDATA
-#include "PathUtils.h"
-#endif
-
 BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mW(0), mH(0), mBPP(0), mStride(0), mLength(0), mBlob(NULL), mData(NULL)
 {
 	if (key && lua_istable(L, arg))
@@ -259,28 +255,3 @@ void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOp
 
 	lua_setmetatable(L, -2);// ..., ud
 }
-
-
-#ifndef PATHUTILS_NOWRITEDATA
-
-WriteAux::WriteAux (lua_State * L, int w, int h, PathData * pd) : mFilename(NULL), mW(w), mH(h)
-{
-	if (pd) mFilename = pd->Canonicalize(L, false);
-}
-
-const char * WriteAux::GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const
-{
-	return FitData(L, reader, barg, w, size_t(mH) * size);
-}
-
-WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, PathData * pd) : WriteAux(L, w, h, pd), mReader(L, barg), mBArg(barg)
-{
-	if (!mReader.mBytes) lua_error(L);
-}
-
-const char * WriteAuxReader::GetBytes (lua_State * L, size_t w, size_t size)
-{
-	return WriteAux::GetBytes(L, mReader, w, size, mBArg);
-}
-
-#endif
