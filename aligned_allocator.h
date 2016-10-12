@@ -21,7 +21,7 @@
 // /STEVE CHAAGE
 #include <cstdint>
 // STEVE CHANGE
-#include STD(name) std::name
+#define STD(name) std::name
 #endif
 // /STEVE CHANGE
 #include <stdexcept>

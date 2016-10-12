@@ -38,7 +38,7 @@
 static void * Align (size_t align, size_t size, void *& ptr, size_t & space)
 {
     uintptr_t p = uintptr_t(ptr);
-    uintptr_t q = (p + align - 1) & align;
+    uintptr_t q = (p + align - 1) & ~align;
     
     space -= q - p;
     
@@ -49,11 +49,11 @@ static void * Align (size_t align, size_t size, void *& ptr, size_t & space)
     return ptr;
 }
 
-#define ALIGN(align, size, ud, n) Align(align, size, ud, n)
+#define ALIGN(to, size, ud, n) Align(to, size, ud, n)
 #else
 #include <type_traits>
 #include <memory>
-#define ALIGN(align, size, ud, n) std::align(align, size, ud, n)
+#define ALIGN(to, size, ud, n) std::align(to, size, ud, n)
 #endif
 
 
