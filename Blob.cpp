@@ -37,16 +37,16 @@
 
 static void * Align (size_t align, size_t size, void *& ptr, size_t & space)
 {
-    uintptr_t p = uintptr_t(ptr);
-    uintptr_t q = (p + align - 1) & ~align;
+	uintptr_t p = uintptr_t(ptr);
+	uintptr_t q = (p + align - 1) & ~(align - 1);
+	uintptr_t diff = q - p;
     
-    space -= q - p;
+	if (space - diff < size) return nullptr;
     
-    if (space < size) return nullptr;
+	space -= diff;
+	ptr = ((unsigned char *)ptr) + q - p;
     
-    ptr = ((unsigned char *)ptr) + q - p;
-    
-    return ptr;
+	return ptr;
 }
 
 #define ALIGN(to, size, ud, n) Align(to, size, ud, n)
