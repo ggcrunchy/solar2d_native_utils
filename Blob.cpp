@@ -336,6 +336,12 @@ static void Resize (lua_State * L, size_t align, int arg, size_t size)
 	#undef UNALIGNED
 }
 
+#ifdef __ANDROID__
+namespace ns_align = std;
+#else
+namespace ns_align = std::tr1;
+#endif
+
 void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 {
 	size_t align = 0, extra = 0;
@@ -372,7 +378,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 		#undef UNALIGNED
 	}
 
-    else if (align > std::tr1::alignment_of<double>::value)	// Lua gives back double-aligned memory
+    else if (align > ns_align::alignment_of<double>::value)	// Lua gives back double-aligned memory
 	{
 		size_t cushioned = size + align - 1;
 
