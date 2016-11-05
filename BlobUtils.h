@@ -57,7 +57,6 @@ namespace BlobXS {
 		Pimpl * mPimpl;	// Implementation details
 
 	public:
-
 		bool Bound (void) { return mPimpl->Bound(); }
 		bool Fit (int x, int y, int w, int h) { return mPimpl->Fit(x, y, w, h); }
 		bool InterpretAs (int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(w, h, bpp, stride); }
@@ -83,6 +82,10 @@ namespace BlobXS {
 
 	//
 	struct BlobPimpl {
+		// Helper functions
+		static size_t ComputeHash (unsigned long long value);
+		static size_t BadHash (void);
+
 		// Methods
 		virtual bool IsBlob (lua_State *, int, const char *) { return false; }
 		virtual bool IsLocked (lua_State *, int, void *) { return false; }
@@ -96,10 +99,10 @@ namespace BlobXS {
 
 		virtual void NewBlob (lua_State *, size_t, const CreateOpts *) {}
 
-		virtual size_t Submit (lua_State *, int) { return 0U; }
+		virtual size_t Submit (lua_State *, int, void *) { return BadHash(); }
+		virtual size_t GetHash (lua_State *, int) { return BadHash(); }
 		virtual bool Exists (size_t) { return false; }
-		virtual bool IsHash (lua_State *, int, size_t &) { return false; }
-		virtual bool Sync (lua_State *, int, size_t) { return false; }
+		virtual bool Sync (lua_State *, int, size_t, void *) { return false; }
 
 		// Lifetime
 		virtual ~BlobPimpl (void) {}
@@ -112,6 +115,7 @@ namespace BlobXS {
 	};
 
 	// Interface
+	void PushImplKey (lua_State * L);
 	Pimpls * GetImplementations (lua_State * L);
 	BlobPimpl & UsingPimpl (lua_State * L);
 
@@ -132,10 +136,10 @@ namespace BlobXS {
 
 	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }
 
-	inline size_t Submit (lua_State * L, int arg) { return UsingPimpl(L).Submit(L, arg); }
+	inline size_t Submit (lua_State * L, int arg, void * key = NULL) { return UsingPimpl(L).Submit(L, arg, key); }
+	inline size_t GetHash (lua_State * L, int arg) { return UsingPimpl(L).GetHash(L, arg); }
 	inline bool Exists (lua_State * L, size_t hash) { return UsingPimpl(L).Exists(hash); }
-	inline bool IsHash (lua_State * L, int arg, size_t & hash) { return UsingPimpl(L).IsHash(L, arg, hash); }
-	inline bool Sync (lua_State * L, int arg, size_t hash) { return UsingPimpl(L).Sync(L, arg, hash); }
+	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = NULL) { return UsingPimpl(L).Sync(L, arg, hash, key); }
 };
 
 #endif

@@ -23,6 +23,8 @@
 
 #include "BlobUtils.h"
 #include "ByteUtils.h"
+#include <functional>
+#include <limits>
 
 BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mPimpl(nullptr)
 {
@@ -77,4 +79,50 @@ int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * bt
 	}
 	
 	return 1;
+}
+
+//
+size_t BlobXS::BlobPimpl::ComputeHash (unsigned long long value)
+{
+	return std::hash<unsigned long long>{}(value);
+}
+
+//
+size_t BlobXS::BlobPimpl::BadHash (void)
+{
+	return ComputeHash(std::numeric_limits<unsigned long long>::max());
+}
+
+//
+void BlobXS::PushImplKey (lua_State * L)
+{
+	lua_pushliteral(L, "BlobXS::ImplKey");	// ..., key
+}
+
+//
+BlobXS::Pimpls * BlobXS::GetImplementations (lua_State * L)
+{
+	PushImplKey(L);	// ..., key
+
+	lua_rawget(L, LUA_REGISTRYINDEX);	// ..., pimpls?
+
+	BlobXS::Pimpls * impl = nullptr;
+
+	if (!lua_isnil(L, -1)) impl = static_cast<BlobXS::Pimpls *>(lua_touserdata(L, -1));
+
+	lua_pop(L, 1);	// ...
+
+	return impl;
+}
+
+//
+BlobXS::BlobPimpl & BlobXS::UsingPimpl (lua_State * L)
+{
+	static BlobPimpl def;
+
+	auto impl = GetImplementations(L);
+
+	if (impl) return *impl->mBlobImpl;
+
+	else return def;
 }
