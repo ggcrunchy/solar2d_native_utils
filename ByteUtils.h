@@ -29,63 +29,13 @@
 #include "aligned_allocator.h"
 #include <vector>
 
-template<size_t N, typename T = unsigned char> struct VectorType {
-	typedef std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N>> type;
-};
+#ifdef _WIN32
+	#define THREAD_LOCAL __declspec(thread)
+#else
+	#define THREAD_LOCAL __thread
+#endif
 
-namespace BlobXS {
-	//
-	class State {
-		int mW, mH, mBPP, mStride;	// Interpreted width, height, bits-per-pixel, and stride
-		size_t mLength;	// Length of blob
-		unsigned char * mBlob, * mData;	// Pointer to blob proper; pointer into its data
 
-		void Bind (lua_State * L, int arg);
-
-	public:
-		bool Bound (void) { return mBlob != NULL; }
-		bool Fit (int x, int y, int w, int h);
-		bool InterpretAs (int w, int h, int bpp, int stride = 0);
-		int GetOffset (lua_State * L, int t, const char * key);
-		operator unsigned char * (void) { return mData; }
-
-		State (lua_State * L, int arg, const char * key = NULL, bool bLeave = true);
-
-		static void Instantiate (lua_State * L, size_t size, const char * type = "xs.blob");
-		static unsigned char * PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero = true, int bpp = 1);
-		static int PushData (lua_State * L, unsigned char * out, const char * btype, int was_blob, bool bAsUserdata);
-	};
-
-	struct CreateOpts {
-		size_t mAlignment;	// Multiple of 4 detailing what sort of memory alignment to assume (with 0 meaning none)
-		bool mResizable;// If true, the userdata holds a vector that contains the blob; otherwise, it is the blob
-		const char * mType;	// User-defined blob type (if unspecified, "xs.blob")
-
-		CreateOpts (void) : mAlignment(0), mType(NULL), mResizable(false) {}
-	};
-
-	bool IsBlob (lua_State * L, int arg, const char * type = NULL);
-	bool IsLocked (lua_State * L, int arg, void * key = NULL);
-	bool Lock (lua_State * L, int arg, void * key);
-	bool Unlock (lua_State * L, int arg, void * key);
-	size_t GetAlignment (lua_State * L, int arg);
-	size_t GetSize (lua_State * L, int arg, bool bNSized = false);
-	int GetVersion (lua_State * L, int arg);
-	unsigned char * GetData (lua_State * L, int arg);
-	void * GetVector (lua_State * L, int arg);
-
-	template<size_t N> typename VectorType<N>::type * GetVectorN (lua_State * L, int arg)
-	{
-		return (typename VectorType<N>::type *)GetVector(L, arg);
-	}
-
-	void NewBlob (lua_State * L, size_t size, const CreateOpts * opts);
-
-	const int Version = 1;	// Since the blob API is available to other plugins, but not frozen, the version
-							// (incrementing from 1) is added to the properties of new blobs, allowing mixed
-							// implementations some measure of interop
-	// TODO: Investigate shared memory blobs, necessary locking mechanisms, etc.
-};
 
 const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
 float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = NULL);

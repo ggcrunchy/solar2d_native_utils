@@ -22,11 +22,11 @@
 */
 
 #include "ByteReader.h"
-#include "ByteUtils.h"
+#include "BlobUtils.h"
 #include "LuaUtils.h"
 #include "aligned_allocator.h"
 #include <vector>
-
+/*
 #ifdef __APPLE__
 #include "TargetConditionals.h"
 #endif
@@ -56,20 +56,19 @@ static void * Align (size_t align, size_t size, void *& ptr, size_t & space)
 #define ALIGN(to, size, ud, n) std::align(to, size, ud, n)
 #endif
 
-
 #define WITH_SIZE(n)	case n:					\
 							ALIGNED(n);	break
 #define WITH_VECTOR()	case 0:					\
 							UNALIGNED(); break;	\
-						WITH_SIZE(4);			\
-						WITH_SIZE(8);			\
-						WITH_SIZE(16);			\
-						WITH_SIZE(32);			\
-						WITH_SIZE(64);			\
-						WITH_SIZE(128);			\
-						WITH_SIZE(256);			\
-						WITH_SIZE(512);			\
-						WITH_SIZE(1024)
+							WITH_SIZE(4);		\
+							WITH_SIZE(8);		\
+							WITH_SIZE(16);		\
+							WITH_SIZE(32);		\
+							WITH_SIZE(64);		\
+							WITH_SIZE(128);		\
+							WITH_SIZE(256);		\
+							WITH_SIZE(512);		\
+							WITH_SIZE(1024)
 
 using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
 using ucvec = std::vector<unsigned char>;
@@ -144,6 +143,11 @@ bool BlobXS::IsLocked (lua_State * L, int arg, void * key)
 	if (!bpv.mProps) return false;
 	if (key) return bpv.mProps->mKey == key;
 	else return bpv.mProps->mKey != NULL;
+}
+
+bool BlobXS::IsResizable (lua_State * L, int arg)
+{
+	 return GetVector(L, arg) != NULL;
 }
 
 bool BlobXS::Lock (lua_State * L, int arg, void * key)
@@ -270,7 +274,7 @@ template<typename T> void * Alloc (lua_State * L)
 
 template<int A> void * AllocN (lua_State * L)
 {
-	return Alloc<typename VectorType<A>::type>(L);	// ..., ud
+	return Alloc<typename BlobXS::VectorType<A>::type>(L);	// ..., ud
 }
 
 template<typename T> void GC (lua_State * L)
@@ -404,7 +408,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					BlobPropViewer bpv(L, 1);
 					ByteReader reader(L, 2);
 
-					if (!bpv.mProps || BlobXS::IsLocked(L, 1)) return AddBytesReturn(L, 0U);// blob, bytes, 0
+					if (!bpv.mProps || IsLocked(L, 1)) return AddBytesReturn(L, 0U);// blob, bytes, 0
 
 					return Append(L, bpv, reader);	// blob, bytes, count
 				}
@@ -440,7 +444,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 					NewBlob(L, size, &copts);	// blob, false[, props, prop], mt[, key, value], new_blob
 
-					memcpy(BlobXS::GetData(L, -1), BlobXS::GetData(L, 1), size);
+					memcpy(GetData(L, -1), GetData(L, 1), size);
 
 					lua_replace(L, bpv.mTop);	// blob, new_blob[, props, prop], mt[, key, value]
 
@@ -470,8 +474,8 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 			}, {
 				"GetBytes", [](lua_State * L)
 				{
-					unsigned char * data = BlobXS::GetData(L, 1);
-					size_t count = BlobXS::GetSize(L, 1);
+					unsigned char * data = GetData(L, 1);
+					size_t count = GetSize(L, 1);
 					int i1 = luaL_optinteger(L, 2, 1);
 					int i2 = luaL_optinteger(L, 3, count);
 
@@ -516,7 +520,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					ByteReader reader(L, 3);
 
 					int pos = luaL_checkint(L, 2);
-					size_t size = BlobXS::GetSize(L, 1);
+					size_t size = GetSize(L, 1);
 
 					if (pos < 0) pos += size;
 
@@ -524,7 +528,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 					if (!reader.mBytes || reader.mCount == 0) return AddBytesReturn(L, 0U);	// blob, pos, bytes, 0
 					if (pos < 0 || size_t(pos) > size) return AddBytesReturn(L, 0U);// ditto
-					if (!bpv.mProps || BlobXS::IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
+					if (!bpv.mProps || IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
 
 					if (size_t(pos) < size)
 					{
@@ -532,8 +536,8 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 						
 						if (bpv.mProps->mResizable)
 						{
-							#define ALIGNED(n) InsertElements(BlobXS::GetVectorN<n>(L, 1), pos, reader)
-							#define UNALIGNED() InsertElements((ucvec *)BlobXS::GetVector(L, 1), pos, reader)
+							#define ALIGNED(n) InsertElements(GetVectorN<n>(L, 1), pos, reader)
+							#define UNALIGNED() InsertElements(static_cast<ucvec *>(GetVector(L, 1)), pos, reader)
 
 							switch (bpv.mProps->mAlign)
 							{
@@ -546,7 +550,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 						else
 						{
-							unsigned char * data = BlobXS::GetData(L, 1) + pos;
+							unsigned char * data = GetData(L, 1) + pos;
 							size_t available = size - size_t(pos);
 
 							count = (std::min)(count, available);
@@ -579,7 +583,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 				"Remove", [](lua_State * L)
 				{
 					BlobPropViewer bpv(L, 1);
-					size_t count = BlobXS::GetSize(L, 1);
+					size_t count = GetSize(L, 1);
 					int i1 = luaL_optinteger(L, 2, 1);
 					int i2 = luaL_optinteger(L, 3, count);
 
@@ -592,12 +596,12 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					else --i2;
 
 					if (i1 < 0 || i1 > i2 || size_t(i2) >= count) return AddBytesReturn(L, 0U);	// blob[, i1[, i2]], ""
-					if (!bpv.mProps || BlobXS::IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
+					if (!bpv.mProps || IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
 
 					if (bpv.mProps->mResizable)
 					{
 						#define ALIGNED(n) EraseElements(BlobXS::GetVectorN<n>(L, 1), i1, i2)
-						#define UNALIGNED() EraseElements((ucvec *)BlobXS::GetVector(L, 1), i1, i2)
+						#define UNALIGNED() EraseElements(static_cast<ucvec *>(GetVector(L, 1)), i1, i2)
 
 						switch (bpv.mProps->mAlign)
 						{
@@ -610,12 +614,39 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 					else
 					{
-						unsigned char * data = BlobXS::GetData(L, 1);
+						unsigned char * data = GetData(L, 1);
 
 						memmove(data + i1, data + i2 + 1, count - size_t(i2) - 1);
 					}
 
 					return AddBytesReturn(L, size_t(i2 - i1) + 1);	// blob[, i1[, i2]], count
+				}
+			}, {
+				"Submit", [](lua_State * L)
+				{
+					BlobPropViewer bpv(L, 1);
+
+					if (IsStoragePrepared() && bpv.mProps && !(bpv.mProps->mResizable && IsLocked(L, 1)))
+					{
+						size_t hash = Submit(L, 1);
+
+						lua_pushlstring(L, reinterpret_cast<const char *>(&hash), sizeof(hash));// blob, hash
+					}
+
+					else lua_pushnil(L);// blob, nil
+
+					return 1;
+				}
+			}, {
+				"Sync", [](lua_State * L)
+				{
+					size_t hash;
+
+					bool bSynced = IsStoragePrepared() && !IsLocked(L, 1) && IsHash(L, 2, hash) && Sync(L, 1, hash);
+
+					lua_pushboolean(L, bSynced ? 1 : 0);// blob, synced
+
+					return 1;
 				}
 			}, {
 				"Write", [](lua_State * L)
@@ -624,7 +655,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 					ByteReader reader(L, 3);
 
 					int pos = luaL_checkint(L, 2);
-					size_t size = BlobXS::GetSize(L, 1);
+					size_t size = GetSize(L, 1);
 
 					if (pos < 0) pos += size;
 
@@ -632,7 +663,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 					if (!reader.mBytes || reader.mCount == 0) return AddBytesReturn(L, 0U);	// blob, pos, bytes, 0
 					if (pos < 0 || size_t(pos) > size) return AddBytesReturn(L, 0U);// ditto
-					if (!bpv.mProps || BlobXS::IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
+					if (!bpv.mProps || IsLocked(L, 1)) return AddBytesReturn(L, 0U);// ditto
 					
 					if (size_t(pos) < size)
 					{
@@ -642,7 +673,7 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 
 						else if (count + pos > size) Resize(L, bpv.mProps->mAlign, 1, count + pos);
 
-						unsigned char * data = BlobXS::GetData(L, 1) + pos; // do here in case resize changes address
+						unsigned char * data = GetData(L, 1) + pos; // do here in case resize changes address
 
 						memcpy(data, reader.mBytes, count);
 
@@ -703,6 +734,245 @@ void BlobXS::NewBlob (lua_State * L, size_t size, const CreateOpts * opts)
 	if (bCanResize && size > 0U) Resize(L, align, -1, size);
 }
 
+// Blob storage API
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <map>
+#include <mutex>
+
+namespace BlobXS {
+	// Vector with reference count, to allow periodic cleaning
+	template<typename T> struct RefCountedVector {
+		T mV;	// Vector
+		int mRefCount;	// Frames to persist
+
+		RefCountedVector (void) : mV(), mRefCount(5) {}
+	};
+
+	// Referenced counted hash map of vectors
+	template<int N> struct HashMap { typedef std::map<size_t, RefCountedVector<typename VectorType<N>::type>> type; };
+	template<> struct HashMap<0> { typedef std::map<size_t, RefCountedVector<ucvec>> type; };
+};
+
+static void * GetVectorStore (size_t align)
+{
+	void * store = NULL;
+
+	#define ALIGNED(n) { static BlobXS::HashMap<n>::type BlobStore_##n; store = &BlobStore_##n; }
+	#define UNALIGNED() { static BlobXS::HashMap<0>::type BlobStore_u; store = &BlobStore_u; }
+
+	switch (align)
+	{
+		WITH_VECTOR();
+	}
+
+	#undef ALIGNED
+	#undef UNALIGNED
+
+	return store;
+}
+
+static std::mutex sMutex;
+static int sCounter;
+
+#define ALIGNMENTS_LOOP() for (size_t align = 0, next = 4U; align <= 1024U; align = next, next *= 4U)
+#define WITH_MUTEX() std::lock_guard<std::mutex> lock(sMutex)
+
+void BlobXS::CleanStorage (std::vector<size_t> & removed)
+{
+	ALIGNMENTS_LOOP()
+	{
+		WITH_MUTEX();
+
+		#define UPDATE_OR_PURGE(n)	{ auto map = *static_cast<HashMap<n>::type *>(GetVectorStore(n));	\
+									for (auto iter = map.begin(); iter != map.end(); ) {				\
+										if (--(iter->second.mRefCount) == 0) {							\
+											removed.push_back(iter->first); iter = map.erase(iter);		\
+										} else ++iter; } }
+		#define ALIGNED(n) UPDATE_OR_PURGE(n)
+		#define UNALIGNED()	UPDATE_OR_PURGE(0)
+
+		switch (align)
+		{
+			WITH_VECTOR();
+		}
+
+		#undef UPDATE_OR_PURGE
+		#undef ALIGNED
+		#undef UNALIGNED
+	}
+}
+
+//
+static std::atomic_bool sBlobStoragePrepared;
+
+void BlobXS::PrepareStorage (void)
+{
+	sBlobStoragePrepared = true;
+}
+
+size_t BlobXS::Submit (lua_State * L, int arg)
+{
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps) return NULL;
+
+	void * store = GetVectorStore(bpv.mProps->mAlign);
+	size_t hash = std::hash<int>{}(sCounter);
+
+	WITH_MUTEX();
+
+	++sCounter;
+
+	#define ALIGNED(n)	{ auto map = *static_cast<HashMap<n>::type *>(store);					\
+						map[hash] = RefCountedVector<typename VectorType<n>::type>();			\
+						if (bpv.mProps->mResizable) GetVectorN<n>(L, arg)->swap(map[hash].mV);	\
+						else { unsigned char * data = GetData(L, arg);							\
+							map[hash].mV.assign(data, data + GetSize(L, arg)); } }
+	#define UNALIGNED()	{ auto map = *static_cast<HashMap<0>::type *>(store);									\
+						map[hash] = RefCountedVector<ucvec>();													\
+						if (bpv.mProps->mResizable) static_cast<ucvec *>(GetVector(L, arg))->swap(map[hash].mV);\
+						else { unsigned char * data = GetData(L, arg);											\
+							map[hash].mV.assign(data, data + GetSize(L, arg)); } }
+
+	switch (bpv.mProps->mAlign)
+	{
+		WITH_VECTOR();
+	}
+
+	#undef ALIGNED
+	#undef UNALIGNED
+
+	return hash;
+}
+
+bool BlobXS::Exists (size_t hash)
+{
+	if (!IsStoragePrepared()) return false;
+
+	WITH_MUTEX();
+
+	#define ALIGNED(n)	{ auto map = static_cast<HashMap<n>::type *>(GetVectorStore(n));\
+						if (map->find(hash) != map->end()) return true; }
+	#define UNALIGNED()	ALIGNED(0)
+
+	ALIGNMENTS_LOOP()
+	{
+		switch (align)
+		{
+			WITH_VECTOR();
+		}
+	}
+
+	#undef ALIGNED
+	#undef UNALIGNED
+
+	return false;
+}
+
+bool BlobXS::IsHash (lua_State * L, int arg, size_t & hash)
+{
+	bool bIsHash = lua_type(L, arg) == LUA_TSTRING && lua_objlen(L, arg) == sizeof(size_t);
+
+	if (bIsHash) memcpy(&hash, lua_tostring(L, 1), sizeof(size_t));
+
+	return bIsHash;
+}
+
+bool BlobXS::IsStoragePrepared (void)
+{
+	return sBlobStoragePrepared;
+}
+
+static bool FastSwap (lua_State * L, int arg, size_t align, size_t hash)
+{
+	void * store = GetVectorStore(align);
+	
+	#define ALIGNED(n)	{ auto map = static_cast<BlobXS::HashMap<n>::type *>(store);			\
+						auto iter = map->find(hash);											\
+						if (iter == map->end()) return false;									\
+						BlobXS::GetVectorN<n>(L, arg)->swap(iter->second.mV);					\
+						map->erase(iter); }
+	#define UNALIGNED()	{ auto map = static_cast<BlobXS::HashMap<0>::type *>(store);			\
+						auto iter = map->find(hash);											\
+						if (iter == map->end()) return false;									\
+						static_cast<ucvec *>(BlobXS::GetVector(L, arg))->swap(iter->second.mV);	\
+						map->erase(iter); }
+
+	switch (align)
+	{
+		WITH_VECTOR();
+	}
+
+	#undef ALIGNED
+	#undef UNALIGNED
+
+	return true;
+}
+
+bool BlobXS::Sync (lua_State * L, int arg, size_t hash)
+{
+	BlobPropViewer bpv(L, arg);
+
+	if (!bpv.mProps) return false;
+
+	WITH_MUTEX();
+
+	if (bpv.mProps->mResizable && FastSwap(L, arg, bpv.mProps->mAlign, hash)) return true;
+
+	else
+	{
+		#define ALIGNED(n)	{ auto map = static_cast<HashMap<n>::type *>(GetVectorStore(n));\
+							auto iter = map->find(hash);									\
+							if (iter != map->end()) {										\
+								from = iter->second.mV.data();								\
+								size = iter->second.mV.size();								\
+								break; } }
+		#define UNALIGNED() ALIGNED(0)
+
+		unsigned char * from = NULL;
+		size_t size;
+
+		ALIGNMENTS_LOOP()
+		{
+			switch (align)
+			{
+				WITH_VECTOR();
+			}
+		}
+
+		#undef ALIGNED
+		#undef UNALIGNED
+
+		if (from)
+		{
+			if (bpv.mProps->mResizable)
+			{
+				#define ALIGNED(n)	GetVectorN<n>(L, arg)->assign(from, from + size)
+				#define UNALIGNED() static_cast<ucvec *>(GetVector(L, arg))->assign(from, from + size)
+
+				switch (bpv.mProps->mAlign)
+				{
+					WITH_VECTOR();
+				}
+
+				#undef ALIGNED
+				#undef UNALIGNED
+			}
+
+			else memcpy(GetData(L, arg), from, (std::min)(GetSize(L, arg), size));
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 #undef ALIGN
 #undef WITH_SIZE
 #undef WITH_VECTOR
+#undef ALIGNMENTS_LOOP
+#undef WITH_MUTEX
+*/
