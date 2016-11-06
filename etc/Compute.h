@@ -21,8 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef COMPUTE_UTILS_H
-#define COMPUTE_UTILS_H
+#pragma once
 
 #include "CoronaLua.h"
 #include <vector>

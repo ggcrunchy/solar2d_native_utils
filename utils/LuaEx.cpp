@@ -21,7 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "LuaUtils.h"
+#include "utils/LuaEx.h"
 
 bool IsMainState (lua_State * L)
 {

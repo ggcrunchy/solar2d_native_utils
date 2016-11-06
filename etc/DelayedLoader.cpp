@@ -1,5 +1,5 @@
 #include "CoronaLua.h"
-#include "PathUtils.h"
+#include "utils/Path.h"
 
 #ifdef _WIN32
 	#include <Windows.h>

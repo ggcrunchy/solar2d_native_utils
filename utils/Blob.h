@@ -21,8 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef BLOB_UTILS_H
-#define BLOB_UTILS_H
+#pragma once
 
 #include "CoronaLua.h"
 #include "aligned_allocator.h"
@@ -111,8 +110,9 @@ namespace BlobXS {
 	// Blob implementations, once blob plugin is loaded in thread
 	struct Pimpls {
 		BlobPimpl * mBlobImpl;	// Blob implementation
+		void (*mInstantiate)(lua_State *, size_t, const char *);// Factory for blobs
 		State::Pimpl * (*mMake)(void);	// Factory for state implementation
-	};
+	};	
 
 	// Interface
 	void PushImplKey (lua_State * L);
@@ -141,5 +141,3 @@ namespace BlobXS {
 	inline bool Exists (lua_State * L, size_t hash) { return UsingPimpl(L).Exists(hash); }
 	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = NULL) { return UsingPimpl(L).Sync(L, arg, hash, key); }
 };
-
-#endif

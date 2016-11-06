@@ -21,8 +21,8 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "ByteUtils.h"
-#include "PathUtils.h"
+#include "utils/Byte.h"
+#include "utils/Path.h"
 
 static int FromSystem (lua_State * L, const char * name)
 {

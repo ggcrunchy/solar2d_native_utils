@@ -21,9 +21,9 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "ComputeUtils.h"
-#include "LuaUtils.h"
-#include "PathUtils.h"
+#include "utils/Compute.h"
+#include "utils/Lua.h"
+#include "utils/Path.h"
 #include <pthread.h>
 
 //

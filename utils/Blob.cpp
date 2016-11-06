@@ -21,8 +21,8 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "BlobUtils.h"
-#include "ByteUtils.h"
+#include "utils/Blob.h"
+#include "utils/Byte.h"
 #include <functional>
 #include <limits>
 
@@ -35,11 +35,9 @@ BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : m
 
 void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
 {
-	void * ud = lua_newuserdata(L, size);	// ..., ud
+	auto impl = GetImplementations(L);
 
-	memset(ud, 0, size);
-
-	AddBytesMetatable(L, name);
+	if (impl) impl->mInstantiate(L, size, name);
 }
 
 unsigned char * BlobXS::State::PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero, int bpp)
@@ -62,7 +60,7 @@ unsigned char * BlobXS::State::PointToData (lua_State * L, int opts, int w, int 
 		lua_pop(L, 1); // ...
 	}
 
-	unsigned char * out = (unsigned char *)lua_newuserdata(L, size);// ..., ud
+	unsigned char * out = static_cast<unsigned char *>(lua_newuserdata(L, size));	// ..., ud
 
 	if (bZero) memset(out, 0, size);
 

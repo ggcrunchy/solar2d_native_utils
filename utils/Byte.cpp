@@ -21,7 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "ByteUtils.h"
+#include "utils/Byte.h"
 
 const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size)
 {

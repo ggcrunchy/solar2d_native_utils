@@ -21,8 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef LUA_UTILS_H
-#define LUA_UTILS_H
+#pragma once
 
 #include "CoronaLua.h"
 
@@ -81,5 +80,3 @@ template<typename T> void AttachTypedLen (lua_State * L)
 
 	luaL_register(L, NULL, len_methods);
 }
-
-#endif

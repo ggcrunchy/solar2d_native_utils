@@ -21,8 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef PATH_UTILS_H
-#define PATH_UTILS_H
+#pragma once
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
@@ -136,5 +135,3 @@ template<typename T> struct WriteData {
 
 	operator T * (void) { return (T *)mData; }
 };
-
-#endif

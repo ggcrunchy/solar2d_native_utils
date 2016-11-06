@@ -21,43 +21,6 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef BYTE_UTILS_H
-#define BYTE_UTILS_H
+#pragma once
 
-#include "CoronaLua.h"
-#include "ByteReader.h"
-#include "aligned_allocator.h"
-#include <vector>
-
-#ifdef _WIN32
-	#define THREAD_LOCAL __declspec(thread)
-#else
-	#define THREAD_LOCAL __thread
-#endif
-
-
-
-const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
-float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = NULL);
-
-struct BytesMetatableOpts {
-	const char * mMetatableName;
-	void (*mMore)(lua_State * L);
-
-	BytesMetatableOpts (void) : mMetatableName(NULL), mMore(NULL) {}
-};
-
-void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts = NULL);
-
-template<typename T = unsigned char> size_t GetSizeWithStride (lua_State * L, int w, int h, int stride, int nchannels = 1)
-{
-	int wlen = w * nchannels * sizeof(T);
-
-	if (!stride) stride = wlen;
-
-	else if (stride < wlen) luaL_error(L, "Stride too short: %i vs. w * nchannels * size = %i\n", stride, wlen);
-
-	return size_t(stride * h);
-}
-
-#endif
+bool CanUseNeon (void);

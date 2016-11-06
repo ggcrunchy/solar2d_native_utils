@@ -21,9 +21,8 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#ifndef PTHREAD_UTILS_H
-#define PTHREAD_UTILS_H
-
+#pragma once
+#if 0
 #include "CoronaLua.h"
 #include <stdlib.h>
 
@@ -108,10 +107,7 @@ void * ReallocTLS (MemoryTLS * tls, void * ptr, size_t size);
 void FreeTLS (MemoryTLS * tls, void * ptr);
 size_t GetSizeTLS (MemoryTLS * tls, void * ptr);
 bool EmitTLS (MemoryTLS * tls, void * ptr, bool bRemove = true);
-
-#ifndef PTHREADUTILS_NOPUSH
 void PushTLS (MemoryTLS * tls, void * ptr, const char * type, bool bAsUserdata, bool bRemove = true);
-#endif
 
 template<typename T, T * (*GET)(void)> struct MemoryFuncsTLS {
 	typedef MemoryFuncsTLS<T, GET> FuncsType;
@@ -123,14 +119,11 @@ template<typename T, T * (*GET)(void)> struct MemoryFuncsTLS {
 	static void Free (void * ptr) { FreeTLS(GET(), ptr); }
 	static size_t GetSize (void * ptr) { return GetSizeTLS(GET(), ptr); }
 	static bool Emit (void * ptr) { return EmitTLS(GET(), ptr); }
-
-#ifndef PTHREADUTILS_NOPUSH
 	static void Push (void * ptr, const char * type, bool as_userdata) { PushTLS(GET(), ptr, type, as_userdata); }
-#endif
 };
-
-#ifndef PTHREADUTILS_NONEON
-bool CanUseNeon (void);
 #endif
-
+#ifdef _WIN32
+	#define DECL_TLS __declspec(thread)
+#else
+	#define DECL_TLS __thread
 #endif

@@ -18,7 +18,7 @@
 #include <stdint.h>
 #define STD(name) name
 #else
-// /STEVE CHAAGE
+// /STEVE CHANGE
 #include <cstdint>
 // STEVE CHANGE
 #define STD(name) std::name
