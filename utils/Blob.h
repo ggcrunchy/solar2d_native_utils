@@ -36,6 +36,10 @@ namespace BlobXS {
 	using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
 	using ucvec = std::vector<unsigned char>;
 
+	template<> struct VectorType<0U, unsigned char> {
+		typedef ucvec type;
+	};
+
 	//
 	class State {
 	public:
