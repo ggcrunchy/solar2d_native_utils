@@ -24,7 +24,6 @@
 #include "utils/Thread.h"
 
 #if TARGET_OS_IOS
-	#include <functional>
 	#include <vector>
 	#include <pthread.h>
 
