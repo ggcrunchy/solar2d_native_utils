@@ -227,3 +227,90 @@ void NewWeakKeyedTable (lua_State * L)
 	lua_setfield(L, -2, "__mode");	// ..., t, mt = { __mode = "k" }
 	lua_setmetatable(L, -2);// ..., t
 }
+
+LuaOptions::LuaOptions (lua_State * L, int arg) : mL(L), mArg(0)
+{
+	if (lua_istable(L, arg)) mArg = CoronaLuaNormalize(L, arg);
+}
+
+LuaOptions & LuaOptions::Add (const char * name, int & opt)
+{
+	return Add(name, opt, opt);
+}
+
+LuaOptions & LuaOptions::Add (const char * name, float & opt)
+{
+	return Add(name, opt, opt);
+}
+
+LuaOptions & LuaOptions::Add (const char * name, double & opt)
+{
+	return Add(name, opt, opt);
+}
+
+LuaOptions & LuaOptions::Add (const char * name, bool & opt)
+{
+	if (mArg)
+	{
+		lua_getfield(mL, mArg, name);	// ..., bool
+
+		opt = lua_toboolean(mL, -1) != 0;
+
+		lua_pop(mL, 1);	// ...
+	}
+
+	return *this;
+}
+
+LuaOptions & LuaOptions::Add (const char * name, size_t & opt)
+{
+	return Add(name, opt, opt);
+}
+
+#define GETFIELD(name, getter)	{ lua_getfield(mL, mArg, name);	\
+								opt = getter(mL, -1, def);		\
+								lua_pop(mL, 1); }
+
+LuaOptions & LuaOptions::Add (const char * name, int & opt, int def)
+{
+	if (mArg) GETFIELD(name, luaL_optint)
+
+	return *this;
+}
+
+LuaOptions & LuaOptions::Add (const char * name, float & opt, float def)
+{
+	if (mArg) GETFIELD(name, (float)luaL_optnumber)
+
+	return *this;
+}
+
+LuaOptions & LuaOptions::Add (const char * name, double & opt, double def)
+{
+	if (mArg) GETFIELD(name, luaL_optnumber)
+
+	return *this;
+}
+
+LuaOptions & LuaOptions::Add (const char * name, bool & opt, bool def)
+{
+	if (mArg)
+	{
+		lua_getfield(mL, mArg, name);	// ..., bool
+
+		opt = !lua_isnil(mL, -1) ? lua_toboolean(mL, -1) != 0 : def;
+
+		lua_pop(mL, 1);	// ...
+	}
+
+	return *this;
+}
+
+LuaOptions & LuaOptions::Add (const char * name, size_t & opt, size_t def)
+{
+	if (mArg) GETFIELD(name, luaL_optinteger)
+
+	return *this;
+}
+
+#undef GETFIELD

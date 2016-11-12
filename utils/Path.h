@@ -25,6 +25,7 @@
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
+#include "utils/LuaEx.h"
 
 struct PathData {
 	int mDocumentsDir;	// Reference to documents directory
@@ -111,19 +112,11 @@ template<typename T> struct WriteData {
 		mFilename = waux.mFilename;
 		mComp = luaL_checkint(L, 4);
 
-		if (lua_istable(L, 6))
-		{
-			lua_getfield(L, 6, "stride");	// ..., stride
-			lua_getfield(L, 6, "as_userdata");	// ..., stride, as_userdata
+		LuaOptions opts(L, 6);
+			
+		opts.Add("as_userdata", mAsUserdata);
 
-			if (bHasStride) mStride = luaL_optint(L, -2, 0);
-
-			mAsUserdata = lua_toboolean(L, -1) != 0;
-
-			lua_pop(L, 2);	// ...
-		}
-
-		else if (bHasStride) mStride = luaL_optint(L, 6, 0);
+		if (!bHasStride) opts.Add("stride", mStride);
 
 		//
 		size_t w = mW * mComp;

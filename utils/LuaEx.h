@@ -80,3 +80,21 @@ template<typename T> void AttachTypedLen (lua_State * L)
 
 	luaL_register(L, NULL, len_methods);
 }
+
+struct LuaOptions {
+	lua_State * mL;	// Current state
+	int mArg;	// Stack position
+
+	LuaOptions (lua_State * L, int arg);
+
+	LuaOptions & Add (const char * name, int & opt);
+	LuaOptions & Add (const char * name, float & opt);
+	LuaOptions & Add (const char * name, double & opt);
+	LuaOptions & Add (const char * name, bool & opt);
+	LuaOptions & Add (const char * name, size_t & opt);
+	LuaOptions & Add (const char * name, int & opt, int def);
+	LuaOptions & Add (const char * name, float & opt, float def);
+	LuaOptions & Add (const char * name, double & opt, double def);
+	LuaOptions & Add (const char * name, bool & opt, bool def);
+	LuaOptions & Add (const char * name, size_t & opt, size_t def);
+};
