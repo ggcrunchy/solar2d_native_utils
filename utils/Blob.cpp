@@ -31,6 +31,8 @@ BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : m
 	auto impl = GetImplementations(L);
 
 	mPimpl = impl ? impl->mMake() : new BlobXS::State::Pimpl();
+
+	mPimpl->Initialize(L, arg, key, bLeave);
 }
 
 void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
@@ -40,25 +42,21 @@ void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
 	if (impl) impl->mInstantiate(L, size, name);
 }
 
-unsigned char * BlobXS::State::PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero, int bpp)
+unsigned char * BlobXS::State::PointToData (lua_State * L, int x, int y, int w, int h, int stride, bool bZero, int bpp)
 {
-	size_t size = GetSizeWithStride(L, w, h, stride, bpp);
-
-	State blob(L, opts, "blob");// ...[, blob]
-
-    was_blob = blob.Bound() ? 1 : 0;
-    
-	if (was_blob)
+	if (Bound())
 	{
-		if (blob.InterpretAs(w, h, bpp, stride))
+		if (InterpretAs(L, w, h, bpp, stride) && Fit(L, x, y, w, h))
 		{
-			int x = blob.GetOffset(L, opts, "xoff"), y = blob.GetOffset(L, opts, "yoff");
+			if (bZero) Zero();
 
-			if (blob.Fit(x, y, w, h)) return blob;
+			return *this;
 		}
 
 		lua_pop(L, 1); // ...
 	}
+
+	size_t size = GetSizeWithStride(L, w, h, stride, bpp);
 
 	unsigned char * out = static_cast<unsigned char *>(lua_newuserdata(L, size));	// ..., ud
 
@@ -67,9 +65,11 @@ unsigned char * BlobXS::State::PointToData (lua_State * L, int opts, int w, int 
 	return out;
 }
 
-int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * btype, int was_blob, bool bAsUserdata)
+int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata)
 {
-	if (!was_blob)
+	if (Bound()) Copy(out);
+
+	else
 	{
 		if (bAsUserdata) AddBytesMetatable(L, btype);
 

@@ -46,9 +46,10 @@ namespace BlobXS {
 		struct Pimpl {
 			// Methods
 			virtual bool Bound (void) { return false; }
-			virtual bool Fit (int, int, int, int) { return false; }
-			virtual bool InterpretAs (int, int, int, int) { return false; }
-			virtual int GetOffset (lua_State *, int, const char *) { return 0; }
+			virtual bool Fit (lua_State *, int, int, int, int) { return false; }
+			virtual bool InterpretAs (lua_State *, int, int, int, int) { return false; }
+			virtual void Copy (void * ptr) {}
+			virtual void Zero (void) {}
 			virtual operator unsigned char * (void) { return nullptr; }
 
 			// Lifetime
@@ -61,17 +62,19 @@ namespace BlobXS {
 
 	public:
 		bool Bound (void) { return mPimpl->Bound(); }
-		bool Fit (int x, int y, int w, int h) { return mPimpl->Fit(x, y, w, h); }
-		bool InterpretAs (int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(w, h, bpp, stride); }
-		int GetOffset (lua_State * L, int t, const char * key) { return mPimpl->GetOffset(L, t, key); }
+		bool Fit (lua_State * L, int x, int y, int w, int h) { return mPimpl->Fit(L, x, y, w, h); }
+		bool InterpretAs (lua_State * L, int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(L, w, h, bpp, stride); }
+		void Copy (void * ptr) { mPimpl->Copy(ptr); }
+		void Zero (void) { mPimpl->Zero(); }
 		operator unsigned char * (void) { return mPimpl->operator unsigned char *(); }
 
-		State (lua_State * L, int arg, const char * key = NULL, bool bLeave = true);
+		State (lua_State * L, int arg, const char * key = nullptr, bool bLeave = true);
 		~State (void) { delete mPimpl; }
 
 		static void Instantiate (lua_State * L, size_t size, const char * type = "xs.blob");
-		static unsigned char * PointToData (lua_State * L, int opts, int w, int h, int stride, int & was_blob, bool bZero = true, int bpp = 1);
-		static int PushData (lua_State * L, unsigned char * out, const char * btype, int was_blob, bool bAsUserdata);
+
+		unsigned char * PointToData (lua_State * L, int x, int y, int w, int h, int stride, bool bZero = true, int bpp = 1);
+		int PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata);
 	};
 
 	//
@@ -95,6 +98,7 @@ namespace BlobXS {
 		virtual bool IsResizable (lua_State *, int) { return false; }
 		virtual bool Lock (lua_State *, int, void *) { return false; }
 		virtual bool Unlock (lua_State *, int, void *) { return false; }
+		virtual bool Resize (lua_State *, int, size_t, void *) { return false; }
 		virtual size_t GetAlignment (lua_State *, int) { return 0U; }
 		virtual size_t GetSize (lua_State *, int, bool) { return 0U; }
 		virtual unsigned char * GetData (lua_State *, int) { return nullptr; }
@@ -123,11 +127,12 @@ namespace BlobXS {
 	Pimpls * GetImplementations (lua_State * L);
 	BlobPimpl & UsingPimpl (lua_State * L);
 
-	inline bool IsBlob (lua_State * L, int arg, const char * type = NULL) { return UsingPimpl(L).IsBlob(L, arg, type); }
-	inline bool IsLocked (lua_State * L, int arg, void * key = NULL) { return UsingPimpl(L).IsLocked(L, arg, key); }
+	inline bool IsBlob (lua_State * L, int arg, const char * type = nullptr) { return UsingPimpl(L).IsBlob(L, arg, type); }
+	inline bool IsLocked (lua_State * L, int arg, void * key = nullptr) { return UsingPimpl(L).IsLocked(L, arg, key); }
 	inline bool IsResizable (lua_State * L, int arg) { return UsingPimpl(L).IsResizable(L, arg); }
 	inline bool Lock (lua_State * L, int arg, void * key) { return UsingPimpl(L).Lock(L, arg, key); }
 	inline bool Unlock (lua_State * L, int arg, void * key) { return UsingPimpl(L).Unlock(L, arg, key); }
+	inline bool Resize (lua_State * L, int arg, size_t size, void * key = nullptr) { return UsingPimpl(L).Resize(L, arg, size, key); }
 	inline size_t GetAlignment (lua_State * L, int arg) { return UsingPimpl(L).GetAlignment(L, arg); }
 	inline size_t GetSize (lua_State * L, int arg, bool bNSized = false) { return UsingPimpl(L).GetSize(L, arg, bNSized); }
 	inline unsigned char * GetData (lua_State * L, int arg) { return UsingPimpl(L).GetData(L, arg); }
@@ -140,8 +145,8 @@ namespace BlobXS {
 
 	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }
 
-	inline size_t Submit (lua_State * L, int arg, void * key = NULL) { return UsingPimpl(L).Submit(L, arg, key); }
+	inline size_t Submit (lua_State * L, int arg, void * key = nullptr) { return UsingPimpl(L).Submit(L, arg, key); }
 	inline size_t GetHash (lua_State * L, int arg) { return UsingPimpl(L).GetHash(L, arg); }
 	inline bool Exists (lua_State * L, size_t hash) { return UsingPimpl(L).Exists(hash); }
-	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = NULL) { return UsingPimpl(L).Sync(L, arg, hash, key); }
+	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = nullptr) { return UsingPimpl(L).Sync(L, arg, hash, key); }
 };

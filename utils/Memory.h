@@ -24,7 +24,6 @@
 #pragma once
 
 #include "CoronaLua.h"
-#include <stdlib.h> // ??? for size_t?
 
 //
 namespace MemoryXS {
