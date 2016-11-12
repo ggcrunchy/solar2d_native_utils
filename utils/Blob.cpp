@@ -42,6 +42,13 @@ void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
 	if (impl) impl->mInstantiate(L, size, name);
 }
 
+unsigned char * BlobXS::State::PointToDataIfBound (lua_State * L, int x, int y, int w, int h, int stride, int bpp)
+{
+	if (Bound() && InterpretAs(L, w, h, bpp, stride) && Fit(L, x, y, w, h)) return *this;
+
+	else return nullptr;
+}
+
 unsigned char * BlobXS::State::PointToData (lua_State * L, int x, int y, int w, int h, int stride, bool bZero, int bpp)
 {
 	if (Bound())
@@ -67,7 +74,7 @@ unsigned char * BlobXS::State::PointToData (lua_State * L, int x, int y, int w, 
 
 int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata)
 {
-	if (Bound()) Copy(out);
+	if (Bound()) CopyTo(out);
 
 	else
 	{

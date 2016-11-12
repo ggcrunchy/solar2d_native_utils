@@ -48,7 +48,8 @@ namespace BlobXS {
 			virtual bool Bound (void) { return false; }
 			virtual bool Fit (lua_State *, int, int, int, int) { return false; }
 			virtual bool InterpretAs (lua_State *, int, int, int, int) { return false; }
-			virtual void Copy (void * ptr) {}
+			virtual void CopyTo (void * ptr) {}
+			virtual void LoadFrom (void * ptr) {}
 			virtual void Zero (void) {}
 			virtual operator unsigned char * (void) { return nullptr; }
 
@@ -64,7 +65,8 @@ namespace BlobXS {
 		bool Bound (void) { return mPimpl->Bound(); }
 		bool Fit (lua_State * L, int x, int y, int w, int h) { return mPimpl->Fit(L, x, y, w, h); }
 		bool InterpretAs (lua_State * L, int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(L, w, h, bpp, stride); }
-		void Copy (void * ptr) { mPimpl->Copy(ptr); }
+		void CopyTo (void * ptr) { mPimpl->CopyTo(ptr); }
+		void LoadFrom (void * ptr) { mPimpl->LoadFrom(ptr); }
 		void Zero (void) { mPimpl->Zero(); }
 		operator unsigned char * (void) { return mPimpl->operator unsigned char *(); }
 
@@ -73,6 +75,7 @@ namespace BlobXS {
 
 		static void Instantiate (lua_State * L, size_t size, const char * type = "xs.blob");
 
+		unsigned char * PointToDataIfBound (lua_State * L, int x, int y, int w, int h, int stride, int bpp = 1);
 		unsigned char * PointToData (lua_State * L, int x, int y, int w, int h, int stride, bool bZero = true, int bpp = 1);
 		int PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata);
 	};
