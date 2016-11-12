@@ -23,101 +23,94 @@
 
 #pragma once
 
-#ifdef _WIN32
-	#define DECL_TLS(type) __declspec(thread) type
-#else
-	#ifdef __APPLE__
-		#include "TargetCondtionals.h"
-	#endif
+#include <type_traits>
 
-	#if TARGET_OS_IOS
-		#include <type_traits>
+namespace TLSXS {
+	union POD {
+		void * mP;
+		double mD;
+	};
 
-		namespace TLSXS {
-			union POD {
-				void * mP;
-				double mD;
-			};
+	template<typename T> struct Value {
+		POD mData;
 
-			template<typename T> struct Value {
-				POD mData;
+		T Get (void)
+		{
+			T value;
 
-				T Get (void)
-				{
-					T value;
+			memcpy(&value, &mData, sizeof(T));
 
-					memcpy(&value, &mData, sizeof(T));
-
-					return value;
-				}
-
-				void Set (const T & value)
-				{
-					memcpy(&mData, &value, sizeof(T));
-				}
-
-				Value (void) {}
-
-				Value (const T & value)
-				{
-					Set(value);
-				}
-			};
-
-			size_t GetSlot (void);
-			void GetItemInSlot (size_t slot, POD & pod);
-			void SetItemInSlot (size_t slot, const POD & pod);
-
-			template<typename T> class TypeWithTLS {
-				size_t mSlot;
-
-			public:
-				TypeWithTLS (void)
-				{
-					mSlot = GetSlot();
-				}
-
-				TypeWithTLS (const T & value)
-				{
-					mSlot = GetSlot();
-
-					SetItemInSlot(mSlot, Value<T>(value).mData);
-				}
-
-				TypeWithTLS<T> & operator = (const T & value)
-				{
-					SetItemInSlot(mSlot, Value<T>(value).mData);
-
-					return *this;
-				}
-
-				operator T ()
-				{
-					Value<T> value;
-
-					GetItemInSlot(mSlot, value.mData);
-
-					return value.Get();
-				}
-
-				T operator -> () // workaround while testing on MSVC
-				{
-					if (std::is_pointer<T>::value)
-					{
-						Value<T> value;
-
-						GetItemInSlot(mSlot, value.mData);
-
-						return value.Get();
-					}
-
-					else return nullptr;
-				}
-			};
+			return value;
 		}
 
-		#define DECL_TLS(type) static TLSXS::TypeWithTLS<type>
-	#else
-		#define DECL_TLS(type) __thread type
-	#endif
+		void Set (const T & value)
+		{
+			memcpy(&mData, &value, sizeof(T));
+		}
+
+		Value (void) {}
+
+		Value (const T & value)
+		{
+			Set(value);
+		}
+	};
+
+	size_t GetSlot (void);
+	void GetItemInSlot (size_t slot, POD & pod);
+	void SetItemInSlot (size_t slot, const POD & pod);
+	void Sync (void);
+
+	template<typename T> class TLS {
+		size_t mSlot;
+
+	public:
+		TLS (void)
+		{
+			mSlot = GetSlot();
+		}
+
+		TLS (const T & value)
+		{
+			mSlot = GetSlot();
+
+			SetItemInSlot(mSlot, Value<T>(value).mData);
+		}
+
+		TLS & operator = (const T & value)
+		{
+			SetItemInSlot(mSlot, Value<T>(value).mData);
+
+			return *this;
+		}
+
+		operator T ()
+		{
+			Value<T> value;
+
+			GetItemInSlot(mSlot, value.mData);
+
+			return value.Get();
+		}
+
+#ifndef _WIN32 // workaround for lack of SFINAE on MSVC
+		#error "Add some std::enable_if() construct here!"
 #endif
+		T operator -> ()
+		{
+#ifdef _WIN32
+			if (std::is_pointer<T>::value)
+#endif
+			{
+				Value<T> value;
+
+				GetItemInSlot(mSlot, value.mData);
+
+				return value.Get();
+			}
+#ifdef _WIN32
+			else return nullptr;
+#endif
+		}
+	};
+}

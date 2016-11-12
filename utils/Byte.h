@@ -28,14 +28,6 @@
 #include "aligned_allocator.h"
 #include <vector>
 
-#ifdef _WIN32
-	#define THREAD_LOCAL __declspec(thread)
-#else
-	#define THREAD_LOCAL __thread
-#endif
-
-
-
 const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
 float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = NULL);
 

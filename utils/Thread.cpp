@@ -23,58 +23,78 @@
 
 #include "utils/Thread.h"
 
-#if TARGET_OS_IOS
-	#include <vector>
-	#include <pthread.h>
+#ifdef __APPLE__
+	#include "TargetCondtionals.h"
+#endif
 
-	namespace TLSXS {
-		static std::vector<POD> * GetData (pthread_key_t key)
+#include <vector>
+#include <pthread.h>
+
+namespace TLSXS {
+	struct Data {
+		std::vector<POD> mCurrent;	// Current TLS values
+		std::vector<POD> mFrozen;	// Frozen values to resync, e.g. on relaunch
+	};
+
+	static Data * GetTLS (pthread_key_t key)
+	{
+		return static_cast<Data *>(pthread_getspecific(key));
+	}
+
+	static std::vector<POD> & GetData (pthread_key_t key)
+	{
+		return GetTLS(key)->mCurrent;
+	}
+
+	static pthread_key_t tls_key;
+
+	size_t GetSlot (void)
+	{
+		static pthread_once_t tls_key_once = PTHREAD_ONCE_INIT;
+
+		pthread_once(&tls_key_once, []()
 		{
-			return static_cast<std::vector<POD> *>(pthread_getspecific(key));
-		}
-
-		static pthread_key_t tls_key;
-
-		size_t GetSlot (void)
-		{
-			static pthread_once_t tls_key_once = PTHREAD_ONCE_INIT;
-
-			pthread_once(&tls_key_once, []()
+			pthread_key_create(&tls_key, [](void * data)
 			{
-				pthread_key_create(&tls_key, [](void * data)
-				{
-					if (data) delete static_cast<std::vector<POD> *>(data);
-				});
-
-				atexit([]() { pthread_key_delete(tls_key); });
+				if (data) delete static_cast<Data *>(data);
 			});
 
-			auto vec = GetData(tls_key);
+			atexit([]() { pthread_key_delete(tls_key); });
+		});
 
-			if (!vec)
-			{
-				vec = new std::vector<POD>;
+		Data * tls = GetTLS(tls_key);
 
-				pthread_setspecific(tls_key, vec);
-			}
-
-			POD pod;
-
-			memset(&pod, 0, sizeof(POD));
-
-			vec->push_back(pod);
-
-			return vec->size() - 1;
-		}
-
-		void GetItemInSlot (size_t slot, POD & pod)
+		if (!tls)
 		{
-			pod = GetData(tls_key)->at(slot);
+			tls = new Data();
+
+			pthread_setspecific(tls_key, tls);
 		}
 
-		void SetItemInSlot (size_t slot, const POD & pod)
-		{
-			GetData(tls_key)->at(slot) = pod;
-		}
+		POD pod;
+
+		memset(&pod, 0, sizeof(POD));
+
+		tls->mCurrent.push_back(pod);
+
+		return tls->mCurrent.size() - 1;
 	}
-#endif
+
+	void GetItemInSlot (size_t slot, POD & pod)
+	{
+		pod = GetData(tls_key).at(slot);
+	}
+
+	void SetItemInSlot (size_t slot, const POD & pod)
+	{
+		GetData(tls_key).at(slot) = pod;
+	}
+
+	void Sync (void)
+	{
+		Data * tls = GetTLS(tls_key);
+
+		for (size_t i = 0; i < tls->mFrozen.size(); ++i) tls->mCurrent[i] = tls->mFrozen[i];
+		for (size_t i = tls->mFrozen.size(); i < tls->mCurrent.size(); ++i) tls->mFrozen.push_back(tls->mCurrent[i]);
+	}
+}
