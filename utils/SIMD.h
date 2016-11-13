@@ -23,4 +23,6 @@
 
 #pragma once
 
-bool CanUseNeon (void);
+namespace SimdXS {
+	bool CanUseNeon (void);
+}

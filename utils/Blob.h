@@ -86,7 +86,7 @@ namespace BlobXS {
 		bool mResizable;// If true, the userdata holds a vector that contains the blob; otherwise, it is the blob
 		const char * mType;	// User-defined blob type (if unspecified, "xs.blob")
 
-		CreateOpts (void) : mAlignment(0), mType(NULL), mResizable(false) {}
+		CreateOpts (void) : mAlignment(0), mType(nullptr), mResizable(false) {}
 	};
 
 	//
@@ -152,4 +152,4 @@ namespace BlobXS {
 	inline size_t GetHash (lua_State * L, int arg) { return UsingPimpl(L).GetHash(L, arg); }
 	inline bool Exists (lua_State * L, size_t hash) { return UsingPimpl(L).Exists(hash); }
 	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = nullptr) { return UsingPimpl(L).Sync(L, arg, hash, key); }
-};
+}

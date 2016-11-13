@@ -162,10 +162,10 @@ namespace LuaXS {
 				{
 					"__gc", gc
 				},
-				{ NULL, NULL }
+				{ nullptr, nullptr }
 			};
 
-			luaL_register(L, NULL, gc_func);
+			luaL_register(L, nullptr, gc_func);
 		}
 
 		lua_setmetatable(L, -2);// ..., ud

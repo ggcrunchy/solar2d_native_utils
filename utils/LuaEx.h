@@ -93,10 +93,10 @@ namespace LuaXS {
 			{
 				"__len", LenTyped<T>
 			},
-			{ NULL, NULL }
+			{ nullptr, nullptr }
 		};
 
-		luaL_register(L, NULL, len_methods);
+		luaL_register(L, nullptr, len_methods);
 	}
 
 	template<typename T> T * NewArray (lua_State * L, size_t n)

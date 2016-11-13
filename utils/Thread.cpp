@@ -30,7 +30,7 @@
 #include <vector>
 #include <pthread.h>
 
-namespace TLSXS {
+namespace ThreadXS {
 	struct Data {
 		std::vector<POD> mCurrent;	// Current TLS values
 		std::vector<POD> mFrozen;	// Frozen values to resync, e.g. on relaunch

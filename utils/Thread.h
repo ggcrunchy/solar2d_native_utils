@@ -25,7 +25,7 @@
 
 #include <type_traits>
 
-namespace TLSXS {
+namespace ThreadXS {
 	union POD {
 		void * mP;
 		double mD;

@@ -67,7 +67,7 @@ namespace MemoryXS {
 		void UnloadTable (void);
 
 		// Lifetime
-		LuaMemory (void) : mL(NULL), mIndex(0), mRegistrySlot(LUA_NOREF), mStoreSlot(LUA_NOREF) {}
+		LuaMemory (void) : mL(nullptr), mIndex(0), mRegistrySlot(LUA_NOREF), mStoreSlot(LUA_NOREF) {}
 
 		// Interface
 		void FailAssert (const char * what);

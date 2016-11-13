@@ -28,25 +28,27 @@
 #include "aligned_allocator.h"
 #include <vector>
 
-const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
-float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = NULL);
+namespace ByteXS {
+	const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
+	float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
 
-struct BytesMetatableOpts {
-	const char * mMetatableName;
-	void (*mMore)(lua_State * L);
+	struct BytesMetatableOpts {
+		const char * mMetatableName;
+		void (*mMore)(lua_State * L);
 
-	BytesMetatableOpts (void) : mMetatableName(NULL), mMore(NULL) {}
-};
+		BytesMetatableOpts (void) : mMetatableName(nullptr), mMore(nullptr) {}
+	};
 
-void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts = NULL);
+	void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts = nullptr);
 
-template<typename T = unsigned char> size_t GetSizeWithStride (lua_State * L, int w, int h, int stride, int nchannels = 1)
-{
-	int wlen = w * nchannels * sizeof(T);
+	template<typename T = unsigned char> size_t GetSizeWithStride (lua_State * L, int w, int h, int stride, int nchannels = 1)
+	{
+		int wlen = w * nchannels * sizeof(T);
 
-	if (!stride) stride = wlen;
+		if (!stride) stride = wlen;
 
-	else if (stride < wlen) luaL_error(L, "Stride too short: %i vs. w * nchannels * size = %i\n", stride, wlen);
+		else if (stride < wlen) luaL_error(L, "Stride too short: %i vs. w * nchannels * size = %i\n", stride, wlen);
 
-	return size_t(stride * h);
+		return size_t(stride * h);
+	}
 }

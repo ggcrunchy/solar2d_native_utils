@@ -64,7 +64,7 @@ unsigned char * BlobXS::State::PointToData (lua_State * L, int x, int y, int w, 
 		lua_pop(L, 1); // ...
 	}
 
-	size_t size = GetSizeWithStride(L, w, h, stride, bpp);
+	size_t size = ByteXS::GetSizeWithStride(L, w, h, stride, bpp);
 
 	unsigned char * out = LuaXS::NewArray<unsigned char>(L, size);	// ..., ud
 
@@ -79,7 +79,7 @@ int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * bt
 
 	else
 	{
-		if (bAsUserdata) AddBytesMetatable(L, btype);
+		if (bAsUserdata) ByteXS::AddBytesMetatable(L, btype);
 
 		else lua_pushlstring(L, (const char *)out, lua_objlen(L, -1));
 	}

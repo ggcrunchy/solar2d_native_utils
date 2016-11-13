@@ -28,25 +28,27 @@
 #include <cpu-features.h>
 #endif
 
-bool CanUseNeon (void)
-{
-#ifdef _WIN32
-	return false;
-#elif __APPLE__
-	#if !TARGET_OS_SIMULATOR && (TARGET_OS_IPHONE || TARGET_OS_TV)
-		return true;
-	#else
-		return false;
-	#endif
-#elif __ANDROID__
-	static bool using_neon;
-	static pthread_once_t neon_once = PTHREAD_ONCE_INIT;
-
-	pthread_once(&neon_once, []()
+namespace SimdXS {
+	bool CanUseNeon (void)
 	{
-		using_neon = android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM && (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
-	});
+	#ifdef _WIN32
+		return false;
+	#elif __APPLE__
+		#if !TARGET_OS_SIMULATOR && (TARGET_OS_IPHONE || TARGET_OS_TV)
+			return true;
+		#else
+			return false;
+		#endif
+	#elif __ANDROID__
+		static bool using_neon;
+		static pthread_once_t neon_once = PTHREAD_ONCE_INIT;
 
-	return using_neon;
-#endif
+		pthread_once(&neon_once, []()
+		{
+			using_neon = android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM && (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+		});
+
+		return using_neon;
+	#endif
+	}
 }

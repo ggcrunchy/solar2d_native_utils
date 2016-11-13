@@ -169,7 +169,7 @@ void * MemoryXS::LuaMemory::Realloc (void * ptr, size_t size)
 	{
 		Free(ptr);
 
-		return NULL;
+		return nullptr;
 	}
 
 	else if (!ptr) return Malloc(size);
@@ -241,7 +241,7 @@ void MemoryXS::LuaMemory::Push (void * ptr, const char * type, bool as_userdata,
 	if (as_userdata)
 	{
 		Emit(ptr, bRemove);	// ..., ud
-		AddBytesMetatable(mL, type);
+		ByteXS::AddBytesMetatable(mL, type);
 	}
 
 	else

@@ -25,99 +25,101 @@
 #include "utils/LuaEx.h"
 #include "utils/Path.h"
 
-static int FromSystem (lua_State * L, const char * name)
-{
-	if (lua_isnil(L, -1)) return LUA_NOREF;
-
-	lua_getfield(L, -1, name);	// system, system[name]
-
-	return luaL_ref(L, LUA_REGISTRYINDEX);	// system
-}
-
-PathData * PathData::Instantiate (lua_State * L)
-{
-	PathData * pd = LuaXS::NewTyped<PathData>(L);	// ..., pd
-
-	lua_getglobal(L, "system");	// ..., pd, system
-
-	pd->mPathForFile = FromSystem(L, "pathForFile");
-	pd->mDocumentsDir = FromSystem(L, "DocumentsDirectory");
-	pd->mResourceDir = FromSystem(L, "ResourceDirectory");
-
-	lua_pop(L, 1);	// ..., pd
-
-	return pd;
-}
-
-const char * PathData::Canonicalize (lua_State * L, bool bRead)
-{
-	const char * str = luaL_checkstring(L, 1);
-
-//	if (*str == '!') return ++str; // <- probably more problems than it's worth
-
-	lua_rawgeti(L, LUA_REGISTRYINDEX, mPathForFile);// str[, dir], ..., pathForFile
-	luaL_argcheck(L, !lua_isnil(L, -1), -1, "Missing pathForFile()");
-	lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
-
-	bool has_userdata = lua_isuserdata(L, 2) != 0;
-
-	if (has_userdata) lua_pushvalue(L, 2);	// str, dir, ..., pathForFile, str, dir
-
-	else lua_rawgeti(L, LUA_REGISTRYINDEX, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
-
-	if (lua_pcall(L, 2, 1, 0) == 0)	// str[, dir], ..., file
+namespace PathXS {
+	static int FromSystem (lua_State * L, const char * name)
 	{
-		if (has_userdata) lua_remove(L, 2);	// str, ..., file
+		if (lua_isnil(L, -1)) return LUA_NOREF;
 
-		lua_replace(L, 1);	// file, ...
+		lua_getfield(L, -1, name);	// system, system[name]
+
+		return luaL_ref(L, LUA_REGISTRYINDEX);	// system
 	}
 
-	else lua_error(L);
-
-	return lua_tostring(L, 1);
-}
-
-void LibLoader::Close (void)
-{
-	if (IsLoaded())
+	Directories * Directories::Instantiate (lua_State * L)
 	{
-#ifdef _WIN32
-		FreeLibrary(mLib);
-#else
-		dlclose(mLib);
-#endif
+		Directories * dirs = LuaXS::NewTyped<Directories>(L);	// ..., dirs
+
+		lua_getglobal(L, "system");	// ..., dirs, system
+
+		dirs->mPathForFile = FromSystem(L, "pathForFile");
+		dirs->mDocumentsDir = FromSystem(L, "DocumentsDirectory");
+		dirs->mResourceDir = FromSystem(L, "ResourceDirectory");
+
+		lua_pop(L, 1);	// ..., dirs
+
+		return dirs;
 	}
 
-	mLib = NULL;
-}
+	const char * Directories::Canonicalize (lua_State * L, bool bRead)
+	{
+		const char * str = luaL_checkstring(L, 1);
 
-void LibLoader::Load (const char * name)
-{
-	Close();
+	//	if (*str == '!') return ++str; // <- probably more problems than it's worth
 
-#ifdef _WIN32
-	mLib = LoadLibraryExA(name, NULL, 0); // following nvcore/Library.h...
-#else
-	mLib = dlopen(name, RTLD_LAZY);
-#endif
-}
+		lua_rawgeti(L, LUA_REGISTRYINDEX, mPathForFile);// str[, dir], ..., pathForFile
+		luaL_argcheck(L, !lua_isnil(L, -1), -1, "Missing pathForFile()");
+		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
 
-WriteAux::WriteAux (lua_State * L, int w, int h, PathData * pd) : mFilename(NULL), mW(w), mH(h)
-{
-	if (pd) mFilename = pd->Canonicalize(L, false);
-}
+		bool has_userdata = lua_isuserdata(L, 2) != 0;
 
-const char * WriteAux::GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const
-{
-	return FitData(L, reader, barg, w, size_t(mH) * size);
-}
+		if (has_userdata) lua_pushvalue(L, 2);	// str, dir, ..., pathForFile, str, dir
 
-WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, PathData * pd) : WriteAux(L, w, h, pd), mReader(L, barg), mBArg(barg)
-{
-	if (!mReader.mBytes) lua_error(L);
-}
+		else lua_rawgeti(L, LUA_REGISTRYINDEX, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
 
-const char * WriteAuxReader::GetBytes (lua_State * L, size_t w, size_t size)
-{
-	return WriteAux::GetBytes(L, mReader, w, size, mBArg);
+		if (lua_pcall(L, 2, 1, 0) == 0)	// str[, dir], ..., file
+		{
+			if (has_userdata) lua_remove(L, 2);	// str, ..., file
+
+			lua_replace(L, 1);	// file, ...
+		}
+
+		else lua_error(L);
+
+		return lua_tostring(L, 1);
+	}
+
+	void LibLoader::Close (void)
+	{
+		if (IsLoaded())
+		{
+	#ifdef _WIN32
+			FreeLibrary(mLib);
+	#else
+			dlclose(mLib);
+	#endif
+		}
+
+		mLib = nullptr;
+	}
+
+	void LibLoader::Load (const char * name)
+	{
+		Close();
+
+	#ifdef _WIN32
+		mLib = LoadLibraryExA(name, nullptr, 0); // following nvcore/Library.h...
+	#else
+		mLib = dlopen(name, RTLD_LAZY);
+	#endif
+	}
+
+	WriteAux::WriteAux (lua_State * L, int w, int h, Directories * dirs) : mFilename(nullptr), mW(w), mH(h)
+	{
+		if (dirs) mFilename = dirs->Canonicalize(L, false);
+	}
+
+	const char * WriteAux::GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const
+	{
+		return ByteXS::FitData(L, reader, barg, w, size_t(mH) * size);
+	}
+
+	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux(L, w, h, dirs), mReader(L, barg), mBArg(barg)
+	{
+		if (!mReader.mBytes) lua_error(L);
+	}
+
+	const char * WriteAuxReader::GetBytes (lua_State * L, size_t w, size_t size)
+	{
+		return WriteAux::GetBytes(L, mReader, w, size, mBArg);
+	}
 }
