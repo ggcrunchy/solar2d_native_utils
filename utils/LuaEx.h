@@ -126,6 +126,27 @@ namespace LuaXS {
 		return instance;
 	}
 
+	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
+	{
+		static_assert(std::is_pod<T>::value, "BytesToValue() type must be plain-old-data");
+
+		if (lua_type(L, arg) == LUA_TSTRING && lua_objlen(L, arg) == sizeof(T))
+		{
+			memcpy(&value, lua_tostring(L, arg), sizeof(T));
+
+			return true;
+		}
+
+		return false;
+	}
+
+	template<typename T> void ValueToBytes (lua_State * L, const T & value)
+	{
+		static_assert(std::is_pod<T>::value, "ValueToBytes() type must be plain-old-data");
+
+		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
+	}
+
 	//
 	template<typename T> struct GetOpt {
 		template<bool is_integral = std::is_integral<T>::value, bool is_signed = std::is_signed<T>::value> static T Get (lua_State * L);
