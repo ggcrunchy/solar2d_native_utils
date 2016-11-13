@@ -22,6 +22,7 @@
 */
 
 #include "utils/Byte.h"
+#include "utils/LuaEx.h"
 
 const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size)
 {
@@ -76,7 +77,7 @@ float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, in
 		{
 			auto bytes = (unsigned char *)reader.mBytes;
 
-			pfloats = (float *)lua_newuserdata(L, nfloats * sizeof(float));	// ..., float_bytes, ..., floats
+			pfloats = LuaXS::NewArray<float>(L, nfloats);	// ..., float_bytes, ..., floats
 
 			for (size_t i = 0; i < (std::min)(reader.mCount, nfloats); ++i) pfloats[i] = float(bytes[i]) / 255.0f;
 			for (size_t i = reader.mCount; i < nfloats; ++i) pfloats[i] = 0.0f;

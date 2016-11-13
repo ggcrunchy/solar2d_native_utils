@@ -22,6 +22,7 @@
 */
 
 #include "utils/Byte.h"
+#include "utils/LuaEx.h"
 #include "utils/Path.h"
 
 static int FromSystem (lua_State * L, const char * name)
@@ -35,7 +36,7 @@ static int FromSystem (lua_State * L, const char * name)
 
 PathData * PathData::Instantiate (lua_State * L)
 {
-	PathData * pd = (PathData *)lua_newuserdata(L, sizeof(PathData));	// ..., pd
+	PathData * pd = LuaXS::NewTyped<PathData>(L);	// ..., pd
 
 	lua_getglobal(L, "system");	// ..., pd, system
 

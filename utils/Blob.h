@@ -143,7 +143,7 @@ namespace BlobXS {
 
 	template<size_t N> typename VectorType<N>::type * GetVectorN (lua_State * L, int arg)
 	{
-		return (typename VectorType<N>::type *)GetVector(L, arg);
+		return static_cast<typename VectorType<N>::type *>(GetVector(L, arg));
 	}
 
 	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }

@@ -23,6 +23,7 @@
 
 #include "utils/Blob.h"
 #include "utils/Byte.h"
+#include "utils/LuaEx.h"
 #include <functional>
 #include <limits>
 
@@ -65,7 +66,7 @@ unsigned char * BlobXS::State::PointToData (lua_State * L, int x, int y, int w, 
 
 	size_t size = GetSizeWithStride(L, w, h, stride, bpp);
 
-	unsigned char * out = static_cast<unsigned char *>(lua_newuserdata(L, size));	// ..., ud
+	unsigned char * out = LuaXS::NewArray<unsigned char>(L, size);	// ..., ud
 
 	if (bZero) memset(out, 0, size);
 
@@ -113,7 +114,7 @@ BlobXS::Pimpls * BlobXS::GetImplementations (lua_State * L)
 
 	BlobXS::Pimpls * impl = nullptr;
 
-	if (!lua_isnil(L, -1)) impl = static_cast<BlobXS::Pimpls *>(lua_touserdata(L, -1));
+	if (!lua_isnil(L, -1)) impl = LuaXS::UD<BlobXS::Pimpls>(L, -1);
 
 	lua_pop(L, 1);	// ...
 

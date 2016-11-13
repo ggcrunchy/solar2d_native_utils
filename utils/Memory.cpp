@@ -1,5 +1,6 @@
 #include "utils/Memory.h"
 #include "utils/Byte.h"
+#include "utils/LuaEx.h"
 
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
@@ -26,9 +27,7 @@ MemoryXS::LuaMemory::BookmarkIndex MemoryXS::LuaMemory::SavePosition (bool bRelo
 
 MemoryXS::LuaMemory * MemoryXS::LuaMemory::New (lua_State * L)
 {
-	LuaMemory * memory = static_cast<LuaMemory *>(lua_newuserdata(L, sizeof(LuaMemory)));	// ..., memory
-
-	new (memory) LuaMemory;
+	LuaMemory * memory = LuaXS::NewTyped<LuaMemory>(L);	// ..., memory
 
 	memory->mL = L;
 

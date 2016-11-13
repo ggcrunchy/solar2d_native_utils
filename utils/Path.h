@@ -101,7 +101,7 @@ template<typename T> struct WriteData {
 	int mW, mH, mComp, mStride;
 	bool mAsUserdata;
 
-	WriteData (lua_State * L, PathData * pd = NULL, bool bHasStride = false) : mData(NULL), mStride(0), mAsUserdata(false)
+	WriteData (lua_State * L, PathData * pd = nullptr, bool bHasStride = false) : mData(nullptr), mStride(0), mAsUserdata(false)
 	{
 		mW = luaL_checkint(L, 2);
 		mH = luaL_checkint(L, 3);
@@ -112,7 +112,7 @@ template<typename T> struct WriteData {
 		mFilename = waux.mFilename;
 		mComp = luaL_checkint(L, 4);
 
-		LuaOptions opts(L, 6);
+		LuaXS::Options opts(L, 6);
 			
 		opts.Add("as_userdata", mAsUserdata);
 
