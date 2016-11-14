@@ -24,7 +24,6 @@
 #include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
-#include <functional>
 #include <limits>
 
 BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mPimpl(nullptr)
@@ -88,15 +87,9 @@ int BlobXS::State::PushData (lua_State * L, unsigned char * out, const char * bt
 }
 
 //
-size_t BlobXS::BlobPimpl::ComputeHash (unsigned long long value)
+BlobXS::BlobPimpl::storage_id BlobXS::BlobPimpl::BadID (void)
 {
-	return std::hash<unsigned long long>{}(value);
-}
-
-//
-size_t BlobXS::BlobPimpl::BadHash (void)
-{
-	return ComputeHash(std::numeric_limits<unsigned long long>::max());
+	return (std::numeric_limits<storage_id>::max)();
 }
 
 //

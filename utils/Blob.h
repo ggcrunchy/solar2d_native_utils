@@ -25,6 +25,7 @@
 
 #include "CoronaLua.h"
 #include "aligned_allocator.h"
+#include <limits>
 #include <vector>
 
 namespace BlobXS {
@@ -91,9 +92,10 @@ namespace BlobXS {
 
 	//
 	struct BlobPimpl {
+		typedef unsigned long long storage_id;
+
 		// Helper functions
-		static size_t ComputeHash (unsigned long long value);
-		static size_t BadHash (void);
+		static storage_id BadID (void);
 
 		// Methods
 		virtual bool IsBlob (lua_State *, int, const char *) { return false; }
@@ -109,10 +111,10 @@ namespace BlobXS {
 
 		virtual void NewBlob (lua_State *, size_t, const CreateOpts *) {}
 
-		virtual size_t Submit (lua_State *, int, void *) { return BadHash(); }
-		virtual size_t GetHash (lua_State *, int) { return BadHash(); }
-		virtual bool Exists (size_t) { return false; }
-		virtual bool Sync (lua_State *, int, size_t, void *) { return false; }
+		virtual storage_id Submit (lua_State *, int, void *) { return BadID(); }
+		virtual storage_id GetID (lua_State *, int) { return BadID(); }
+		virtual bool Exists (storage_id) { return false; }
+		virtual bool Sync (lua_State *, int, storage_id, void *) { return false; }
 
 		// Lifetime
 		virtual ~BlobPimpl (void) {}
@@ -148,8 +150,8 @@ namespace BlobXS {
 
 	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }
 
-	inline size_t Submit (lua_State * L, int arg, void * key = nullptr) { return UsingPimpl(L).Submit(L, arg, key); }
-	inline size_t GetHash (lua_State * L, int arg) { return UsingPimpl(L).GetHash(L, arg); }
-	inline bool Exists (lua_State * L, size_t hash) { return UsingPimpl(L).Exists(hash); }
-	inline bool Sync (lua_State * L, int arg, size_t hash, void * key = nullptr) { return UsingPimpl(L).Sync(L, arg, hash, key); }
+	inline BlobPimpl::storage_id Submit (lua_State * L, int arg, void * key = nullptr) { return UsingPimpl(L).Submit(L, arg, key); }
+	inline BlobPimpl::storage_id GetID (lua_State * L, int arg) { return UsingPimpl(L).GetID(L, arg); }
+	inline bool Exists (lua_State * L, BlobPimpl::storage_id id) { return UsingPimpl(L).Exists(id); }
+	inline bool Sync (lua_State * L, int arg, BlobPimpl::storage_id id, void * key = nullptr) { return UsingPimpl(L).Sync(L, arg, id, key); }
 }

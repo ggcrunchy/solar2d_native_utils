@@ -147,43 +147,31 @@ namespace LuaXS {
 		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
 	}
 
-	//
-	template<typename T> struct GetOpt {
-		template<bool is_integral = std::is_integral<T>::value, bool is_signed = std::is_signed<T>::value> static T Get (lua_State * L);
+	// Return type traits for options
+	template<typename T> struct AuxOpt { typedef T return_type; };
+	template<> struct AuxOpt<unsigned int> { typedef lua_Integer return_type; };
 
-		template<> static inline T Get<true, true> (lua_State * L)
-		{
-			return static_cast<T>(luaL_checkint(L, -1));
-		}
+	// Helper to get an option from the top of Lua's stack, if present
+	template<typename T> typename AuxOpt<T>::return_type GetOpt (lua_State *);
 
-		//
-		template<typename T> static T GetUnsigned (lua_State * L)
-		{
-			lua_Integer ret = luaL_checkinteger(L, -1);
+	template<> inline bool GetOpt<bool> (lua_State * L) { return lua_toboolean(L, -1) != 0; }
+	template<> inline int GetOpt<int> (lua_State * L) { return luaL_checkint(L, -1); }
+	template<> inline long GetOpt<long> (lua_State * L) { return luaL_checklong(L, -1); }
+	template<> inline lua_Number GetOpt<lua_Number> (lua_State * L) { return luaL_checknumber(L, -1); }
 
-			if (ret < 0) ret = 0;
+	template<> inline lua_Integer GetOpt<unsigned int> (lua_State * L)
+	{
+		lua_Integer ret = luaL_checkinteger(L, -1);
 
-			return static_cast<T>(ret);
-		}
-
-		template<> static inline bool GetUnsigned<bool> (lua_State * L) { return lua_toboolean(L, -1) != 0; }
-
-		template<> static inline T Get<true, false> (lua_State * L)
-		{
-			return GetUnsigned<T>(L);
-		}
-
-		template<> static inline T Get<false, true> (lua_State * L)
-		{
-			return static_cast<T>(luaL_checknumber(L, -1));
-		}
-	};
+		return ret >= 0 ? ret : 0;
+	}
 
 	//
 	class Options {
 		lua_State * mL;	// Current state
 		int mArg;	// Stack position
 
+		// Helper to get teh default value for a missing option
 		template<typename T> T GetDef (T def) { return def; }
 
 		template<> inline bool GetDef<bool> (bool) { return false; }
@@ -206,7 +194,21 @@ namespace LuaXS {
 			{
 				lua_getfield(mL, mArg, name);// ..., value
 
-				opt = !lua_isnil(mL, -1) ? GetOpt<T>::Get(mL) : def;
+				if (!lua_isnil(mL, -1))
+				{
+					using opt_type = std::conditional<std::is_same<T, bool>::value, bool, // Is it a bool? Use that, if so...
+						std::conditional<std::is_floating_point<T>::value, lua_Number, // ...next try floats...
+							std::conditional<!std::is_signed<T>::value, unsigned int, // ...then unsigned integers...
+								std::conditional<std::is_same<T, long>::value, long, int>::type	// ... then longs or ints.
+							>::type
+						>::type
+					>::type;
+
+					opt = static_cast<T>(GetOpt<opt_type>(mL));
+				}
+
+				else opt = def;
+			//	opt = !lua_isnil(mL, -1) ? GetOpt<T>::Get(mL) : def;
 
 				lua_pop(mL, 1);	// ...
 			}
