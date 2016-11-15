@@ -26,6 +26,7 @@
 #include "CoronaLua.h"
 #include "aligned_allocator.h"
 #include <limits>
+#include <utility>
 #include <vector>
 
 namespace BlobXS {
@@ -143,9 +144,14 @@ namespace BlobXS {
 	inline unsigned char * GetData (lua_State * L, int arg) { return UsingPimpl(L).GetData(L, arg); }
 	inline void * GetVector (lua_State * L, int arg) { return UsingPimpl(L).GetVector(L, arg); }
 
+	template<size_t N> typename VectorType<N>::type * GetVectorN (void * data)
+	{
+		return static_cast<typename VectorType<N>::type *>(data);
+	}
+
 	template<size_t N> typename VectorType<N>::type * GetVectorN (lua_State * L, int arg)
 	{
-		return static_cast<typename VectorType<N>::type *>(GetVector(L, arg));
+		return GetVectorN<N>(GetVector(L, arg));
 	}
 
 	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }
