@@ -24,16 +24,25 @@
 #include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
-#include <algorithm>
 
 namespace ByteXS {
 	//
-	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count)
+	template<typename F> float * LoadFloats (lua_State * L, int arg, size_t n, size_t size, F func)
 	{
-		float * pfloats;
+		float * pfloats = LuaXS::NewArray<float>(L, n);	// ..., float_bytes, ..., floats
 
-		if (count) *count = int(nfloats);
+		for (size_t i = 0; i < n; ++i) pfloats[i] = func(i);
 
+		memset(&pfloats[n], 0, (size - n) * sizeof(float));
+
+		lua_replace(L, arg);// ..., floats, ...
+
+		return pfloats;
+	}
+
+	//
+	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, bool as_bytes)
+	{
 		if (!lua_istable(L, arg))
 		{
 			ByteReader reader(L, arg);
@@ -44,38 +53,25 @@ namespace ByteXS {
 			{
 				auto bytes = static_cast<const unsigned char *>(reader.mBytes);
 
-				pfloats = LuaXS::NewArray<float>(L, nfloats);	// ..., float_bytes, ..., floats
-
-				for (size_t i = 0; i < (std::min)(reader.mCount, nfloats); ++i) pfloats[i] = float(bytes[i]) / 255.0f;
-				for (size_t i = reader.mCount; i < nfloats; ++i) pfloats[i] = 0.0f;
-
-				lua_replace(L, arg);// ..., floats, ...
+				return LoadFloats(L, arg, reader.mCount, nfloats, [=](size_t i)
+				{
+					return float(bytes[i]) / 255.0f;
+				});
 			}
 
-			else return EnsureN<float>(L, reader, arg, nfloats);
+			else return EnsureN<float>(L, reader, nfloats);
 		}
 
-		else
+		else return LoadFloats(L, arg, lua_objlen(L, arg), nfloats, [=](size_t i)
 		{
-			size_t n = lua_objlen(L, arg);
-		
-			pfloats = LuaXS::NewArray<float>(L, nfloats);	// ..., float_table, ..., floats
+			lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
 
-			for (size_t i = 0; i < (std::min)(n, nfloats); ++i)
-			{
-				lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
+			float f = (float)luaL_checknumber(L, -1);
 
-				pfloats[i] = (float)luaL_checknumber(L, -1);
+			lua_pop(L, 1);	// ..., float_table, ..., floats
 
-				lua_pop(L, 1);	// ..., float_table, ..., floats
-			}
-
-			for (size_t i = n; i < nfloats; ++i) pfloats[i] = 0.0f;
-
-			lua_replace(L, arg);// ..., floats, ...
-		}
-
-		return pfloats;
+			return f;
+		});
 	}
 
 	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine(out), mOffset(0U), mStride(stride)

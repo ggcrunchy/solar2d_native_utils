@@ -30,6 +30,20 @@
 
 namespace ByteXS {
 	//
+	template<typename T> size_t GetCount (lua_State * L, int arg)
+	{
+		int top = lua_gettop(L);
+
+		ByteReader reader(L, arg, false); // ..., reader args
+
+		lua_settop(L, top);	// ...
+
+		if (reader.mBytes) return reader.mCount / sizeof(T);
+
+		return lua_objlen(L, arg);
+	}
+
+	//
 	template<typename T = unsigned char> const T * EnsureN (lua_State * L, const ByteReader & reader, size_t n, size_t size = sizeof(T))
 	{
 		if (size < sizeof(T)) return nullptr;
@@ -58,7 +72,7 @@ namespace ByteXS {
 		return static_cast<const T *>(data);
 	}
 
-	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
+	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, bool as_bytes);
 
 	struct ByteWriter {
 		luaL_Buffer mB;	// Buffer, when not writing to a blob
