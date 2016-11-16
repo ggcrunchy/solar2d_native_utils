@@ -39,6 +39,18 @@ namespace ByteXS {
 		return static_cast<const T *>(data);
 	}
 
+	struct ByteWriter {
+		luaL_Buffer mB;	// Buffer, when not writing to a blob
+		unsigned char * mLine;	// Current line, when writing to a blob
+		size_t mOffset, mStride;// Offset into line; stride to next line
+
+		ByteWriter (lua_State * L, unsigned char * out = nullptr, size_t stride = 0U);
+		~ByteWriter (void);
+
+		void AddBytes (const unsigned char * bytes, size_t n);
+		void NextLine (void);
+	};
+
 	struct BytesMetatableOpts {
 		const char * mMetatableName;
 		void (*mMore)(lua_State * L);
@@ -59,7 +71,7 @@ namespace ByteXS {
 		return size_t(stride * h);
 	}
 
-	// Point to the start of a given element
+	// Point to the start of a given element (stride unknown)
 	template<typename T> T * PointToData (T * start, int x, int y, int w, int bpp, int * stride)
 	{
 		int istride = w * bpp;
@@ -67,5 +79,11 @@ namespace ByteXS {
 		if (stride) *stride = istride;
 	
 		return start + y * istride + x * bpp;
-	 }
+	}
+
+	// Point to the start of a given element (stride known)
+	template<typename T> T * PointToData (T * start, int x, int y, int bpp, int stride)
+	{
+		return start + y * stride + x * bpp;
+	}
 }

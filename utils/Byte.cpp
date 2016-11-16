@@ -21,6 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
+#include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 
@@ -112,6 +113,39 @@ namespace ByteXS {
 		}
 
 		return pfloats;
+	}
+
+	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine(out), mOffset(0U), mStride(stride)
+	{
+		if (!mLine) luaL_buffinit(L, &mB);
+
+		else luaL_argcheck(L, BlobXS::IsBlob(L, -1), -1, "ByteWriter expects blob at top of stack"); 
+	}
+
+	ByteWriter::~ByteWriter (void)
+	{
+		if (!mLine) luaL_pushresult(&mB);	// ...[, bytes]
+	}
+
+	void ByteWriter::AddBytes (const unsigned char * bytes, size_t n)
+	{
+		if (!mLine) luaL_addlstring(&mB, reinterpret_cast<const char *>(bytes), n);
+
+		else
+		{
+			memcpy(&mLine[mOffset], bytes, n);
+
+			mOffset += n;
+		}
+	}
+
+	void ByteWriter::NextLine (void)
+	{
+		if (mLine)
+		{
+			mLine += mStride;
+			mOffset = 0U;
+		}
 	}
 
 	void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts)

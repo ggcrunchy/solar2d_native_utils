@@ -82,6 +82,30 @@ namespace BlobXS {
 		int PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata);
 	};
 
+	// Check for blobs in an options table. If present, the blob is pushed onto the stack and
+	// the members of this structure are filled in; otherwise, pushes nil.
+	struct Options {
+		// Lookup keys: a blob may be in one or the other of `mBlob` or `mOpt`, favoring the
+		// former. If a blob is found in `mBlob`, it must be used, or else we have an error; a
+		// blob in `mOpt`, on the other hand, says "use me if I'm satisfactory, otherwise seek
+		// alternatives". Blob-related information may be found in the table in `mInfo`.
+		struct Keys {
+			const char * mBlob, * mOpt, * mInfo;// Defaults = "blob", "opt_blob", "blob_info"
+
+			Keys (void);
+		} mKeys;
+
+		// An info table might look like so:
+		// { x = 7, y = 2, stride = 100, no_resize = false, discard_ok = true }
+		int mX, mY;	// Offsets into blob, >= 0; both default to 0
+		int mStride;// Stride of blob data; defaults to 0, meaning it will be calculated as width * bytes-per-component
+		bool mNoResize;	// Request to not resize blob even if possible; defaults to false
+		bool mDiscardOK;// Allow destructive resizing, e.g. along the x-axis; defaults to false
+		bool mMustUseBlob;	// If true, blob must be used
+
+		Options (lua_State * L, int arg, const Keys & keys = Keys());
+	};
+
 	//
 	struct CreateOpts {
 		size_t mAlignment;	// Multiple of 4 detailing what sort of memory alignment to assume (with 0 meaning none)

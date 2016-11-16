@@ -96,7 +96,7 @@ namespace PathXS {
 		const unsigned char * GetBytes (lua_State * L, size_t w, size_t size);
 	};
 
-	template<typename T> struct WriteData {
+	template<typename T = unsigned char> struct WriteData {
 		const void * mData;
 		const char * mFilename;
 		int mW, mH, mComp, mStride;
