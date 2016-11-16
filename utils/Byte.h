@@ -29,8 +29,15 @@
 #include <vector>
 
 namespace ByteXS {
-	const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
-	float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
+	const unsigned char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
+	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
+
+	template<typename T> const T * FitDataTyped (lua_State * L, const ByteReader & reader, int barg, size_t n)
+	{
+		const void * data = FitData(L, reader, barg, n, sizeof(T));
+
+		return static_cast<const T *>(data);
+	}
 
 	struct BytesMetatableOpts {
 		const char * mMetatableName;
@@ -51,4 +58,14 @@ namespace ByteXS {
 
 		return size_t(stride * h);
 	}
+
+	// Point to the start of a given element
+	template<typename T> T * PointToData (T * start, int x, int y, int w, int bpp, int * stride)
+	{
+		int istride = w * bpp;
+ 
+		if (stride) *stride = istride;
+	
+		return start + y * istride + x * bpp;
+	 }
 }

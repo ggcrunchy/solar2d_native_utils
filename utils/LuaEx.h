@@ -24,6 +24,7 @@
 #pragma once
 
 #include "CoronaLua.h"
+#include "CoronaGraphics.h"
 #include <type_traits>
 #include <utility>
 
@@ -58,6 +59,11 @@ namespace LuaXS {
 	template<typename T> T * CheckUD (lua_State * L, int arg, const char * name)
 	{
 		return static_cast<T *>(luaL_checkudata(L, arg, name));
+	}
+
+	template<typename T> T * ExtUD (lua_State * L, int arg)
+	{
+		return static_cast<T *>(CoronaExternalGetUserData(L, arg));
 	}
 
 	template<typename T> int ArrayN (lua_State * L, int arg = 1)
@@ -208,7 +214,6 @@ namespace LuaXS {
 				}
 
 				else opt = def;
-			//	opt = !lua_isnil(mL, -1) ? GetOpt<T>::Get(mL) : def;
 
 				lua_pop(mL, 1);	// ...
 			}

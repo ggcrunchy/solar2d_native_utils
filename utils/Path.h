@@ -84,7 +84,7 @@ namespace PathXS {
 
 		WriteAux (lua_State * L, int w, int h, Directories * dirs);
 
-		const char * GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const;
+		const unsigned char * GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const;
 	};
 
 	struct WriteAuxReader : WriteAux {
@@ -93,11 +93,12 @@ namespace PathXS {
 
 		WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs = nullptr);
 
-		const char * GetBytes (lua_State * L, size_t w, size_t size);
+		const unsigned char * GetBytes (lua_State * L, size_t w, size_t size);
 	};
 
 	template<typename T> struct WriteData {
-		const char * mData, * mFilename;
+		const void * mData;
+		const char * mFilename;
 		int mW, mH, mComp, mStride;
 		bool mAsUserdata;
 
@@ -116,7 +117,7 @@ namespace PathXS {
 			
 			opts.Add("as_userdata", mAsUserdata);
 
-			if (!bHasStride) opts.Add("stride", mStride);
+			if (bHasStride) opts.Add("stride", mStride);
 
 			//
 			size_t w = mW * mComp;
@@ -126,6 +127,6 @@ namespace PathXS {
 			mData = waux.GetBytes(L, w, sizeof(T));
 		}
 
-		operator T * (void) { return (T *)mData; }
+		operator const T * (void) { return static_cast<const T *>(mData); }
 	};
 }

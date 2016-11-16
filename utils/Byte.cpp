@@ -25,14 +25,14 @@
 #include "utils/LuaEx.h"
 
 namespace ByteXS {
-	const char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size)
+	const unsigned char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size)
 	{
 		barg = CoronaLuaNormalize(L, barg);
 
 		//
 		size_t len = reader.mCount / size;
 
-		const char * data = (const char *)reader.mBytes;
+		const char * data = static_cast<const char *>(reader.mBytes);
 
 		//
 		if (n > len)
@@ -61,12 +61,14 @@ namespace ByteXS {
 			data = lua_tostring(L, barg);
 		}
 
-		return data;
+		return reinterpret_cast<const unsigned char *>(data);
 	}
 
-	float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count)
+	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count)
 	{
 		float * pfloats;
+
+		if (count) *count = int(nfloats);
 
 		if (!lua_istable(L, arg))
 		{
@@ -76,7 +78,7 @@ namespace ByteXS {
 
 			if (as_bytes)
 			{
-				auto bytes = (unsigned char *)reader.mBytes;
+				auto bytes = static_cast<const unsigned char *>(reader.mBytes);
 
 				pfloats = LuaXS::NewArray<float>(L, nfloats);	// ..., float_bytes, ..., floats
 
@@ -86,14 +88,14 @@ namespace ByteXS {
 				lua_replace(L, arg);// ..., floats, ...
 			}
 
-			else pfloats = (float *)FitData(L, reader, arg, nfloats, sizeof(float));
+			else return FitDataTyped<float>(L, reader, arg, nfloats);
 		}
 
 		else
 		{
 			size_t n = lua_objlen(L, arg);
 		
-			pfloats = (float *)lua_newuserdata(L, nfloats * sizeof(float));	// ..., float_table, ..., floats
+			pfloats = LuaXS::NewArray<float>(L, nfloats);	// ..., float_table, ..., floats
 
 			for (size_t i = 0; i < (std::min)(n, nfloats); ++i)
 			{
@@ -108,8 +110,6 @@ namespace ByteXS {
 
 			lua_replace(L, arg);// ..., floats, ...
 		}
-
-		if (count) *count = int(nfloats);
 
 		return pfloats;
 	}
