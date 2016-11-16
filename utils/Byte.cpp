@@ -24,47 +24,10 @@
 #include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
+#include <algorithm>
 
 namespace ByteXS {
-	const unsigned char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size)
-	{
-		barg = CoronaLuaNormalize(L, barg);
-
-		//
-		size_t len = reader.mCount / size;
-
-		const char * data = static_cast<const char *>(reader.mBytes);
-
-		//
-		if (n > len)
-		{
-			luaL_Buffer buff;
-
-			luaL_buffinit(L, &buff);
-			luaL_addlstring(&buff, data, len * size);
-
-			if (size > 1)
-			{
-				char pad[2 * sizeof(double)] = { 0 };
-
-				do {
-					luaL_addlstring(&buff, pad, size);
-				} while (++len < n);
-			}
-			
-			else do {
-				luaL_addchar(&buff, '\0');
-			} while (++len < n);
-
-			luaL_pushresult(&buff);	// ..., data, ..., ex
-			lua_replace(L, barg);	// ..., ex, ...
-
-			data = lua_tostring(L, barg);
-		}
-
-		return reinterpret_cast<const unsigned char *>(data);
-	}
-
+	//
 	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count)
 	{
 		float * pfloats;
@@ -89,7 +52,7 @@ namespace ByteXS {
 				lua_replace(L, arg);// ..., floats, ...
 			}
 
-			else return FitDataTyped<float>(L, reader, arg, nfloats);
+			else return EnsureN<float>(L, reader, arg, nfloats);
 		}
 
 		else
@@ -127,9 +90,9 @@ namespace ByteXS {
 		if (!mLine) luaL_pushresult(&mB);	// ...[, bytes]
 	}
 
-	void ByteWriter::AddBytes (const unsigned char * bytes, size_t n)
+	void ByteWriter::AddBytes (const void * bytes, size_t n)
 	{
-		if (!mLine) luaL_addlstring(&mB, reinterpret_cast<const char *>(bytes), n);
+		if (!mLine) luaL_addlstring(&mB, static_cast<const char *>(bytes), n);
 
 		else
 		{
@@ -145,6 +108,29 @@ namespace ByteXS {
 		{
 			mLine += mStride;
 			mOffset = 0U;
+		}
+	}
+
+	void ByteWriter::ZeroPad (size_t n)
+	{
+		const size_t kPadBufferSize = 64U;
+
+		static_assert(kPadBufferSize >= sizeof(double) && kPadBufferSize >= sizeof(long long), "Insufficient pad buffer size");
+
+		if (mLine)
+		{
+			memset(&mLine[mOffset], 0, n);
+
+			mOffset += n;
+		}
+
+		else
+		{
+			static char pad[kPadBufferSize] = { 0 };
+
+			for ( ; n >= kPadBufferSize; n -= kPadBufferSize) luaL_addlstring(&mB, pad, kPadBufferSize);
+
+			if (n > 0U) luaL_addlstring(&mB, pad, n);
 		}
 	}
 

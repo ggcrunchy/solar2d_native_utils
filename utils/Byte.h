@@ -29,15 +29,36 @@
 #include <vector>
 
 namespace ByteXS {
-	const unsigned char * FitData (lua_State * L, const ByteReader & reader, int barg, size_t n, size_t size = 1U);
-	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
-
-	template<typename T> const T * FitDataTyped (lua_State * L, const ByteReader & reader, int barg, size_t n)
+	//
+	template<typename T = unsigned char> const T * EnsureN (lua_State * L, const ByteReader & reader, size_t n, size_t size = sizeof(T))
 	{
-		const void * data = FitData(L, reader, barg, n, sizeof(T));
+		if (size < sizeof(T)) return nullptr;
+
+		//
+		size_t len = reader.mCount / size;
+		const void * data = reader.mBytes;
+
+		//
+		if (n > len)
+		{
+			{
+				ByteWriter writer(L);
+
+				writer.AddBytes(data, len * size);
+				writer.ZeroPad((n - len) * size);
+			}
+			
+			// ~ByteWriter(): ..., data, ..., ex
+
+			data = lua_tostring(L, -1);
+
+			lua_replace(L, reader.mPos);// ..., ex, ...
+		}
 
 		return static_cast<const T *>(data);
 	}
+
+	const float * PointToFloats (lua_State * L, int arg, size_t nfloats, bool as_bytes, int * count = nullptr);
 
 	struct ByteWriter {
 		luaL_Buffer mB;	// Buffer, when not writing to a blob
@@ -47,8 +68,9 @@ namespace ByteXS {
 		ByteWriter (lua_State * L, unsigned char * out = nullptr, size_t stride = 0U);
 		~ByteWriter (void);
 
-		void AddBytes (const unsigned char * bytes, size_t n);
+		void AddBytes (const void * bytes, size_t n);
 		void NextLine (void);
+		void ZeroPad (size_t n);
 	};
 
 	struct BytesMetatableOpts {

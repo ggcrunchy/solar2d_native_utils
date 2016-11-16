@@ -25,6 +25,7 @@
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
+#include "utils/Byte.h"
 #include "utils/LuaEx.h"
 
 #ifdef _WIN32
@@ -84,20 +85,25 @@ namespace PathXS {
 
 		WriteAux (lua_State * L, int w, int h, Directories * dirs);
 
-		const unsigned char * GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const;
+		template<typename T = unsigned char> const T * GetBytes (lua_State * L, const ByteReader & reader, size_t w) const
+		{
+			return ByteXS::EnsureN<T>(L, reader, w, size_t(mH) * sizeof(T));
+		}
 	};
 
 	struct WriteAuxReader : WriteAux {
 		ByteReader mReader;
-		int mBArg;
 
 		WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs = nullptr);
 
-		const unsigned char * GetBytes (lua_State * L, size_t w, size_t size);
+		template<typename T = unsigned char> const T * GetBytes (lua_State * L, size_t w)
+		{
+			return WriteAux::GetBytes<T>(L, mReader, w);
+		}
 	};
 
 	template<typename T = unsigned char> struct WriteData {
-		const void * mData;
+		const T * mData;
 		const char * mFilename;
 		int mW, mH, mComp, mStride;
 		bool mAsUserdata;
@@ -124,9 +130,9 @@ namespace PathXS {
 
 			if (mStride != 0) w = mStride;
 
-			mData = waux.GetBytes(L, w, sizeof(T));
+			mData = waux.GetBytes<T>(L, w);
 		}
 
-		operator const T * (void) { return static_cast<const T *>(mData); }
+		operator const T * (void) { return mData; }
 	};
 }

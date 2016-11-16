@@ -108,18 +108,8 @@ namespace PathXS {
 		if (dirs) mFilename = dirs->Canonicalize(L, false);
 	}
 
-	const unsigned char * WriteAux::GetBytes (lua_State * L, const ByteReader & reader, size_t w, size_t size, int barg) const
-	{
-		return ByteXS::FitData(L, reader, barg, w, size_t(mH) * size);
-	}
-
-	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux(L, w, h, dirs), mReader(L, barg), mBArg(barg)
+	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux(L, w, h, dirs), mReader(L, barg)
 	{
 		if (!mReader.mBytes) lua_error(L);
-	}
-
-	const unsigned char * WriteAuxReader::GetBytes (lua_State * L, size_t w, size_t size)
-	{
-		return WriteAux::GetBytes(L, mReader, w, size, mBArg);
 	}
 }
