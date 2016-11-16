@@ -27,11 +27,11 @@
 
 namespace ByteXS {
 	//
-	template<typename F> float * LoadFloats (lua_State * L, int arg, size_t n, size_t size, F func)
+	template<typename F> float * LoadFloats (lua_State * L, int arg, F func, size_t n, size_t size)
 	{
 		float * pfloats = LuaXS::NewArray<float>(L, n);	// ..., float_bytes, ..., floats
 
-		for (size_t i = 0; i < n; ++i) pfloats[i] = func(i);
+		for (size_t i = 0; i < n; ++i) func(pfloats, n);
 
 		memset(&pfloats[n], 0, (size - n) * sizeof(float));
 
@@ -53,25 +53,22 @@ namespace ByteXS {
 			{
 				auto bytes = static_cast<const unsigned char *>(reader.mBytes);
 
-				return LoadFloats(L, arg, reader.mCount, nfloats, [=](size_t i)
-				{
-					return float(bytes[i]) / 255.0f;
-				});
+				return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
+					for (size_t i = 0; i < n; ++i) pfloats[i] = float(bytes[i]) / 255.0f; // TODO: planning some sort of unorm8 <-> float SIMD ops
+				}, reader.mCount, nfloats);
 			}
 
 			else return EnsureN<float>(L, reader, nfloats);
 		}
 
-		else return LoadFloats(L, arg, lua_objlen(L, arg), nfloats, [=](size_t i)
-		{
-			lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
+		else return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
+			for (size_t i = 0; i < n; ++i, lua_pop(L, 1))	// ..., float_table, ..., floats
+			{
+				lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
 
-			float f = (float)luaL_checknumber(L, -1);
-
-			lua_pop(L, 1);	// ..., float_table, ..., floats
-
-			return f;
-		});
+				pfloats[i] = (float)luaL_checknumber(L, -1);
+			}
+		}, lua_objlen(L, arg), nfloats);
 	}
 
 	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine(out), mOffset(0U), mStride(stride)

@@ -47,13 +47,18 @@ namespace BlobXS {
 	public:
 		struct Pimpl {
 			// Methods
-			virtual bool Bound (void) { return false; }
+			virtual bool CanBind (lua_State * L, int, int, int, int) { return false; } // Other, options? (sets reason if false)
+			virtual void Commit (lua_State * L) {} // ...if true, applies previous step
+			// ^^^ TO DO: Fumbling toward a solution, but these should subsume the next three and possibly the later methods
+
+			virtual bool Bound (void) const { return false; }
 			virtual bool Fit (lua_State *, int, int, int, int) { return false; }
 			virtual bool InterpretAs (lua_State *, int, int, int, int) { return false; }
 			virtual void CopyTo (void * ptr) {}
 			virtual void LoadFrom (void * ptr) {}
 			virtual void Zero (void) {}
 			virtual operator unsigned char * (void) { return nullptr; }
+			virtual const char * GetReason (void) const { return nullptr; }
 
 			// Lifetime
 			virtual void Initialize (lua_State *, int, const char *, bool) {}
@@ -64,13 +69,14 @@ namespace BlobXS {
 		Pimpl * mPimpl;	// Implementation details
 
 	public:
-		bool Bound (void) { return mPimpl->Bound(); }
+		bool Bound (void) const { return mPimpl->Bound(); }
 		bool Fit (lua_State * L, int x, int y, int w, int h) { return mPimpl->Fit(L, x, y, w, h); }
 		bool InterpretAs (lua_State * L, int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(L, w, h, bpp, stride); }
 		void CopyTo (void * ptr) { mPimpl->CopyTo(ptr); }
 		void LoadFrom (void * ptr) { mPimpl->LoadFrom(ptr); }
 		void Zero (void) { mPimpl->Zero(); }
 		operator unsigned char * (void) { return mPimpl->operator unsigned char *(); }
+		const char * GetReason (void) const { return mPimpl->GetReason(); }
 
 		State (lua_State * L, int arg, const char * key = nullptr, bool bLeave = true);
 		~State (void) { delete mPimpl; }
