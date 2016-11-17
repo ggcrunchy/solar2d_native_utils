@@ -25,4 +25,7 @@
 
 namespace SimdXS {
 	bool CanUseNeon (void);
+
+	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n);
+	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n);
 }

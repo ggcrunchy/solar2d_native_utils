@@ -23,9 +23,11 @@
 
 #include "utils/SIMD.h"
 
-#ifdef __ANDROID__
-#include <pthread.h>
-#include <cpu-features.h>
+#ifdef __APPLE__
+	#include "TargetConditionals.h"
+#elif __ANDROID__
+	#include <pthread.h>
+	#include <cpu-features.h>
 #endif
 
 namespace SimdXS {
@@ -34,7 +36,7 @@ namespace SimdXS {
 	#ifdef _WIN32
 		return false;
 	#elif __APPLE__
-		#if !TARGET_OS_SIMULATOR && (TARGET_OS_IPHONE || TARGET_OS_TV)
+		#if !TARGET_OS_SIMULATOR && (TARGET_OS_IOS || TARGET_OS_TV)
 			return true;
 		#else
 			return false;
@@ -50,5 +52,15 @@ namespace SimdXS {
 
 		return using_neon;
 	#endif
+	}
+
+	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n)
+	{
+		// TODO! (DirectXMath has some stuff that looks viable)
+	}
+
+	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n)
+	{
+		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f; // TODO: This is NOT the SIMD version :D (See above note)
 	}
 }

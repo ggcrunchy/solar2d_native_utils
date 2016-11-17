@@ -24,6 +24,7 @@
 #include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
+#include "utils/SIMD.h"
 
 namespace ByteXS {
 	//
@@ -49,14 +50,9 @@ namespace ByteXS {
 
 			if (!reader.mBytes) lua_error(L);
 
-			if (as_bytes)
-			{
-				auto bytes = static_cast<const unsigned char *>(reader.mBytes);
-
-				return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
-					for (size_t i = 0; i < n; ++i) pfloats[i] = float(bytes[i]) / 255.0f; // TODO: planning some sort of unorm8 <-> float SIMD ops
-				}, reader.mCount, nfloats);
-			}
+			if (as_bytes) return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
+				SimdXS::Unorm8sToFloats(static_cast<const unsigned char *>(reader.mBytes), pfloats, n);
+			}, reader.mCount, nfloats);
 
 			else return EnsureN<float>(L, reader, nfloats);
 		}
