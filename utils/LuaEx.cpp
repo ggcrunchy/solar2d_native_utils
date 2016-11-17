@@ -188,6 +188,64 @@ namespace LuaXS {
 		lua_setmetatable(L, -2);// ..., ud
 	}
 
+	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable)
+	{
+		lua_pushcfunction(L, get_props);// ..., meta, get_props
+		lua_getfield(L, -1, "__index");	// ..., meta, get_props, index
+
+		// Build up a list of entries that may be null, since otherwise these would be
+		// interpreted as missing properties when nil.
+		if (nullable)
+		{
+			lua_newtable(L);// ..., meta, index, nullable
+
+			for (int i = 0; nullable[i]; ++i)
+			{
+				lua_pushstring(L, nullable[i]);	// ..., meta, get_props, index, nullable, entry
+				lua_rawseti(L, -2, i + 1);	// ..., meta, get_props, index, nullable = { ..., entry }
+			}
+		}
+
+		else lua_pushnil(L);// ..., meta, get_props, index, nil
+
+		// Chain the property getter.
+		lua_pushcclosure(L, [](lua_State * L)
+		{
+			// Try to get the property first.
+			lua_pushvalue(L, lua_upvalueindex(1));	// ud, key, get_props
+			lua_pushvalue(L, 1);// ud, key, get_props, ud
+			lua_pushvalue(L, 2);// ud, key, get_props, ud, key
+			lua_call(L, 2, 1);	// ud, key, value?
+
+			if (!lua_isnil(L, 3)) return 1;
+
+			// Failing that, see if the property is allowed to be nil.
+			lua_pushvalue(L, lua_upvalueindex(3));	// ud, key, nil, nullable
+
+			for (size_t i = 1, n = lua_objlen(L, 4); i <= n; ++i, lua_pop(L, 1))
+			{
+				lua_rawgeti(L, 4, i);	// ud, key, nil, nullable, entry
+
+				if (lua_equal(L, 2, 5))
+				{
+					lua_pop(L, 2);	// ud, key, nil
+
+					return 1;
+				}
+			}
+
+			// Finally, go to the next getter in the chain.
+			lua_settop(L, 2);	// ud, key
+			lua_pushvalue(L, lua_upvalueindex(2));	// ud, key, index
+			lua_insert(L, 1);	// index, ud, key
+			lua_call(L, 2, 1);	// value?
+
+			return 1;
+		}, 3);	// ... meta, Index
+
+		lua_setfield(L, -2, "__index");	// ..., meta = { ..., __index = Index }
+	}
+
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params)
 	{
 		int first, tpos;
@@ -227,6 +285,11 @@ namespace LuaXS {
 		lua_pushliteral(L, "k");// ..., t, mt, "k"
 		lua_setfield(L, -2, "__mode");	// ..., t, mt = { __mode = "k" }
 		lua_setmetatable(L, -2);// ..., t
+	}
+
+	int NoOp (lua_State * L)
+	{
+		return 0;
 	}
 
 	Options::Options (lua_State * L, int arg) : mL(L), mArg(0)

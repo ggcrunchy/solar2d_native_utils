@@ -47,9 +47,12 @@ namespace LuaXS {
 	void AttachGC (lua_State * L, lua_CFunction gc);
 	void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
+	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable = nullptr);
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams());
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams());
 	void NewWeakKeyedTable (lua_State * L);
+
+	int NoOp (lua_State * L);
 
 	template<typename T> T * UD (lua_State * L, int arg)
 	{
@@ -66,6 +69,11 @@ namespace LuaXS {
 		return static_cast<T *>(CoronaExternalGetUserData(L, arg));
 	}
 
+	template<typename T> T * DualUD (lua_State * L, int arg, const char * name)
+	{
+		return IsType(L, name, arg) ? UD<T>(L, arg) : ExtUD<T>(L, arg);
+	}
+
 	template<typename T> int ArrayN (lua_State * L, int arg = 1)
 	{
 		return int(lua_objlen(L, arg) / sizeof(T));
@@ -76,14 +84,16 @@ namespace LuaXS {
 		UD<T>(L, arg)->~T();
 	}
 
+	template<typename T> int TypedGC (lua_State * L)
+	{
+		DestructTyped<T>(L, 1);
+
+		return 0;
+	}
+
 	template<typename T> void AttachTypedGC (lua_State * L, const char * type)
 	{
-		AttachGC(L, type, [](lua_State * L)
-		{
-			DestructTyped<T>(L, 1);
-
-			return 0;
-		});
+		AttachGC(L, type, GC<T>);
 	}
 
 	template<typename T> int LenTyped (lua_State * L)
