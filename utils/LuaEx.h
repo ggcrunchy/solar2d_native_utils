@@ -93,7 +93,7 @@ namespace LuaXS {
 
 	template<typename T> void AttachTypedGC (lua_State * L, const char * type)
 	{
-		AttachGC(L, type, GC<T>);
+		AttachGC(L, type, TypedGC<T>);
 	}
 
 	template<typename T> int LenTyped (lua_State * L)
