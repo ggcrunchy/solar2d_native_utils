@@ -44,10 +44,14 @@ namespace LuaXS {
 	bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
 
 	void AddClosures (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams());
+	void AddCloseLogic (lua_State * L, lua_CFunction func);
+	void AddRuntimeListener (lua_State * L, const char * name);
+	void AddRuntimeListener (lua_State * L, const char * name, lua_CFunction func, int nupvalues = 0);
 	void AttachGC (lua_State * L, lua_CFunction gc);
 	void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable = nullptr);
+	void CallInMainState (lua_State * L, lua_CFunction func);
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams());
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams());
 	void NewWeakKeyedTable (lua_State * L);

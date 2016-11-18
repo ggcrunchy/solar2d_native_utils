@@ -31,6 +31,20 @@ namespace ThreadXS {
 		double mD;
 	};
 
+	struct Slot {
+		Slot * mNext;
+		POD mData;
+		size_t mIndex;
+
+		Slot (void);
+
+		void GetItem (POD & pod);
+		void SetItem (const POD & pod);
+		void Sync (void);
+
+		static void RestoreValues (void);
+	};
+
 	template<typename T> struct Value {
 		POD mData;
 
@@ -56,30 +70,24 @@ namespace ThreadXS {
 		}
 	};
 
-	size_t GetSlot (void);
-	void GetItemInSlot (size_t slot, POD & pod);
-	void SetItemInSlot (size_t slot, const POD & pod);
-	void Sync (void);
-
 	template<typename T> class TLS {
-		size_t mSlot;
+		Slot mSlot;
 
 	public:
-		TLS (void)
+		TLS (void) : mSlot()
 		{
-			mSlot = GetSlot();
+			mSlot.Sync();
 		}
 
 		TLS (const T & value)
 		{
-			mSlot = GetSlot();
-
-			SetItemInSlot(mSlot, Value<T>(value).mData);
+			mSlot.SetItem(Value<T>(value).mData);
+			mSlot.Sync();
 		}
 
 		TLS & operator = (const T & value)
 		{
-			SetItemInSlot(mSlot, Value<T>(value).mData);
+			mSlot.SetItem(Value<T>(value).mData);
 
 			return *this;
 		}
@@ -88,7 +96,7 @@ namespace ThreadXS {
 		{
 			Value<T> value;
 
-			GetItemInSlot(mSlot, value.mData);
+			mSlot.GetItem(value.mData);
 
 			return value.Get();
 		}
@@ -104,7 +112,7 @@ namespace ThreadXS {
 			{
 				Value<T> value;
 
-				GetItemInSlot(mSlot, value.mData);
+				mSlot.GetItem(value.mData);
 
 				return value.Get();
 			}

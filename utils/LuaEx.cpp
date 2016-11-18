@@ -146,6 +146,35 @@ namespace LuaXS {
 		if (params.mLeaveTableAtTop) lua_settop(L, tpos);	// ..., t
 	}
 
+	void AddCloseLogic (lua_State * L, lua_CFunction func)
+	{
+		lua_newuserdata(L, 0U);	// ..., dummy
+
+		LuaXS::AttachGC(L, func);
+
+		lua_pushboolean(L, 1);	// ..., dummy, true
+		lua_rawset(L, LUA_REGISTRYINDEX);	// ...; registry = { [dummy] = true }
+	}
+
+	void AddRuntimeListener (lua_State * L, const char * name)
+	{
+		CoronaLuaPushRuntime(L);// ..., func, Runtime
+
+		lua_getfield(L, -1, "addEventListener");// ..., func, Runtime, Runtime.addEventListener
+		lua_insert(L, -2);	// ..., func, Runtime.addEventListener, Runtime
+		lua_pushstring(L, name);// ..., func, Runtime.addEventListener, Runtime, name
+		lua_pushvalue(L, -4);	// ..., func, Runtime.addEventListener, Runtime, name, func
+		lua_remove(L, -5);	// ..., Runtime.addEventListener, Runtime, name, func
+		lua_call(L, 3, 0);	// ...
+	}
+
+	void AddRuntimeListener (lua_State * L, const char * name, lua_CFunction func, int nupvalues)
+	{
+		lua_pushcclosure(L, func, nupvalues);	// ..., func
+
+		AddRuntimeListener(L, name);// ...
+	}
+
 	void AttachGC (lua_State * L, lua_CFunction gc)
 	{
 		lua_newtable(L);// ..., ud, mt
@@ -244,6 +273,24 @@ namespace LuaXS {
 		}, 3);	// ... meta, Index
 
 		lua_setfield(L, -2, "__index");	// ..., meta = { ..., __index = Index }
+	}
+
+	void CallInMainState (lua_State * L, lua_CFunction func)
+	{
+		bool bOK;
+
+		if (IsMainState(L)) bOK = lua_cpcall(L, func, nullptr) == 0;// ...[, err]
+
+		else
+		{
+			lua_getfield(L, LUA_REGISTRYINDEX, "LUAPROC_CALLER_FUNC");	// ..., caller?
+			luaL_checktype(L, -1, LUA_TFUNCTION);
+			lua_pushcfunction(L, func);	// ..., caller, func
+
+			bOK = lua_pcall(L, 1, 0, 0) == 0;	// ...[, err]
+		}
+
+		if (!bOK) lua_error(L);
 	}
 
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params)

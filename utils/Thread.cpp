@@ -27,74 +27,98 @@
 	#include "TargetCondtionals.h"
 #endif
 
+#include <atomic>
+#include <limits>
 #include <vector>
 #include <pthread.h>
 
 namespace ThreadXS {
-	struct Data {
-		std::vector<POD> mCurrent;	// Current TLS values
-		std::vector<POD> mFrozen;	// Frozen values to resync, e.g. on relaunch
-	};
+	// 
+	static std::atomic<Slot *> sHead;
 
-	static Data * GetTLS (pthread_key_t key)
-	{
-		return static_cast<Data *>(pthread_getspecific(key));
-	}
-
-	static std::vector<POD> & GetData (pthread_key_t key)
-	{
-		return GetTLS(key)->mCurrent;
-	}
-
+	//
 	static pthread_key_t tls_key;
 
-	size_t GetSlot (void)
+	//
+	Slot::Slot (void) : mNext(nullptr), mIndex((std::numeric_limits<size_t>::max)())
 	{
+		//
 		static pthread_once_t tls_key_once = PTHREAD_ONCE_INIT;
 
 		pthread_once(&tls_key_once, []()
 		{
 			pthread_key_create(&tls_key, [](void * data)
 			{
-				if (data) delete static_cast<Data *>(data);
+				if (data) delete static_cast<std::vector<POD> *>(data);
 			});
 
 			atexit([]() { pthread_key_delete(tls_key); });
 		});
 
-		Data * tls = GetTLS(tls_key);
+		memset(&mData, 0, sizeof(POD));
+	}
 
-		if (!tls)
+	void Slot::GetItem (POD & pod)
+	{
+		std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
+
+		if (tls && mIndex < tls->size()) pod = tls->at(mIndex);
+		
+		else pod = mData;
+	}
+
+	void Slot::SetItem (const POD & pod)
+	{
+		if (mIndex != (std::numeric_limits<size_t>::max)())
 		{
-			tls = new Data();
+			std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
 
-			pthread_setspecific(tls_key, tls);
+			if (!tls)
+			{
+				tls = new std::vector<POD>;
+
+				pthread_setspecific(tls_key, tls);
+			}
+
+			size_t old_size = tls->size();
+
+			if (mIndex >= old_size)
+			{
+				tls->resize(mIndex + 1);
+
+				size_t offset = 1, count = mIndex - old_size;
+
+				for (Slot * slot = mNext; offset < count; slot = slot->mNext, ++offset) tls->at(mIndex - offset) = slot->mData;
+			}
+
+			tls->at(mIndex) = pod;
 		}
 
-		POD pod;
-
-		memset(&pod, 0, sizeof(POD));
-
-		tls->mCurrent.push_back(pod);
-
-		return tls->mCurrent.size() - 1;
+		else mData = pod;
 	}
 
-	void GetItemInSlot (size_t slot, POD & pod)
+	void Slot::Sync (void)
 	{
-		pod = GetData(tls_key).at(slot);
+		// http://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange
+		mNext = sHead.load(std::memory_order_relaxed);
+ 
+		while (!sHead.compare_exchange_weak(mNext, this, std::memory_order_release, std::memory_order_relaxed));
+
+		// Count the steps to the node. This will be the TLS position.
+		mIndex = 0U;
+
+		for (Slot * slot = mNext; slot; slot = slot->mNext) ++mIndex;
 	}
 
-	void SetItemInSlot (size_t slot, const POD & pod)
+	void Slot::RestoreValues (void)
 	{
-		GetData(tls_key).at(slot) = pod;
-	}
+		std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
 
-	void Sync (void)
-	{
-		Data * tls = GetTLS(tls_key);
-
-		for (size_t i = 0; i < tls->mFrozen.size(); ++i) tls->mCurrent[i] = tls->mFrozen[i];
-		for (size_t i = tls->mFrozen.size(); i < tls->mCurrent.size(); ++i) tls->mFrozen.push_back(tls->mCurrent[i]);
+		if (tls)
+		{
+			delete tls;
+			
+			pthread_setspecific(tls_key, nullptr);
+		}
 	}
 }
