@@ -32,7 +32,6 @@ namespace ThreadXS {
 	};
 
 	struct Slot {
-		Slot * mNext;
 		POD mData;
 		size_t mIndex;
 
@@ -41,8 +40,6 @@ namespace ThreadXS {
 		void GetItem (POD & pod);
 		void SetItem (const POD & pod);
 		void Sync (void);
-
-		static void RestoreValues (void);
 	};
 
 	template<typename T> struct Value {
@@ -72,6 +69,8 @@ namespace ThreadXS {
 
 	template<typename T> class TLS {
 		Slot mSlot;
+
+		static_assert(std::is_pod<T>::value, "ThreadXS::TLS only supports plain-old-date types");
 
 	public:
 		TLS (void) : mSlot()

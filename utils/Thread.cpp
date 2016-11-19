@@ -29,69 +29,73 @@
 
 #include <atomic>
 #include <limits>
-#include <vector>
+#include <map>
 #include <pthread.h>
 
 namespace ThreadXS {
+	//
+	const size_t kInvalidID = (std::numeric_limits<size_t>::max)();
+
 	// 
-	static std::atomic<Slot *> sHead;
+	static std::atomic<size_t> sID(0U);
 
 	//
 	static pthread_key_t tls_key;
 
 	//
-	Slot::Slot (void) : mNext(nullptr), mIndex((std::numeric_limits<size_t>::max)())
+	using map_type = std::map<size_t, POD>;
+
+	//
+	Slot::Slot (void) : mIndex(kInvalidID)
 	{
-		//
-		static pthread_once_t tls_key_once = PTHREAD_ONCE_INIT;
-
-		pthread_once(&tls_key_once, []()
-		{
-			pthread_key_create(&tls_key, [](void * data)
+		static struct KeyLifetime {
+			KeyLifetime (void)
 			{
-				if (data) delete static_cast<std::vector<POD> *>(data);
-			});
+				pthread_key_create(&tls_key, [](void * data)
+				{
+					if (data) delete static_cast<map_type *>(data);
+				});
+			}
 
-			atexit([]() { pthread_key_delete(tls_key); });
-		});
+			~KeyLifetime (void)
+			{
+				pthread_key_delete(tls_key);
+			}
+		} sKeyLifetime;
 
 		memset(&mData, 0, sizeof(POD));
 	}
 
 	void Slot::GetItem (POD & pod)
 	{
-		std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
+		map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
 
-		if (tls && mIndex < tls->size()) pod = tls->at(mIndex);
+		if (tls)
+		{
+			auto iter = tls->find(mIndex);
+
+			if (iter != tls->end()) pod = iter->second;
+
+			else pod = mData;
+		}
 		
 		else pod = mData;
 	}
 
 	void Slot::SetItem (const POD & pod)
 	{
-		if (mIndex != (std::numeric_limits<size_t>::max)())
+		if (mIndex != kInvalidID)
 		{
-			std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
+			map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
 
 			if (!tls)
 			{
-				tls = new std::vector<POD>;
+				tls = new map_type;
 
 				pthread_setspecific(tls_key, tls);
 			}
 
-			size_t old_size = tls->size();
-
-			if (mIndex >= old_size)
-			{
-				tls->resize(mIndex + 1);
-
-				size_t offset = 1, count = mIndex - old_size;
-
-				for (Slot * slot = mNext; offset < count; slot = slot->mNext, ++offset) tls->at(mIndex - offset) = slot->mData;
-			}
-
-			tls->at(mIndex) = pod;
+			(*tls)[mIndex] = pod;
 		}
 
 		else mData = pod;
@@ -99,26 +103,6 @@ namespace ThreadXS {
 
 	void Slot::Sync (void)
 	{
-		// http://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange
-		mNext = sHead.load(std::memory_order_relaxed);
- 
-		while (!sHead.compare_exchange_weak(mNext, this, std::memory_order_release, std::memory_order_relaxed));
-
-		// Count the steps to the node. This will be the TLS position.
-		mIndex = 0U;
-
-		for (Slot * slot = mNext; slot; slot = slot->mNext) ++mIndex;
-	}
-
-	void Slot::RestoreValues (void)
-	{
-		std::vector<POD> * tls = static_cast<std::vector<POD> *>(pthread_getspecific(tls_key));
-
-		if (tls)
-		{
-			delete tls;
-			
-			pthread_setspecific(tls_key, nullptr);
-		}
+		mIndex = sID++;
 	}
 }
