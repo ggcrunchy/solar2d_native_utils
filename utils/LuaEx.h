@@ -167,19 +167,15 @@ namespace LuaXS {
 		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
 	}
 
-	// Return type traits for options
-	template<typename T> struct AuxOpt { typedef T return_type; };
-	template<> struct AuxOpt<unsigned int> { typedef lua_Integer return_type; };
-
 	// Helper to get an option from the top of Lua's stack, if present
-	template<typename T> typename AuxOpt<T>::return_type GetOpt (lua_State *);
+	template<typename T, typename R = T> R GetOpt (lua_State *);
 
 	template<> inline bool GetOpt<bool> (lua_State * L) { return lua_toboolean(L, -1) != 0; }
 	template<> inline int GetOpt<int> (lua_State * L) { return luaL_checkint(L, -1); }
 	template<> inline long GetOpt<long> (lua_State * L) { return luaL_checklong(L, -1); }
 	template<> inline lua_Number GetOpt<lua_Number> (lua_State * L) { return luaL_checknumber(L, -1); }
 
-	template<> inline lua_Integer GetOpt<unsigned int> (lua_State * L)
+	template<> inline lua_Integer GetOpt<unsigned int, lua_Integer> (lua_State * L)
 	{
 		lua_Integer ret = luaL_checkinteger(L, -1);
 
@@ -191,7 +187,7 @@ namespace LuaXS {
 		lua_State * mL;	// Current state
 		int mArg;	// Stack position
 
-		// Helper to get teh default value for a missing option
+		// Helper to get the default value for a missing option
 		template<typename T> T GetDef (T def) { return def; }
 
 		template<> inline bool GetDef<bool> (bool) { return false; }
@@ -216,15 +212,16 @@ namespace LuaXS {
 
 				if (!lua_isnil(mL, -1))
 				{
-					using opt_type = std::conditional<std::is_same<T, bool>::value, bool, // Is it a bool? Use that, if so...
+					using opt_type = std::conditional<std::is_same<T, bool>::value, bool, // Is the option a bool? Use that, if so...
 						std::conditional<std::is_floating_point<T>::value, lua_Number, // ...next try floats...
-							std::conditional<!std::is_signed<T>::value, unsigned int, // ...then unsigned integers...
-								std::conditional<std::is_same<T, long>::value, long, int>::type	// ... then longs or ints.
+							std::conditional<std::is_same<T, long>::value, long,// ...then longs...
+								std::conditional<std::is_unsigned<T>::value, unsigned int, int>::type	// ... and finally ints.
 							>::type
 						>::type
 					>::type;
+					using ret_type = std::conditional<std::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
 
-					opt = static_cast<T>(GetOpt<opt_type>(mL));
+					opt = static_cast<T>(GetOpt<opt_type, ret_type>(mL));
 				}
 
 				else opt = def;
@@ -266,4 +263,35 @@ namespace LuaXS {
 			return *this;
 		}
 	};
+
+	// Helper to push arguments onto Lua's stack
+	template<typename T> void PushArg (lua_State *, T arg);
+
+	template<> inline void PushArg<nullptr_t> (lua_State * L, nullptr_t) { lua_pushnil(L); }
+	template<> inline void PushArg<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
+	template<> inline void PushArg<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
+	template<> inline void PushArg<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
+	template<> inline void PushArg<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
+	template<> inline void PushArg<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
+
+	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
+	{
+		using arg_type = std::conditional<std::is_pointer<T>::value,// Is the argument a pointer?
+			std::conditional<std::is_same<std::decay<T>::type, char>::value,
+				const char *,	// If so, use either strings...
+				void *	// ...or light userdata.
+			>::type,
+			std::conditional<std::is_floating_point<T>::value,
+				lua_Number, // Otherwise, is it a float...
+				std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer?
+					lua_Integer,
+					T	// Boolean or null: use the raw type.
+				>::type
+			>::type
+		>::type;
+
+		PushArg<arg_type>(L, static_cast<arg_type>(arg));
+
+		return 1;
+	}
 };
