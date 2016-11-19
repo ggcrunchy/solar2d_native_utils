@@ -23,13 +23,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <type_traits>
 
 namespace ThreadXS {
-	union POD {
-		void * mP;
-		double mD;
-	};
+	using POD = std::max_align_t;
 
 	struct Slot {
 		POD mData;
@@ -70,7 +68,7 @@ namespace ThreadXS {
 	template<typename T> class TLS {
 		Slot mSlot;
 
-		static_assert(std::is_pod<T>::value, "ThreadXS::TLS only supports plain-old-date types");
+		static_assert(std::is_scalar<T>::value, "ThreadXS::TLS only supports scalar types");
 
 	public:
 		TLS (void) : mSlot()
