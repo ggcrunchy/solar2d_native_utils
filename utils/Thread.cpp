@@ -43,10 +43,10 @@ namespace ThreadXS {
 	static pthread_key_t tls_key;
 
 	//
-	using map_type = std::map<size_t, POD>;
+	using map_type = std::map<size_t, var_storage>;
 
 	//
-	Slot::Slot (void) : mIndex(kInvalidID)
+	Slot::Slot (size_t size) : mData(size, 0), mIndex(kInvalidID)
 	{
 		static struct KeyLifetime {
 			KeyLifetime (void)
@@ -62,11 +62,9 @@ namespace ThreadXS {
 				pthread_key_delete(tls_key);
 			}
 		} sKeyLifetime;
-
-		memset(&mData, 0, sizeof(POD));
 	}
 
-	void Slot::GetItem (POD & pod)
+	void Slot::GetVar (void * var)
 	{
 		map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
 
@@ -74,16 +72,18 @@ namespace ThreadXS {
 		{
 			auto iter = tls->find(mIndex);
 
-			if (iter != tls->end()) pod = iter->second;
+			if (iter != tls->end()) memcpy(var, iter->second.data(), mData.size());
 
-			else pod = mData;
+			else memcpy(var, mData.data(), mData.size());
 		}
 		
-		else pod = mData;
+		else memcpy(var, mData.data(), mData.size());
 	}
 
-	void Slot::SetItem (const POD & pod)
+	void Slot::SetVar (const void * var)
 	{
+		auto bytes = static_cast<const unsigned char *>(var);
+
 		if (mIndex != kInvalidID)
 		{
 			map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
@@ -95,10 +95,10 @@ namespace ThreadXS {
 				pthread_setspecific(tls_key, tls);
 			}
 
-			(*tls)[mIndex] = pod;
+			(*tls)[mIndex].assign(bytes, bytes + mData.size());
 		}
 
-		else mData = pod;
+		else mData.assign(bytes, bytes + mData.size());
 	}
 
 	void Slot::Sync (void)

@@ -25,7 +25,7 @@
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
-#include "aligned_allocator.h"
+#include "external/aligned_allocator.h"
 #include <vector>
 
 namespace ByteXS {

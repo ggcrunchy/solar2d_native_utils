@@ -22,11 +22,11 @@
 */
 
 #include "utils/SIMD.h"
+#include "external/DirectXMath.h"
 
 #ifdef __APPLE__
 	#include "TargetConditionals.h"
 #elif __ANDROID__
-	#include <pthread.h>
 	#include <cpu-features.h>
 #endif
 
@@ -42,15 +42,16 @@ namespace SimdXS {
 			return false;
 		#endif
 	#elif __ANDROID__
-		static bool using_neon;
-		static pthread_once_t neon_once = PTHREAD_ONCE_INIT;
+		static struct UsingNeon {
+			bool mUsing;
 
-		pthread_once(&neon_once, []()
-		{
-			using_neon = android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM && (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
-		});
+			UsingNeon (void)
+			{
+				mUsing = android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM && (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+			}
+		} sNeon;
 
-		return using_neon;
+		return sNeon.mUsing;
 	#endif
 	}
 

@@ -23,79 +23,54 @@
 
 #pragma once
 
-#include <cstddef>
 #include <type_traits>
+#include <vector>
 
 namespace ThreadXS {
-	using POD = std::max_align_t;
+	typedef std::vector<unsigned char> var_storage;
 
 	struct Slot {
-		POD mData;
+		var_storage mData;
 		size_t mIndex;
 
-		Slot (void);
+		Slot (size_t size);
 
-		void GetItem (POD & pod);
-		void SetItem (const POD & pod);
+		void GetVar (void * var);
+		void SetVar (const void * var);
 		void Sync (void);
-	};
-
-	template<typename T> struct Value {
-		POD mData;
-
-		T Get (void)
-		{
-			T value;
-
-			memcpy(&value, &mData, sizeof(T));
-
-			return value;
-		}
-
-		void Set (const T & value)
-		{
-			memcpy(&mData, &value, sizeof(T));
-		}
-
-		Value (void) {}
-
-		Value (const T & value)
-		{
-			Set(value);
-		}
 	};
 
 	template<typename T> class TLS {
 		Slot mSlot;
 
-		static_assert(std::is_scalar<T>::value, "ThreadXS::TLS only supports scalar types");
+		static_assert(std::is_trivial<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports trivial types with trivial destructors");
 
 	public:
-		TLS (void) : mSlot()
+		TLS (void) : mSlot(sizeof(T))
 		{
 			mSlot.Sync();
 		}
 
-		TLS (const T & value)
+		TLS (const T & value) : mSlot(sizeof(T))
 		{
-			mSlot.SetItem(Value<T>(value).mData);
+			mSlot.SetVar(&value);
 			mSlot.Sync();
 		}
 
 		TLS & operator = (const T & value)
 		{
-			mSlot.SetItem(Value<T>(value).mData);
+			mSlot.SetVar(&value);
 
 			return *this;
 		}
 
 		operator T ()
 		{
-			Value<T> value;
+			T value;
 
-			mSlot.GetItem(value.mData);
+			mSlot.GetVar(&value);
 
-			return value.Get();
+			return value;
 		}
 
 #ifndef _WIN32 // workaround for lack of SFINAE on MSVC
@@ -107,11 +82,11 @@ namespace ThreadXS {
 			if (std::is_pointer<T>::value)
 #endif
 			{
-				Value<T> value;
+				T value;
 
-				mSlot.GetItem(value.mData);
+				mSlot.GetVar(&value);
 
-				return value.Get();
+				return value;
 			}
 #ifdef _WIN32
 			else return nullptr;

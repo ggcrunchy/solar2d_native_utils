@@ -12,7 +12,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\ByteReader\ByteReader.h" />
-    <ClInclude Include="..\..\utils\aligned_allocator.h" />
+    <ClInclude Include="..\..\external\aligned_allocator.h" />
+    <ClInclude Include="..\..\external\DirectXMath.h" />
+    <ClInclude Include="..\..\external\DirectXPackedVector.h" />
     <ClInclude Include="..\..\utils\Blob.h" />
     <ClInclude Include="..\..\utils\Byte.h" />
     <ClInclude Include="..\..\utils\LuaEx.h" />
@@ -30,6 +32,11 @@
     <ClCompile Include="..\..\utils\SIMD.cpp" />
     <ClCompile Include="..\..\utils\Memory.cpp" />
     <ClCompile Include="..\..\utils\Thread.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\external\DirectXMathConvert.inl" />
+    <None Include="..\..\external\DirectXMathVector.inl" />
+    <None Include="..\..\external\DirectXPackedVector.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BF4DE651-2791-489F-9246-E70BD64F314E}</ProjectGuid>

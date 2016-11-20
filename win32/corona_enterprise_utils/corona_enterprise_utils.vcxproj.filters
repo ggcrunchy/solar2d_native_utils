@@ -15,12 +15,12 @@
     <Filter Include="Source Files\utils">
       <UniqueIdentifier>{35d9a441-eb1f-4306-afce-889299d2fa8d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\external">
+      <UniqueIdentifier>{4b4082e7-2d97-4ae6-b3bd-c610418a88d2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\utils\Thread.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\utils\aligned_allocator.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\utils\Blob.h">
@@ -43,6 +43,15 @@
     </ClInclude>
     <ClInclude Include="..\..\utils\Memory.h">
       <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\aligned_allocator.h">
+      <Filter>Header Files\external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\DirectXMath.h">
+      <Filter>Header Files\external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\DirectXPackedVector.h">
+      <Filter>Header Files\external</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -70,5 +79,16 @@
     <ClCompile Include="..\..\utils\Thread.cpp">
       <Filter>Source Files\utils</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\external\DirectXMathConvert.inl">
+      <Filter>Header Files\external</Filter>
+    </None>
+    <None Include="..\..\external\DirectXMathVector.inl">
+      <Filter>Header Files\external</Filter>
+    </None>
+    <None Include="..\..\external\DirectXPackedVector.inl">
+      <Filter>Header Files\external</Filter>
+    </None>
   </ItemGroup>
 </Project>

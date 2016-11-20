@@ -24,7 +24,7 @@
 #pragma once
 
 #include "CoronaLua.h"
-#include "aligned_allocator.h"
+#include "external/aligned_allocator.h"
 #include <limits>
 #include <utility>
 #include <vector>
