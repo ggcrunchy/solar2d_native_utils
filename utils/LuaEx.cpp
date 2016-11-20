@@ -285,7 +285,8 @@ namespace LuaXS {
 		{
 			lua_getfield(L, LUA_REGISTRYINDEX, "LUAPROC_CALLER_FUNC");	// ..., caller?
 			luaL_checktype(L, -1, LUA_TFUNCTION);
-			lua_pushcfunction(L, func);	// ..., caller, func
+
+			*LuaXS::NewTyped<lua_CFunction>(L) = func;	// ..., caller, func
 
 			bOK = lua_pcall(L, 1, 0, 0) == 0;	// ...[, err]
 		}
