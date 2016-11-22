@@ -26,6 +26,16 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef _WIN32
+	#include <ppl.h>
+#elif __APPLE__
+	#include <dispatch/dispatch.h>
+#elif __ANDROID__
+	#include <parallel/algorithm>
+#else
+	#error "Unsupported target"
+#endif
+
 namespace ThreadXS {
 	typedef std::vector<unsigned char> var_storage;
 
@@ -43,7 +53,7 @@ namespace ThreadXS {
 	template<typename T> class TLS {
 		Slot mSlot;
 
-		static_assert(std::is_trivial<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports trivial types with trivial destructors");
+		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
 
 	public:
 		TLS (void) : mSlot(sizeof(T))
@@ -66,31 +76,42 @@ namespace ThreadXS {
 
 		operator T ()
 		{
-			T value;
+			std::aligned_union<0U, T> value;
 
 			mSlot.GetVar(&value);
 
-			return value;
+			return *reinterpret_cast<T *>(&value);
 		}
 
-#ifndef _WIN32 // workaround for lack of SFINAE on MSVC
-		#error "Add some std::enable_if() construct here!"
-#endif
-		T operator -> ()
-		{
-#ifdef _WIN32
-			if (std::is_pointer<T>::value)
-#endif
-			{
-				T value;
+#ifdef _WIN32 // workaround for lack of SFINAE on MSVC 2013
+		template<bool is_pointer = std::is_pointer<T>::value> typename std::conditional<is_pointer, T, void>::type operator -> (void);
 
-				mSlot.GetVar(&value);
-
-				return value;
-			}
-#ifdef _WIN32
-			else return nullptr;
+		template<> inline T operator -> <true> (void) { return T(*this); }
+		template<> inline void operator -> <false> (void) {}
+#else
+		template<typename T> std::enable_if<std::is_pointer<T>::value, T>::type operator -> () { return T(*this); }
 #endif
-		}
 	};
+
+	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
+	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f)
+	{
+	#ifdef _WIN32
+		Concurrency::parallel_for_each(a, b, std::forward<F>(f));
+	#elif __APPLE__
+		size_t count = std::distance(a, b);
+		using data_t = std::pair<It, F>;
+		data_t helper = data_t(a, std::forward<F>(f));
+
+		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
+		{
+			data_t * d = static_cast<data_t *>(ctx);
+			auto elem_it = std::next(d->first, cnt);
+
+			(*d).second(*(elem_it));
+		});
+	#elif __ANDROID__
+		__gnu_parallel::for_each(a, b, std::forward<F>(f));
+	#endif
+	}
 }
