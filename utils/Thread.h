@@ -93,6 +93,26 @@ namespace ThreadXS {
 #endif
 	};
 
+	// Adapted from parallel_for_each, which follows
+	template<typename F> inline void parallel_for (size_t a, size_t b, F && f)
+	{
+	#ifdef _WIN32
+		Concurrency::parallel_for(a, b, std::forward<F>(f));
+	#elif __APPLE__
+		using data_t = std::pair<size_t, F>;
+		data_t helper = data_t(a, std::forward<F>(f));
+
+		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
+		{
+			data_t * d = static_cast<data_t *>(ctx);
+
+			(*d).second(d->first + cnt);
+		});
+	#elif __ANDROID__
+		__gnu_parallel::generate_n(a, b - a, std::forward<F>(f));
+	#endif
+	}
+
 	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
 	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f)
 	{
