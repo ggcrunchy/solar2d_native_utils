@@ -27,7 +27,6 @@ namespace LuaXS {
 	bool IsMainState (lua_State * L)
 	{
 		int top = lua_gettop(L);
-
 		const char * levels[] = { "package", "loaded", "luaproc", "is_main_state" };
 
 		for (int i = 0; i < sizeof(levels) / sizeof(const char *); ++i)
@@ -48,7 +47,7 @@ namespace LuaXS {
 
 		bool bOK = lua_isfunction(L, -1) != 0 && lua_pcall(L, 0, 1, 0) == 0;
 
-		if (!bOK) printf("luaproc.is_main_state() failed\n");
+		if (!bOK) fprintf(stderr, "luaproc.is_main_state() failed\n");
 
 		bool bMainState = !bOK || lua_toboolean(L, -1) != 0; // if something went wrong, main state as good a guess as any
 
@@ -340,7 +339,7 @@ namespace LuaXS {
 		return 0;
 	}
 
-	Options::Options (lua_State * L, int arg) : mL(L), mArg(0)
+	Options::Options (lua_State * L, int arg) : mL{L}, mArg{0}
 	{
 		if (lua_istable(L, arg)) mArg = CoronaLuaNormalize(L, arg);
 	}

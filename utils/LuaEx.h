@@ -34,7 +34,7 @@ namespace LuaXS {
 		int mTablePos;
 		bool mLeaveTableAtTop;
 
-		AddParams (int tpos = 0, int first = 0) : mFirstPos(first), mTablePos(tpos), mLeaveTableAtTop(true)
+		AddParams (int tpos = 0, int first = 0) : mFirstPos{first}, mTablePos{tpos}, mLeaveTableAtTop{true}
 		{
 		}
 	};
@@ -43,7 +43,7 @@ namespace LuaXS {
 	bool IsType (lua_State * L, const char * name, int index = -1);
 	bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
 
-	void AddClosures (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams());
+	void AddClosures (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
 	void AddCloseLogic (lua_State * L, lua_CFunction func);
 	void AddRuntimeListener (lua_State * L, const char * name);
 	void AddRuntimeListener (lua_State * L, const char * name, lua_CFunction func, int nupvalues = 0);
@@ -52,8 +52,8 @@ namespace LuaXS {
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable = nullptr);
 	void CallInMainState (lua_State * L, lua_CFunction func);
-	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams());
-	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams());
+	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
+	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams{});
 	void NewWeakKeyedTable (lua_State * L);
 
 	int NoOp (lua_State * L);
@@ -121,7 +121,7 @@ namespace LuaXS {
 
 	template<typename T> T * NewArray (lua_State * L, size_t n)
 	{
-		static_assert(std::is_pod<T>::value, "NewArray() type must be plain-old-data");
+		static_assert(std::is_nothrow_default_constructible<T>::value, "NewArray() type must be nothrow default-constructible");
 
 		return static_cast<T *>(lua_newuserdata(L, n * sizeof(T)));	// ..., ud
 	}
@@ -130,7 +130,7 @@ namespace LuaXS {
 	{
 		T * instance = static_cast<T *>(lua_newuserdata(L, sizeof(T)));	// ..., ud
 
-		new (instance) T(std::forward<Args>(args)...);
+		new (instance) T{std::forward<Args>(args)...};
 
 		return instance;
 	}
@@ -141,14 +141,14 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T(std::forward<Args>(args)...);
+		new (instance) T{std::forward<Args>(args)...};
 
 		return instance;
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
 	{
-		static_assert(std::is_pod<T>::value, "BytesToValue() type must be plain-old-data");
+		static_assert(std::is_trivially_copyable<T>::value, "BytesToValue() type must be trivially copyable");
 
 		if (lua_type(L, arg) == LUA_TSTRING && lua_objlen(L, arg) == sizeof(T))
 		{
@@ -162,7 +162,7 @@ namespace LuaXS {
 
 	template<typename T> void ValueToBytes (lua_State * L, const T & value)
 	{
-		static_assert(std::is_pod<T>::value, "ValueToBytes() type must be plain-old-data");
+		static_assert(std::is_trivially_copyable<T>::value, "ValueToBytes() type must be trivially copyable");
 
 		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
 	}
@@ -290,7 +290,7 @@ namespace LuaXS {
 			>::type
 		>::type;
 
-		PushArg<arg_type>(L, static_cast<arg_type>(arg));
+		PushArg(L, static_cast<arg_type>(arg));
 
 		return 1;
 	}

@@ -22,31 +22,19 @@
 */
 
 #include "utils/Thread.h"
-
-#ifdef __APPLE__
-	#include "TargetCondtionals.h"
-#endif
-
 #include <atomic>
-#include <limits>
 #include <map>
 #include <pthread.h>
 
 namespace ThreadXS {
 	//
-	const size_t kInvalidID = (std::numeric_limits<size_t>::max)();
-
-	// 
-	static std::atomic<size_t> sID(0U);
+	using map_type = std::map<size_t, Slot::storage_type>;
 
 	//
 	static pthread_key_t tls_key;
 
 	//
-	using map_type = std::map<size_t, var_storage>;
-
-	//
-	Slot::Slot (size_t size) : mData(size, 0), mIndex(kInvalidID)
+	void Slot::Init (void)
 	{
 		static struct KeyLifetime {
 			KeyLifetime (void)
@@ -62,47 +50,62 @@ namespace ThreadXS {
 				pthread_key_delete(tls_key);
 			}
 		} sKeyLifetime;
+
+		//
+		static std::atomic<size_t> sID{0U};
+
+		mIndex = sID++;
 	}
 
+	//
+	Slot::Slot (size_t size) : mData(size, 0)
+	{
+		Init();
+	}
+
+	//
+	static void Assign (Slot::storage_type & storage, const void * var, size_t size)
+	{
+		auto bytes = static_cast<const unsigned char *>(var);
+
+		storage.assign(bytes, bytes + size);
+	}
+
+	//
+	Slot::Slot (size_t size, const void * var) : mData(size)
+	{
+		Init();
+		Assign(mData, var, size);
+	}
+
+	//
 	void Slot::GetVar (void * var)
 	{
 		map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
+		auto source = &mData;
 
 		if (tls)
 		{
 			auto iter = tls->find(mIndex);
 
-			if (iter != tls->end()) memcpy(var, iter->second.data(), mData.size());
-
-			else memcpy(var, mData.data(), mData.size());
+			if (iter != tls->end()) source = &iter->second;
 		}
 		
-		else memcpy(var, mData.data(), mData.size());
+		memcpy(var, source->data(), mData.size());
 	}
 
+	//
 	void Slot::SetVar (const void * var)
 	{
-		auto bytes = static_cast<const unsigned char *>(var);
+		map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
 
-		if (mIndex != kInvalidID)
+		if (!tls)
 		{
-			map_type * tls = static_cast<map_type *>(pthread_getspecific(tls_key));
+			tls = new map_type;
 
-			if (!tls)
-			{
-				tls = new map_type;
-
-				pthread_setspecific(tls_key, tls);
-			}
-
-			(*tls)[mIndex].assign(bytes, bytes + mData.size());
+			pthread_setspecific(tls_key, tls);
 		}
 
-		else mData.assign(bytes, bytes + mData.size());
-	}
-
-	void Slot::Sync (void)
-	{
-		mIndex = sID++;
+		Assign((*tls)[mIndex], var, mData.size());
 	}
 }

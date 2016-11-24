@@ -52,7 +52,9 @@ namespace PathXS {
 		void * mLib;
 	#endif
 
-		LibLoader (void) : mLib(nullptr) {}
+		LibLoader (void) : mLib{nullptr}
+		{
+		}
 	
 		bool IsLoaded (void) const { return mLib != nullptr; }
 		bool LateLoad (void);
@@ -108,7 +110,7 @@ namespace PathXS {
 		int mW, mH, mComp, mStride;
 		bool mAsUserdata;
 
-		WriteData (lua_State * L, Directories * dirs = nullptr, bool bHasStride = false) : mData(nullptr), mStride(0), mAsUserdata(false)
+		WriteData (lua_State * L, Directories * dirs = nullptr, bool bHasStride = false) : mData{nullptr}, mStride{0}, mAsUserdata{false}
 		{
 			mW = luaL_checkint(L, 2);
 			mH = luaL_checkint(L, 3);

@@ -25,7 +25,6 @@
 
 #include "CoronaLua.h"
 #include "external/aligned_allocator.h"
-#include <limits>
 #include <utility>
 #include <vector>
 
@@ -35,11 +34,8 @@ namespace BlobXS {
 		typedef std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N>> type;
 	};
 
-	using namespace simdpp::SIMDPP_ARCH_NAMESPACE;
-	using ucvec = std::vector<unsigned char>;
-
-	template<> struct VectorType<0U, unsigned char> {
-		typedef ucvec type;
+	template<> struct VectorType<0U> {
+		typedef std::vector<unsigned char> type;
 	};
 
 	//
@@ -118,7 +114,9 @@ namespace BlobXS {
 		bool mResizable;// If true, the userdata holds a vector that contains the blob; otherwise, it is the blob
 		const char * mType;	// User-defined blob type (if unspecified, "xs.blob")
 
-		CreateOpts (void) : mAlignment(0), mType(nullptr), mResizable(false) {}
+		CreateOpts (void) : mAlignment{0}, mType{nullptr}, mResizable{false}
+		{
+		}
 	};
 
 	//

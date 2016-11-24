@@ -46,7 +46,7 @@ namespace ByteXS {
 	{
 		if (!lua_istable(L, arg))
 		{
-			ByteReader reader(L, arg);
+			ByteReader reader{L, arg};
 
 			if (!reader.mBytes) lua_error(L);
 

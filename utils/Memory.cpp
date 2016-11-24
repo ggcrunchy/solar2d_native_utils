@@ -246,7 +246,7 @@ void MemoryXS::LuaMemory::Push (void * ptr, const char * type, bool as_userdata,
 
 	else
 	{
-		lua_pushlstring(mL, (const char *)ptr, GetSize(ptr));	// ..., bytes
+		lua_pushlstring(mL, static_cast<const char *>(ptr), GetSize(ptr));	// ..., bytes
 
 		if (bRemove) Free(ptr);
 	}

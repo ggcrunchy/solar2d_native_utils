@@ -26,7 +26,7 @@
 #include "utils/LuaEx.h"
 #include <limits>
 
-BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mPimpl(nullptr)
+BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : mPimpl{nullptr}
 {
 	auto impl = GetImplementations(L);
 

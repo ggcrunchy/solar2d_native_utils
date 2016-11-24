@@ -30,6 +30,7 @@
 	#include <ppl.h>
 #elif __APPLE__
 	#include <dispatch/dispatch.h>
+	#include "TargetConditionals.h"
 #elif __ANDROID__
 	#include <parallel/algorithm>
 #else
@@ -37,34 +38,48 @@
 #endif
 
 namespace ThreadXS {
-	typedef std::vector<unsigned char> var_storage;
+	// Macro to declare type with thread-local duration, preferring compiler support when available.
+	// Using `thread_local` would be even better, but seems to be pretty hit-and-miss.
+	#ifdef _WIN32
+		#define THREAD_LOCAL(type) __declspec(thread) type
+	#elif !TARGET_OS_IOS
+		#define THREAD_LOCAL(type) __thread type
+	#else
+		#define THREAD_LOCAL(type) ThreadXS::TLS<type>
+	#endif
 
-	struct Slot {
-		var_storage mData;
+	//
+	class Slot {
+	public:
+		using storage_type = std::vector<unsigned char>;
+
+	private:
+		storage_type mData;
 		size_t mIndex;
 
+		void Init (void);
+
+	public:
 		Slot (size_t size);
+		Slot (size_t size, const void * var);
 
 		void GetVar (void * var);
 		void SetVar (const void * var);
-		void Sync (void);
 	};
 
+	//
 	template<typename T> class TLS {
 		Slot mSlot;
 
 		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
 
 	public:
-		TLS (void) : mSlot(sizeof(T))
+		TLS (void) : mSlot{sizeof(T)}
 		{
-			mSlot.Sync();
 		}
 
-		TLS (const T & value) : mSlot(sizeof(T))
+		TLS (const T & value) : mSlot{sizeof(T), &value}
 		{
-			mSlot.SetVar(&value);
-			mSlot.Sync();
 		}
 
 		TLS & operator = (const T & value)
@@ -76,21 +91,21 @@ namespace ThreadXS {
 
 		operator T ()
 		{
-			std::aligned_union<0U, T> value;
+			std::aligned_union<0U, T> value;// Use POD data so that T need not be trivially constructible
 
 			mSlot.GetVar(&value);
 
 			return *reinterpret_cast<T *>(&value);
 		}
 
-#ifdef _WIN32 // workaround for lack of SFINAE on MSVC 2013
+	#ifdef _WIN32 // workaround for lack of SFINAE on MSVC 2013
 		template<bool is_pointer = std::is_pointer<T>::value> typename std::conditional<is_pointer, T, void>::type operator -> (void);
 
-		template<> inline T operator -> <true> (void) { return T(*this); }
-		template<> inline void operator -> <false> (void) {}
-#else
-		template<typename T> std::enable_if<std::is_pointer<T>::value, T>::type operator -> () { return T(*this); }
-#endif
+		template<> inline T operator -> <true> (void) { return T{*this}; }
+		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
+	#else
+		template<typename T> std::enable_if<std::is_pointer<T>::value, T>::type operator -> () { return T{*this}; }
+	#endif
 	};
 
 	// Adapted from parallel_for_each, which follows
@@ -100,7 +115,8 @@ namespace ThreadXS {
 		Concurrency::parallel_for(a, b, std::forward<F>(f));
 	#elif __APPLE__
 		using data_t = std::pair<size_t, F>;
-		data_t helper = data_t(a, std::forward<F>(f));
+
+		data_t helper = data_t{a, std::forward<F>(f)};
 
 		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
@@ -119,9 +135,10 @@ namespace ThreadXS {
 	#ifdef _WIN32
 		Concurrency::parallel_for_each(a, b, std::forward<F>(f));
 	#elif __APPLE__
-		size_t count = std::distance(a, b);
 		using data_t = std::pair<It, F>;
-		data_t helper = data_t(a, std::forward<F>(f));
+
+		size_t count = std::distance(a, b);
+		data_t helper = data_t{a, std::forward<F>(f)};
 
 		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
