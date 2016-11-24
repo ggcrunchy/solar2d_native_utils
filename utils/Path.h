@@ -82,7 +82,7 @@ namespace PathXS {
 	#define LIB_BIND(lib, prefix, n) lib.Bind(&n, #prefix #n)
 
 	struct WriteAux {
-		const char * mFilename;
+		const char * mFilename{nullptr};
 		int mW, mH;
 
 		WriteAux (lua_State * L, int w, int h, Directories * dirs);

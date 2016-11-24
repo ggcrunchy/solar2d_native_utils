@@ -103,12 +103,12 @@ namespace PathXS {
 	#endif
 	}
 
-	WriteAux::WriteAux (lua_State * L, int w, int h, Directories * dirs) : mFilename(nullptr), mW(w), mH(h)
+	WriteAux::WriteAux (lua_State * L, int w, int h, Directories * dirs) : mW{w}, mH{h}
 	{
 		if (dirs) mFilename = dirs->Canonicalize(L, false);
 	}
 
-	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux(L, w, h, dirs), mReader(L, barg)
+	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux{L, w, h, dirs}, mReader{L, barg}
 	{
 		if (!mReader.mBytes) lua_error(L);
 	}

@@ -32,9 +32,9 @@ namespace LuaXS {
 	struct AddParams {
 		int mFirstPos;
 		int mTablePos;
-		bool mLeaveTableAtTop;
+		bool mLeaveTableAtTop{true};
 
-		AddParams (int tpos = 0, int first = 0) : mFirstPos{first}, mTablePos{tpos}, mLeaveTableAtTop{true}
+		AddParams (int tpos = 0, int first = 0) : mFirstPos{first}, mTablePos{tpos}
 		{
 		}
 	};
@@ -126,11 +126,16 @@ namespace LuaXS {
 		return static_cast<T *>(lua_newuserdata(L, n * sizeof(T)));	// ..., ud
 	}
 
+	template<typename T> T * AllocTyped (lua_State * L)
+	{
+		return static_cast<T *>(lua_newuserdata(L, sizeof(T)));	// ..., ud
+	}
+
 	template<typename T, typename ... Args> T * NewTyped (lua_State * L, Args && ... args)
 	{
-		T * instance = static_cast<T *>(lua_newuserdata(L, sizeof(T)));	// ..., ud
+		T * instance = AllocTyped<T>(L);// ..., ud
 
-		new (instance) T{std::forward<Args>(args)...};
+		new (instance) T(std::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -141,7 +146,7 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T{std::forward<Args>(args)...};
+		new (instance) T(std::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -265,16 +270,16 @@ namespace LuaXS {
 	};
 
 	// Helper to push arguments onto Lua's stack
-	template<typename T> void PushArg (lua_State *, T arg);
+	template<typename T> void PushArgBody (lua_State *, T arg);
 
-	template<> inline void PushArg<nullptr_t> (lua_State * L, nullptr_t) { lua_pushnil(L); }
-	template<> inline void PushArg<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
-	template<> inline void PushArg<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
-	template<> inline void PushArg<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
-	template<> inline void PushArg<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
-	template<> inline void PushArg<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
+	template<> inline void PushArgBody<nullptr_t> (lua_State * L, nullptr_t) { lua_pushnil(L); }
+	template<> inline void PushArgBody<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
+	template<> inline void PushArgBody<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
+	template<> inline void PushArgBody<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
+	template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
+	template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
 
-	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
+	template<typename T> void PushArg (lua_State * L, T arg)
 	{
 		using arg_type = std::conditional<std::is_pointer<T>::value,// Is the argument a pointer?
 			std::conditional<std::is_same<std::decay<T>::type, char>::value,
@@ -290,7 +295,12 @@ namespace LuaXS {
 			>::type
 		>::type;
 
-		PushArg(L, static_cast<arg_type>(arg));
+		PushArgBody(L, static_cast<arg_type>(arg));
+	}
+
+	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
+	{
+		PushArg(L, arg);
 
 		return 1;
 	}

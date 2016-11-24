@@ -28,10 +28,10 @@
 //
 namespace MemoryXS {
 	struct LuaMemory {
-		lua_State * mL;	// Main Lua state for this 
-		int mIndex;	// Index of memory
-		int mRegistrySlot;	// Slot in registry, if used
-		int mStoreSlot;	// Slot in registry for table storage, if used
+		lua_State * mL{nullptr};// Main Lua state for this 
+		int mIndex{0};	// Index of memory
+		int mRegistrySlot{LUA_NOREF};	// Slot in registry, if used
+		int mStoreSlot{LUA_NOREF};	// Slot in registry for table storage, if used
 
 		struct BookmarkDualTables {
 			LuaMemory * mOwner;	// Memory TLS to repair
@@ -65,9 +65,6 @@ namespace MemoryXS {
 		void PushObject (int slot, void * ptr);
 		void Remove (int slot, void * ptr);
 		void UnloadTable (void);
-
-		// Lifetime
-		LuaMemory (void) : mL(nullptr), mIndex(0), mRegistrySlot(LUA_NOREF), mStoreSlot(LUA_NOREF) {}
 
 		// Interface
 		void FailAssert (const char * what);
