@@ -29,7 +29,7 @@
 
 #if _XM_VECTORCALL_
 #define XM_CALLCONV __vectorcall
-#else
+/*#else*/#elif _MSC_VER	// <- STEVE CHANGE
 #define XM_CALLCONV __fastcall
 #endif
 
@@ -72,6 +72,16 @@
 #if defined(_XM_SSE3_INTRINSICS_) && !defined(_XM_SSE_INTRINSICS_)
 #define _XM_SSE_INTRINSICS_
 #endif
+
+// STEVE CHANGE
+#ifdef __APPLE__
+	#include "TargetConditionals.h"
+#endif
+
+#if TARGET_OS_IPHONE || defined(__ANDROID__)
+	#define _XM_ARM_NEON_INTRINSICS_
+#endif
+// /STEVE CHANGE
 
 #if !defined(_XM_ARM_NEON_INTRINSICS_) && !defined(_XM_SSE_INTRINSICS_) && !defined(_XM_NO_INTRINSICS_)
 #if defined(_M_IX86) || defined(_M_X64)
@@ -123,7 +133,16 @@
 #endif
 #endif // !_XM_NO_INTRINSICS_
 
+#ifdef _MSC_VER	// <- STEVE CHANGE
 #include <sal.h>
+// STEVE CHANGE
+#else
+	#define _In_
+	#define _In_reads_
+	#define _Out_
+	#define _Use_decl_annotations_
+#endif
+// /STEVE CHANGE
 #include <assert.h>
 
 #ifndef _XM_NO_ROUNDF_
@@ -325,9 +344,19 @@ typedef const XMVECTOR& HXMVECTOR;
 // Fix-up for (7th+) XMVECTOR parameters to pass by reference
 typedef const XMVECTOR& CXMVECTOR;
 
+// STEVE CHANGE
+#ifdef _MSC_VER
+	#define ALIGNED16 __declspec(align(16))
+#elif __APPLE__
+	#define ALIGNED16 __attribute__((align_value(16)))
+#elif __ANDROID__
+	#define ALIGNED16 __attribute__((aligned(16)))
+#endif
+// /STEVE CHANGE
+
 //------------------------------------------------------------------------------
 // Conversion types for constants
-__declspec(align(16)) struct XMVECTORF32
+/*__declspec(align(16))*/ALIGNED16 struct XMVECTORF32	// <- STEVE CHANGE
 {
     union
     {
@@ -343,7 +372,7 @@ __declspec(align(16)) struct XMVECTORF32
 #endif
 };
 
-__declspec(align(16)) struct XMVECTORI32
+/*__declspec(align(16))*/ALIGNED16 struct XMVECTORI32	// <- STEVE CHANGE
 {
     union
     {
@@ -358,7 +387,7 @@ __declspec(align(16)) struct XMVECTORI32
 #endif
 };
 
-__declspec(align(16)) struct XMVECTORU8
+/*__declspec(align(16))*/ALIGNED16 struct XMVECTORU8	// <- STEVE CHANGE
 {
     union
     {
@@ -373,7 +402,7 @@ __declspec(align(16)) struct XMVECTORU8
 #endif
 };
 
-__declspec(align(16)) struct XMVECTORU32
+/*__declspec(align(16))*/ALIGNED16 struct XMVECTORU32	// <- STEVE CHANGE
 {
     union
     {
@@ -428,7 +457,7 @@ typedef const XMMATRIX& CXMMATRIX;
 #ifdef _XM_NO_INTRINSICS_
 struct XMMATRIX
 #else
-__declspec(align(16)) struct XMMATRIX
+/*__declspec(align(16))*/ALIGNED16 struct XMMATRIX	// <- STEVE CHANGE
 #endif
 {
 #ifdef _XM_NO_INTRINSICS_
@@ -500,7 +529,7 @@ struct XMFLOAT2
 };
 
 // 2D Vector; 32 bit floating point components aligned on a 16 byte boundary
-__declspec(align(16)) struct XMFLOAT2A : public XMFLOAT2
+/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT2A : public XMFLOAT2	// <- STEVE CHANGE
 {
     XMFLOAT2A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT2A(float _x, float _y) : XMFLOAT2(_x, _y) {}
@@ -552,7 +581,7 @@ struct XMFLOAT3
 };
 
 // 3D Vector; 32 bit floating point components aligned on a 16 byte boundary
-__declspec(align(16)) struct XMFLOAT3A : public XMFLOAT3
+/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT3A : public XMFLOAT3	// <- STEVE CHANGE
 {
     XMFLOAT3A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT3A(float _x, float _y, float _z) : XMFLOAT3(_x, _y, _z) {}
@@ -607,7 +636,7 @@ struct XMFLOAT4
 };
 
 // 4D Vector; 32 bit floating point components aligned on a 16 byte boundary
-__declspec(align(16)) struct XMFLOAT4A : public XMFLOAT4
+/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4A : public XMFLOAT4	// <- STEVE CHANGE
 {
     XMFLOAT4A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4A(float _x, float _y, float _z, float _w) : XMFLOAT4(_x, _y, _z, _w) {}
@@ -712,7 +741,7 @@ struct XMFLOAT4X3
 };
 
 // 4x3 Matrix: 32 bit floating point components aligned on a 16 byte boundary
-__declspec(align(16)) struct XMFLOAT4X3A : public XMFLOAT4X3
+/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4X3A : public XMFLOAT4X3	// <- STEVE CHANGE
 {
     XMFLOAT4X3A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4X3A(float m00, float m01, float m02,
@@ -762,7 +791,7 @@ struct XMFLOAT4X4
 };
 
 // 4x4 Matrix: 32 bit floating point components aligned on a 16 byte boundary
-__declspec(align(16)) struct XMFLOAT4X4A : public XMFLOAT4X4
+/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4X4A : public XMFLOAT4X4	// <- STEVE CHANGE
 {
     XMFLOAT4X4A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4X4A(float m00, float m01, float m02, float m03,

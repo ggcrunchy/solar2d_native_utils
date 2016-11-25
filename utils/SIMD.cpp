@@ -23,6 +23,7 @@
 
 #include "utils/SIMD.h"
 #include "external/DirectXMath.h"
+#include "external/DirectXPackedVector.h"
 
 #ifdef __APPLE__
 	#include "TargetConditionals.h"
@@ -59,9 +60,35 @@ namespace SimdXS {
 	{
 		// TODO! (DirectXMath has some stuff that looks viable)
 	}
-
+#include <stdio.h>
 	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n)
 	{
-		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f; // TODO: This is NOT the SIMD version :D (See above note)
+//		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f; // TODO: This is NOT the SIMD version :D (See above note)
+		for (size_t i = 0; i < n / 4; ++i, u8 += 4, pfloats += 4)
+		{
+			DirectX::PackedVector::XMUBYTEN4 bytes{u8};
+
+			*reinterpret_cast<DirectX::XMVECTOR *>(pfloats) = DirectX::PackedVector::XMLoadUByteN4(&bytes);
+		}
+		
+		size_t extra = n % 4;
+
+		if (extra)
+		{
+			uint8_t padded[4] = { 0 };
+
+			for (size_t i = 0; i < extra; ++i) padded[i] = u8[i];
+
+			DirectX::PackedVector::XMUBYTEN4 bytes{padded};
+
+			auto xmv = DirectX::PackedVector::XMLoadUByteN4(&bytes);
+
+//			for (size_t i = 0; i < extra; ++i) *((float *)&xmv)[i] = 
+		}
+		/*
+		for (size_t i = 0; i < n % 4; ++i)
+		{
+			pfloats[i] = float(u8[i]) / 255.0f;
+		}*/
 	}
 }
