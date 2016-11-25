@@ -22,6 +22,7 @@
 */
 
 #include "utils/LuaEx.h"
+#include <vector>
 
 namespace LuaXS {
 	bool IsMainState (lua_State * L)
@@ -334,28 +335,80 @@ namespace LuaXS {
 		lua_setmetatable(L, -2);// ..., t
 	}
 
+	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def)
+	{
+		luaL_argcheck(L, lnames.size() == lflags.size(), arg, "Flag names and values mismatched");
+
+		//
+		int flags = 0, type = lua_type(L, arg);
+
+		if (type == LUA_TTABLE || type == LUA_TSTRING)
+		{
+			//
+			std::vector<const char *> vnames(lnames);
+			std::vector<int> vflags(lflags);
+
+			if (!def)
+			{
+				def = "";
+
+				vnames.push_back("");
+				vflags.push_back(0);
+			}
+
+			vnames.push_back(nullptr);
+
+			//
+			if (type == LUA_TTABLE)
+			{
+				for (size_t i = 1, n = lua_objlen(L, arg); i <= n; ++i, lua_pop(L, 1))
+				{
+					lua_rawgeti(L, arg, i);	// ..., flags, ..., flag
+			
+					flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
+				}
+			}
+
+			else flags = vflags[luaL_checkoption(L, arg, def, vnames.data())];
+		}
+
+		return flags;
+	}
+
+	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def)
+	{
+		if (!lua_istable(L, arg)) return 0;
+
+		lua_getfield(L, arg, name);	// ..., flags?
+
+		int flags = GetFlags(L, arg, lnames, lflags, def);
+
+		lua_pop(L, 1);	// ...
+
+		return flags;
+	}
+
 	int NoOp (lua_State * L)
 	{
 		return 0;
 	}
+
+	bool Bool (lua_State * L, int arg) { return GetArg<bool>(L, arg); }
+	float Float (lua_State * L, int arg) { return GetArg<float>(L, arg); }
+	double Double (lua_State * L, int arg) { return GetArg<double>(L, arg); }
+	int Int (lua_State * L, int arg) { return GetArg<int>(L, arg); }
+	long Long (lua_State * L, int arg) { return GetArg<long>(L, arg); }
+	unsigned int Uint (lua_State * L, int arg) { return GetArg<unsigned int>(L, arg); }
+	const char * String (lua_State * L, int arg) { return GetArg<const char *>(L, arg); }
 
 	Options::Options (lua_State * L, int arg) : mL{L}, mArg{0}
 	{
 		if (lua_istable(L, arg)) mArg = CoronaLuaNormalize(L, arg);
 	}
 
-	Options & Options::Add (const char * name, const char *& opt)
+	Options & Options::Add (const char * name, bool & opt)
 	{
-		if (mArg)
-		{
-			lua_getfield(mL, mArg, name);	// ..., str
-
-			if (!lua_isnil(mL, -1)) opt = luaL_checkstring(mL, -1);
-
-			lua_pop(mL, 1);	// ...
-		}
-
-		return *this;
+		return Add(name, opt, false);
 	}
 
 	Options & Options::ArgCheck (bool bOK, const char * message)

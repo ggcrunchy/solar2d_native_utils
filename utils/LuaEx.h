@@ -25,7 +25,9 @@
 
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
+#include <initializer_list>
 #include <type_traits>
+#include <string>
 #include <utility>
 
 namespace LuaXS {
@@ -56,6 +58,8 @@ namespace LuaXS {
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams{});
 	void NewWeakKeyedTable (lua_State * L);
 
+	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
+	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
 	int NoOp (lua_State * L);
 
 	template<typename T> T * UD (lua_State * L, int arg)
@@ -172,69 +176,98 @@ namespace LuaXS {
 		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
 	}
 
-	// Helper to get an option from the top of Lua's stack, if present
-	template<typename T, typename R = T> R GetOpt (lua_State *);
+	// Helper to get an argument from Lua's stack
+	template<typename T, typename R = T> R GetArgBody (lua_State *, int);
 
-	template<> inline bool GetOpt<bool> (lua_State * L) { return lua_toboolean(L, -1) != 0; }
-	template<> inline int GetOpt<int> (lua_State * L) { return luaL_checkint(L, -1); }
-	template<> inline long GetOpt<long> (lua_State * L) { return luaL_checklong(L, -1); }
-	template<> inline lua_Number GetOpt<lua_Number> (lua_State * L) { return luaL_checknumber(L, -1); }
+	template<> inline bool GetArgBody<bool> (lua_State * L, int arg) { return lua_toboolean(L, arg) != 0; }
+	template<> inline int GetArgBody<int> (lua_State * L, int arg) { return luaL_checkint(L, arg); }
+	template<> inline long GetArgBody<long> (lua_State * L, int arg) { return luaL_checklong(L, arg); }
+	template<> inline lua_Number GetArgBody<lua_Number> (lua_State * L, int arg) { return luaL_checknumber(L, arg); }
+	template<> inline const char * GetArgBody<const char *> (lua_State * L, int arg) { return luaL_checkstring(L, arg); }
 
-	template<> inline lua_Integer GetOpt<unsigned int, lua_Integer> (lua_State * L)
+	template<> inline lua_Integer GetArgBody<unsigned int, lua_Integer> (lua_State * L, int arg)
 	{
-		lua_Integer ret = luaL_checkinteger(L, -1);
+		lua_Integer ret = luaL_checkinteger(L, arg);
 
 		return ret >= 0 ? ret : 0;
 	}
+
+	template<typename T> T GetArg (lua_State * L, int arg = -1)
+	{
+		using opt_type = std::conditional<!std::is_arithmetic<T>::value || std::is_same<T, bool>::value,// Is the type non-arithmetic (or bool)?
+			T, // If so, use it as is.
+			std::conditional<std::is_floating_point<T>::value,	// Otherwise, is it a float?
+				lua_Number, // If so, use numbers.
+				std::conditional<std::is_same<T, long>::value, long,// Failing that, we have either a long...
+					std::conditional<std::is_unsigned<T>::value, unsigned int, int>::type	// ...or finally an int with a certain signedness.
+				>::type
+			>::type
+		>::type;
+		using ret_type = std::conditional<std::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
+
+		return static_cast<T>(GetArgBody<opt_type, ret_type>(L, arg));
+	}
+
+	bool Bool (lua_State * L, int arg = -1);
+	float Float (lua_State * L, int arg = -1);
+	double Double (lua_State * L, int arg = -1);
+	int Int (lua_State * L, int arg = -1);
+	long Long (lua_State * L, int arg = -1);
+	unsigned int Uint (lua_State * L, int arg = -1);
+	const char * String (lua_State * L, int arg = -1);
 
 	//
 	class Options {
 		lua_State * mL;	// Current state
 		int mArg;	// Stack position
 
-		// Helper to get the default value for a missing option
-		template<typename T> T GetDef (T def) { return def; }
-
-		template<> inline bool GetDef<bool> (bool) { return false; }
-
 	public:
 		Options (lua_State * L, int arg);
 
-		Options & Add (const char * name, const char *& opt);
+		Options & Add (const char * name, bool & opt);
 		Options & ArgCheck (bool bOK, const char * message);
 
 		void Replace (const char * field);
 		bool WasSkipped (void) { return mArg == 0; }
 
 		//
-		template<typename T> Options & Add (const char * name, T & opt, T def)
+		template<typename F> Options & WithFieldDo (const char * name, F func)
 		{
-			static_assert(std::is_arithmetic<T>::value, "Expected a numeric type");
-
 			if (mArg)
 			{
 				lua_getfield(mL, mArg, name);// ..., value
 
-				if (!lua_isnil(mL, -1))
-				{
-					using opt_type = std::conditional<std::is_same<T, bool>::value, bool, // Is the option a bool? Use that, if so...
-						std::conditional<std::is_floating_point<T>::value, lua_Number, // ...next try floats...
-							std::conditional<std::is_same<T, long>::value, long,// ...then longs...
-								std::conditional<std::is_unsigned<T>::value, unsigned int, int>::type	// ... and finally ints.
-							>::type
-						>::type
-					>::type;
-					using ret_type = std::conditional<std::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
-
-					opt = static_cast<T>(GetOpt<opt_type, ret_type>(mL));
-				}
-
-				else opt = def;
+				if (!lua_isnil(mL, -1)) func();
 
 				lua_pop(mL, 1);	// ...
 			}
 
 			return *this;
+		}
+
+		//
+		template<typename F, typename A> Options & WithFieldDo (const char * name, F func, A alt)
+		{
+			if (mArg)
+			{
+				lua_getfield(mL, mArg, name);// ..., value
+
+				!lua_isnil(mL, -1) ? func() : alt();
+
+				lua_pop(mL, 1);	// ...
+			}
+
+			return *this;
+		}
+
+		//
+		template<typename T> Options & Add (const char * name, T & opt, T def)
+		{
+			return WithFieldDo(name, [=, &opt](){
+				opt = GetArg<T>(mL);
+			}, [def, &opt](){
+				opt = def;
+			});
 		}
 
 		//
@@ -242,31 +275,34 @@ namespace LuaXS {
 		{
 			static_assert(std::is_arithmetic<T>::value, "Expected a numeric type");
 
-			if (mArg) return Add(name, opt, GetDef(opt));
-
-			return *this;
+			return Add(name, std::forward<T &>(opt), opt);
 		}
 
 		template<typename T, typename F, typename ... Args> Options & AddByCall (const char * name, T & opt, F func, Args && ... args)
 		{
-			if (mArg)
-			{
-				lua_getfield(mL, mArg, name);// ..., opt
-
-				if (!lua_isnil(mL, -1)) opt = func(mL, -1, std::forward<Args>(args)...);
-
-				lua_pop(mL, 1);	// ...
-			}
-
-			return *this;
+			return WithFieldDo(name, [=, &opt](){ opt = func(mL, -1, std::forward<Args>(args)...); });
 		}
 
 		template<typename T, typename F, typename ... Args> Options & AddByCall (const char * name, T * opt, F func, Args && ... args)
 		{
-			if (opt) return AddByCall(name, *opt, func, args...);
+			if (opt) return AddByCall(name, std::forward<T &>(*opt), std::forward<F>(func), std::forward<Args>(args)...);
 
 			return *this;
 		}
+	};
+
+	//
+	struct StackIndex {
+		int mIndex;
+
+		StackIndex (lua_State * L, int index)
+		{
+			mIndex = CoronaLuaNormalize(L, index);
+		}
+
+		static StackIndex Top (lua_State * L) { return StackIndex(L, -1); }
+
+		operator int (void) { return mIndex; }
 	};
 
 	// Helper to push arguments onto Lua's stack
@@ -277,7 +313,9 @@ namespace LuaXS {
 	template<> inline void PushArgBody<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
 	template<> inline void PushArgBody<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
 	template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
+	template<> inline void PushArgBody<const std::string &> (lua_State * L, const std::string & s) { lua_pushlstring(L, s.data(), s.length()); }
 	template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
+	template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
 
 	template<typename T> void PushArg (lua_State * L, T arg)
 	{
@@ -290,18 +328,42 @@ namespace LuaXS {
 				lua_Number, // Otherwise, is it a float...
 				std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer?
 					lua_Integer,
-					T	// Boolean or null: use the raw type.
+					T	// Boolean, null, or stack index: use the raw type.
 				>::type
 			>::type
 		>::type;
 
-		PushArgBody(L, static_cast<arg_type>(arg));
+		PushArgBody(L, std::forward<arg_type>(static_cast<arg_type>(arg)));
 	}
 
 	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
 	{
-		PushArg(L, arg);
+		PushArg(L, std::forward<T>(arg));
 
 		return 1;
+	}
+
+	template<typename T> void PushMultipleArgs (lua_State * L, T arg) { PushArg(L, std::forward<T>(arg)); }
+
+	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T arg, Args && ... args)
+	{
+		PushArg(L, std::forward<T>(arg));
+		PushMultipleArgs(L, std::forward<Args>(args)...);
+	}
+
+	template<typename ... Args> int PushMultipleArgsAndReturn (lua_State * L, Args && ... args)
+	{
+		PushMultipleArgs(L, std::forward<Args>(args)...);
+
+		return sizeof...(args);
+	}
+
+	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
+	{
+		lua_pushcfunction(L, func);	// ..., func
+
+		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+
+		return lua_pcall(L, sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
 };
