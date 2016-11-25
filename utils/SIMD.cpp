@@ -27,8 +27,16 @@
 
 #ifdef __APPLE__
 	#include "TargetConditionals.h"
-#elif __ANDROID__
+#endif
+
+#ifdef __ANDROID__
 	#include <cpu-features.h>
+#endif
+
+#if TARGET_OS_IPHONE
+	#include <stdlib.h>
+#else
+	#include <memory>
 #endif
 
 namespace SimdXS {
@@ -56,39 +64,112 @@ namespace SimdXS {
 	#endif
 	}
 
+	void * Align (size_t bound, size_t size, void *& ptr, size_t * space)
+	{
+		size_t cushion = size + bound - 1U;
+		size_t & space_ref = space ? *space : cushion;
+
+	#if TARGET_OS_IPHONE
+		uintptr_t p = uintptr_t(ptr);
+		uintptr_t q = (p + align - 1) & -align;
+		uintptr_t diff = q - p;
+
+		if (space_ref - diff < size) return nullptr;
+    
+		if (space) *space -= diff;
+
+		ptr = static_cast<unsigned char *>(ptr) + q - p;
+    
+		return ptr;
+	#else
+		return std::align(bound, size, ptr, space_ref);
+	#endif
+	}
+
 	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n)
 	{
-		// TODO! (DirectXMath has some stuff that looks viable)
+		void * ptr = const_cast<float *>(pfloats);
+
+		Align(16U, n * sizeof(float), ptr);
+
+		DirectX::PackedVector::XMUBYTEN4 out;
+
+		// Peel off any leading floats.
+		if (pfloats != ptr)
+		{
+			size_t extra = static_cast<const float *>(ptr) - pfloats;
+			DirectX::XMVECTORF32 padding = { 0 };
+
+			for (size_t i = 0; i < extra; ++i, --n) padding.f[4U - extra + i] = pfloats[i];
+
+			DirectX::PackedVector::XMStoreUByteN4(&out, padding.v);
+
+			memcpy(u8, reinterpret_cast<unsigned char *>(&out) + 4U - extra, extra);
+
+			u8 += extra;
+		}
+
+		// Blast through the aligned region.
+		auto from = reinterpret_cast<const DirectX::XMVECTOR *>(ptr);
+
+		for (; n >= 4U; u8 += 4U, n-= 4U) DirectX::PackedVector::XMStoreUByteN4(reinterpret_cast<DirectX::PackedVector::XMUBYTEN4 *>(u8), *from++);
+
+		// Peel off any trailing floats.
+		if (n)
+		{
+			DirectX::XMVECTORF32 padding = { 0 };
+
+			memcpy(padding.f, from, n * sizeof(float));
+
+			DirectX::PackedVector::XMStoreUByteN4(&out, padding.v);
+
+			memcpy(u8, &out, n);
+		}
 	}
-#include <stdio.h>
+
 	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n)
 	{
-//		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f; // TODO: This is NOT the SIMD version :D (See above note)
-		for (size_t i = 0; i < n / 4; ++i, u8 += 4, pfloats += 4)
+		void * ptr = pfloats;
+
+		Align(16U, n * sizeof(float), ptr);
+
+		// Peel off any leading floats.
+		if (pfloats != ptr)
+		{
+			size_t extra = static_cast<float *>(ptr) - pfloats;
+			uint8_t padding[4] = { 0 };
+
+			for (size_t i = 0; i < extra; ++i, --n) padding[4U - extra + i] = *u8++;
+			
+			DirectX::PackedVector::XMUBYTEN4 bytes{padding};
+
+			auto result = DirectX::PackedVector::XMLoadUByteN4(&bytes);
+
+			memcpy(pfloats - extra, reinterpret_cast<float *>(&result) + 4U - extra, extra * sizeof(float));
+		}
+
+		// Blast through the aligned region.
+		auto to = reinterpret_cast<DirectX::XMVECTOR *>(ptr);
+
+		for (; n >= 4U; u8 += 4U, n-= 4U)
 		{
 			DirectX::PackedVector::XMUBYTEN4 bytes{u8};
 
-			*reinterpret_cast<DirectX::XMVECTOR *>(pfloats) = DirectX::PackedVector::XMLoadUByteN4(&bytes);
+			*to++ = DirectX::PackedVector::XMLoadUByteN4(&bytes);
 		}
-		
-		size_t extra = n % 4;
 
-		if (extra)
+		// Peel off any trailing floats.
+		if (n)
 		{
-			uint8_t padded[4] = { 0 };
+			uint8_t padding[4] = { 0 };
 
-			for (size_t i = 0; i < extra; ++i) padded[i] = u8[i];
+			for (size_t i = 0; i < n; ++i) padding[i] = u8[i];
 
-			DirectX::PackedVector::XMUBYTEN4 bytes{padded};
+			DirectX::PackedVector::XMUBYTEN4 bytes{padding};
 
-			auto xmv = DirectX::PackedVector::XMLoadUByteN4(&bytes);
+			auto result = DirectX::PackedVector::XMLoadUByteN4(&bytes);
 
-//			for (size_t i = 0; i < extra; ++i) *((float *)&xmv)[i] = 
+			memcpy(to, &result, n * sizeof(float));
 		}
-		/*
-		for (size_t i = 0; i < n % 4; ++i)
-		{
-			pfloats[i] = float(u8[i]) / 255.0f;
-		}*/
 	}
 }

@@ -67,7 +67,7 @@ namespace ByteXS {
 		}, lua_objlen(L, arg), nfloats);
 	}
 
-	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine(out), mOffset(0U), mStride(stride)
+	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine{out}, mStride{stride}
 	{
 		if (!mLine) luaL_buffinit(L, &mB);
 

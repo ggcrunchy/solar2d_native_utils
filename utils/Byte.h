@@ -77,7 +77,7 @@ namespace ByteXS {
 	struct ByteWriter {
 		luaL_Buffer mB;	// Buffer, when not writing to a blob
 		unsigned char * mLine;	// Current line, when writing to a blob
-		size_t mOffset, mStride;// Offset into line; stride to next line
+		size_t mOffset{0U}, mStride;// Offset into line; stride to next line
 
 		ByteWriter (lua_State * L, unsigned char * out = nullptr, size_t stride = 0U);
 		~ByteWriter (void);
@@ -88,10 +88,8 @@ namespace ByteXS {
 	};
 
 	struct BytesMetatableOpts {
-		const char * mMetatableName;
-		void (*mMore)(lua_State * L);
-
-		BytesMetatableOpts (void) : mMetatableName(nullptr), mMore(nullptr) {}
+		const char * mMetatableName{nullptr};
+		void (*mMore)(lua_State * L){nullptr};
 	};
 
 	void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts = nullptr);

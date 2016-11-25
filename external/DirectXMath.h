@@ -347,9 +347,7 @@ typedef const XMVECTOR& CXMVECTOR;
 // STEVE CHANGE
 #ifdef _MSC_VER
 	#define ALIGNED16 __declspec(align(16))
-#elif __APPLE__
-	#define ALIGNED16 __attribute__((align_value(16)))
-#elif __ANDROID__
+#else
 	#define ALIGNED16 __attribute__((aligned(16)))
 #endif
 // /STEVE CHANGE
