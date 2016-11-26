@@ -57,10 +57,27 @@ namespace LuaXS {
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams{});
 	void NewWeakKeyedTable (lua_State * L);
-
+	
+	int BoolResult (lua_State * L, int b);
+	int ErrorAfterFalse (lua_State * L);
+	int ErrorAfterNil (lua_State * L);
 	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
 	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
 	int NoOp (lua_State * L);
+
+	template<typename T> int ResultOrNil (lua_State * L, T ok)
+	{
+		if (!ok) lua_pushnil(L);// ..., res[, ok]
+
+		return 1;
+	}
+
+	template<typename ... Args> int WithError (lua_State * L, const char * format, Args && ... args)
+	{
+		lua_pushfstring(L, format, std::forward<Args>(args)...);// nil / false, err
+
+		return 2;
+	}
 
 	template<typename T> T * UD (lua_State * L, int arg)
 	{
@@ -82,9 +99,9 @@ namespace LuaXS {
 		return IsType(L, name, arg) ? UD<T>(L, arg) : ExtUD<T>(L, arg);
 	}
 
-	template<typename T> int ArrayN (lua_State * L, int arg = 1)
+	template<typename T> size_t ArrayN (lua_State * L, int arg = 1)
 	{
-		return int(lua_objlen(L, arg) / sizeof(T));
+		return lua_objlen(L, arg) / sizeof(T);
 	}
 
 	template<typename T> void DestructTyped (lua_State * L, int arg = 1)
@@ -155,7 +172,7 @@ namespace LuaXS {
 		return instance;
 	}
 
-	template<typename F> void ForEachI (lua_State * L, int arg, F func)
+	template<typename F> void ForEachI (lua_State * L, int arg, F && func)
 	{
 		for (size_t i = 1, n = lua_objlen(L, arg); i <= n; ++i, lua_pop(L, 1))
 		{
@@ -165,7 +182,7 @@ namespace LuaXS {
 		}
 	}
 
-	template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F func)
+	template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F && func)
 	{
 		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
 		{
@@ -175,7 +192,7 @@ namespace LuaXS {
 		}
 	}
 
-	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P preamble, F func)
+	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P && preamble, F && func)
 	{
 		size_t n = lua_objlen(L, arg);
 
@@ -219,6 +236,13 @@ namespace LuaXS {
 	template<> inline lua_Number GetArgBody<lua_Number> (lua_State * L, int arg) { return luaL_checknumber(L, arg); }
 	template<> inline const char * GetArgBody<const char *> (lua_State * L, int arg) { return luaL_checkstring(L, arg); }
 
+	template<> inline void * GetArgBody<void *> (lua_State * L, int arg)
+	{
+		luaL_argcheck(L, lua_isuserdata(L, arg), arg, "Non-userdata argument");
+
+		return lua_touserdata(L, arg);
+	}
+
 	template<> inline lua_Integer GetArgBody<unsigned int, lua_Integer> (lua_State * L, int arg)
 	{
 		lua_Integer ret = luaL_checkinteger(L, arg);
@@ -249,6 +273,7 @@ namespace LuaXS {
 	long Long (lua_State * L, int arg = -1);
 	unsigned int Uint (lua_State * L, int arg = -1);
 	const char * String (lua_State * L, int arg = -1);
+	void * Userdata (lua_State * L, int arg = -1);
 
 	//
 	class Options {
@@ -265,7 +290,7 @@ namespace LuaXS {
 		bool WasSkipped (void) { return mArg == 0; }
 
 		//
-		template<typename F> Options & WithFieldDo (const char * name, F func)
+		template<typename F> Options & WithFieldDo (const char * name, F && func)
 		{
 			if (mArg)
 			{
@@ -280,7 +305,7 @@ namespace LuaXS {
 		}
 
 		//
-		template<typename F, typename A> Options & WithFieldDo (const char * name, F func, A alt)
+		template<typename F, typename A> Options & WithFieldDo (const char * name, F && func, A && alt)
 		{
 			if (mArg)
 			{
@@ -307,21 +332,15 @@ namespace LuaXS {
 		//
 		template<typename T> Options & Add (const char * name, T & opt)
 		{
-			static_assert(std::is_arithmetic<T>::value, "Expected a numeric type");
-
 			return Add(name, std::forward<T &>(opt), opt);
 		}
 
-		template<typename T, typename F, typename ... Args> Options & AddByCall (const char * name, T & opt, F func, Args && ... args)
+		//
+		template<typename F, typename ... Args> Options & Call (const char * name, F && func, Args && ... args)
 		{
-			return WithFieldDo(name, [=, &opt](){ opt = func(mL, -1, std::forward<Args>(args)...); });
-		}
-
-		template<typename T, typename F, typename ... Args> Options & AddByCall (const char * name, T * opt, F func, Args && ... args)
-		{
-			if (opt) return AddByCall(name, std::forward<T &>(*opt), std::forward<F>(func), std::forward<Args>(args)...);
-
-			return *this;
+			return WithFieldDo(name, [&](){
+				func(mL, std::forward<Args>(args)...);
+			});
 		}
 	};
 
@@ -339,11 +358,12 @@ namespace LuaXS {
 		operator int (void) { return mIndex; }
 	};
 
-	// Helper to push arguments onto Lua's stack
+	// Helper to push argument onto Lua's stack
 	template<typename T> void PushArgBody (lua_State *, T arg);
 
 	template<> inline void PushArgBody<nullptr_t> (lua_State * L, nullptr_t) { lua_pushnil(L); }
 	template<> inline void PushArgBody<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
+	template<> inline void PushArgBody<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
 	template<> inline void PushArgBody<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
 	template<> inline void PushArgBody<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
 	template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
@@ -353,7 +373,7 @@ namespace LuaXS {
 
 	template<typename T> void PushArg (lua_State * L, T arg)
 	{
-		using arg_type = std::conditional<std::is_pointer<T>::value,// Is the argument a pointer?
+		using arg_type = std::conditional<std::is_pointer<T>::value && !std::is_same<T, lua_CFunction>::value,	// Is the argument a (non-Lua function) pointer?
 			std::conditional<std::is_same<std::decay<T>::type, char>::value,
 				const char *,	// If so, use either strings...
 				void *	// ...or light userdata.
@@ -362,7 +382,7 @@ namespace LuaXS {
 				lua_Number, // Otherwise, is it a float...
 				std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer?
 					lua_Integer,
-					T	// Boolean, null, or stack index: use the raw type.
+					T	// Boolean, null, Lua function, stack index, or user-specialized: use the raw type.
 				>::type
 			>::type
 		>::type;
@@ -394,10 +414,15 @@ namespace LuaXS {
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
 	{
-		lua_pushcfunction(L, func);	// ..., func
-
-		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, func, std::forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), 0, 0) == 0;// ...[, err]
+	}
+
+	template<typename ... Args> bool PCallN (lua_State * L, lua_CFunction func, int nresults, Args && ... args)
+	{
+		PushMultipleArgs(L, func, std::forward<Args>(args)...);	// ..., func, ...
+
+		return lua_pcall(L, sizeof...(args), nresults, 0) == 0;	// ..., err / results
 	}
 };

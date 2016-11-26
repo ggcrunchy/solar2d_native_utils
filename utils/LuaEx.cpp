@@ -335,6 +335,29 @@ namespace LuaXS {
 		lua_setmetatable(L, -2);// ..., t
 	}
 
+	int BoolResult (lua_State * L, int b)
+	{
+		lua_pushboolean(L, b);	// ..., b
+
+		return 1;
+	}
+
+	int ErrorAfterFalse (lua_State * L)
+	{
+		lua_pushboolean(L, 0);	// ..., err, false
+		lua_insert(L, -2);	// ..., false, err
+
+		return 2;
+	}
+
+	int ErrorAfterNil (lua_State * L)
+	{
+		lua_pushnil(L);	// ..., err, nil
+		lua_insert(L, -2);	// ..., nil, err
+
+		return 2;
+	}
+
 	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def)
 	{
 		luaL_argcheck(L, lnames.size() == lflags.size(), arg, "Flag names and values mismatched");
@@ -395,6 +418,7 @@ namespace LuaXS {
 	long Long (lua_State * L, int arg) { return GetArg<long>(L, arg); }
 	unsigned int Uint (lua_State * L, int arg) { return GetArg<unsigned int>(L, arg); }
 	const char * String (lua_State * L, int arg) { return GetArg<const char *>(L, arg); }
+	void * Userdata (lua_State * L, int arg) { return GetArg<void *>(L, arg); }
 
 	Options::Options (lua_State * L, int arg) : mL{L}, mArg{0}
 	{

@@ -25,6 +25,7 @@
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 #include "utils/SIMD.h"
+#include <cstddef>
 
 namespace ByteXS {
 	//
@@ -100,10 +101,6 @@ namespace ByteXS {
 
 	void ByteWriter::ZeroPad (size_t n)
 	{
-		const size_t kPadBufferSize = 64U;
-
-		static_assert(kPadBufferSize >= sizeof(double) && kPadBufferSize >= sizeof(long long), "Insufficient pad buffer size");
-
 		if (mLine)
 		{
 			memset(&mLine[mOffset], 0, n);
@@ -113,6 +110,7 @@ namespace ByteXS {
 
 		else
 		{
+			const size_t kPadBufferSize = sizeof(std::max_align_t);
 			static char pad[kPadBufferSize] = { 0 };
 
 			for ( ; n >= kPadBufferSize; n -= kPadBufferSize) luaL_addlstring(&mB, pad, kPadBufferSize);
