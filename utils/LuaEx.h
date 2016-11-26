@@ -155,6 +155,40 @@ namespace LuaXS {
 		return instance;
 	}
 
+	template<typename F> void ForEachI (lua_State * L, int arg, F func)
+	{
+		for (size_t i = 1, n = lua_objlen(L, arg); i <= n; ++i, lua_pop(L, 1))
+		{
+			lua_rawgeti(L, arg, i);	// ..., item
+
+			func(L, i);
+		}
+	}
+
+	template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F func)
+	{
+		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
+		{
+			lua_rawgeti(L, arg, i);	// ..., item
+
+			func(L, i);
+		}
+	}
+
+	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P preamble, F func)
+	{
+		size_t n = lua_objlen(L, arg);
+
+		preamble(L, n);
+
+		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
+		{
+			lua_rawgeti(L, arg, i);	// ..., item
+
+			func(L, i);
+		}
+	}
+
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
 	{
 		static_assert(std::is_trivially_copyable<T>::value, "BytesToValue() type must be trivially copyable");

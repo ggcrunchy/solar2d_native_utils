@@ -58,12 +58,10 @@ namespace ByteXS {
 		}
 
 		else return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
-			for (size_t i = 0; i < n; ++i, lua_pop(L, 1))	// ..., float_table, ..., floats
+			LuaXS::ForEachI(L, arg, n, [=](lua_State * L, size_t i)
 			{
-				lua_rawgeti(L, arg, i + 1);	// ..., float_table, ..., floats, v
-
-				pfloats[i] = (float)luaL_checknumber(L, -1);
-			}
+				pfloats[i - 1] = LuaXS::Float(L, -1);
+			});
 		}, lua_objlen(L, arg), nfloats);
 	}
 

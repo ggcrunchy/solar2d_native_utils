@@ -359,17 +359,12 @@ namespace LuaXS {
 			vnames.push_back(nullptr);
 
 			//
-			if (type == LUA_TTABLE)
-			{
-				for (size_t i = 1, n = lua_objlen(L, arg); i <= n; ++i, lua_pop(L, 1))
-				{
-					lua_rawgeti(L, arg, i);	// ..., flags, ..., flag
+			if (type == LUA_TSTRING) flags = vflags[luaL_checkoption(L, arg, def, vnames.data())];
 			
-					flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
-				}
-			}
-
-			else flags = vflags[luaL_checkoption(L, arg, def, vnames.data())];
+			else ForEachI(L, arg, [=, &flags](lua_State * L, size_t i)
+			{
+				flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
+			});
 		}
 
 		return flags;
