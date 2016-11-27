@@ -389,8 +389,9 @@ namespace LuaXS {
 	template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
 	template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
 
-	template<typename T> static void PushArg (lua_State * L, T arg)
+	template<typename U> static void PushArg (lua_State * L, U && arg)
 	{
+		using T = std::remove_reference<U>::type;
 		using arg_type = std::conditional<std::is_pointer<T>::value && !std::is_same<T, lua_CFunction>::value,	// Is the argument a (non-Lua function) pointer?
 			std::conditional<std::is_same<std::decay<T>::type, char>::value,
 				const char *,	// If so, use either strings...
@@ -405,10 +406,10 @@ namespace LuaXS {
 			>::type
 		>::type;
 
-		PushArgBody(L, arg_type(arg));
+		PushArgBody(L, static_cast<arg_type>(arg));
 	}
 
-	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
+	template<typename T> int PushArgAndReturn (lua_State * L, T && arg)
 	{
 		PushArg(L, std::forward<T>(arg));
 
@@ -442,5 +443,35 @@ namespace LuaXS {
 		PushMultipleArgs(L, func, std::forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), nresults, 0) == 0;	// ..., err / results
+	}
+
+	template<typename A1> inline bool CheckFuncArg (lua_State * L, A1 && arg1)
+	{
+		PushArg(L, std::forward<A1>(arg1));	// ..., func
+
+		if (lua_isfunction(L, -1)) return true;
+
+		lua_pushfstring(L, "Argument is a %s, not a function", luaL_typename(L, -1));	// ..., func, err
+		lua_replace(L, -2);	// ..., err
+
+		return false;
+	}
+
+	template<typename A1, typename ... Args> bool PCall1 (lua_State * L, A1 && arg1, Args && ... args)
+	{
+		if (!CheckFuncArg(L, std::forward<A1>(arg1))) return false;	// ..., func / err
+
+		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+
+		return lua_pcall(L, 1 + sizeof...(args), 0, 0) == 0;// ...[, err]
+	}
+
+	template<typename A1, typename ... Args> bool PCallN1 (lua_State * L, int nresults, A1 && arg1, Args && ... args)
+	{
+		if (!CheckFuncArg(L, std::forward<A1>(arg1))) return false;	// ..., func / err
+
+		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+
+		return lua_pcall(L, 1 + sizeof...(args), nresults, 0) == 0;	// ...[, err]
 	}
 };

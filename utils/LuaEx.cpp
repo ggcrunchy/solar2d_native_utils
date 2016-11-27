@@ -398,24 +398,17 @@ namespace LuaXS {
 
 	size_t Find (lua_State * L, int t, int item)
 	{
-		size_t index = 0;
-
 		if (lua_istable(L, t))
 		{
 			item = CoronaLuaNormalize(L, item);
 
 			for (size_t cur : Range(L, t))
 			{
-				if (lua_equal(L, item, -1))
-				{
-					index = cur;
-
-					break;
-				}
+				if (lua_equal(L, item, -1)) return cur;
 			}
 		}
 
-		return index;
+		return 0U;
 	}
 
 
