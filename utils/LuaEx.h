@@ -125,9 +125,7 @@ namespace LuaXS {
 
 	template<typename T> int LenTyped (lua_State * L)
 	{
-		lua_pushinteger(L, ArrayN<T>(L));	// arr, n
-    
-		return 1;
+		return PushArgAndReturn(L, ArrayN<T>(L));	// arr, n
 	}
 
 	template<typename T> void AttachTypedLen (lua_State * L)
@@ -267,7 +265,7 @@ namespace LuaXS {
 	{
 		lua_Integer ret = luaL_checkinteger(L, arg);
 
-		return ret >= 0 ? ret : 0;
+		return ret >= 0 ? ret : 0U;
 	}
 
 	template<typename T> T GetArg (lua_State * L, int arg = -1)
@@ -391,7 +389,7 @@ namespace LuaXS {
 	template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
 	template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
 
-	template<typename T> void PushArg (lua_State * L, T arg)
+	template<typename T> static void PushArg (lua_State * L, T arg)
 	{
 		using arg_type = std::conditional<std::is_pointer<T>::value && !std::is_same<T, lua_CFunction>::value,	// Is the argument a (non-Lua function) pointer?
 			std::conditional<std::is_same<std::decay<T>::type, char>::value,
@@ -407,7 +405,7 @@ namespace LuaXS {
 			>::type
 		>::type;
 
-		PushArgBody(L, std::forward<arg_type>(static_cast<arg_type>(arg)));
+		PushArgBody(L, arg_type(arg));
 	}
 
 	template<typename T> int PushArgAndReturn (lua_State * L, T arg)
@@ -417,9 +415,9 @@ namespace LuaXS {
 		return 1;
 	}
 
-	template<typename T> void PushMultipleArgs (lua_State * L, T arg) { PushArg(L, std::forward<T>(arg)); }
+	template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, std::forward<T>(arg)); }
 
-	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T arg, Args && ... args)
+	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T && arg, Args && ... args)
 	{
 		PushArg(L, std::forward<T>(arg));
 		PushMultipleArgs(L, std::forward<Args>(args)...);

@@ -127,11 +127,8 @@ namespace ByteXS {
 		{
 			lua_pushboolean(L, 1);	// ..., ud, mt, true
 			lua_setfield(L, -2, "__bytes");	// ..., ud, mt = { __bytes = true }
-			lua_pushcfunction(L, [](lua_State * L)
-			{
-				lua_pushinteger(L, lua_objlen(L, 1));	// bytes, len
-
-				return 1;
+			lua_pushcfunction(L, [](lua_State * L){
+				return LuaXS::PushArgAndReturn(L, lua_objlen(L, 1));	// bytes, len
 			});	// ..., ud, mt, len
 			lua_setfield(L, -2, "__len");	// ..., ud, mt = { __bytes, __len = len }
 
