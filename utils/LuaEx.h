@@ -65,6 +65,8 @@ namespace LuaXS {
 	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
 	int NoOp (lua_State * L);
 
+	size_t Find (lua_State * L, int t, int item);
+
 	template<typename T> int ResultOrNil (lua_State * L, T ok)
 	{
 		if (!ok) lua_pushnil(L);// ..., res[, ok]
@@ -172,14 +174,9 @@ namespace LuaXS {
 		return instance;
 	}
 
-	template<typename F> void ForEachI (lua_State * L, int arg, F && func)
+	template<typename F> void ForEachI (lua_State * L, int arg, F && func, bool bIterOnceIfNonTable = false)
 	{
-		for (size_t i = 1, n = lua_objlen(L, arg); i <= n; ++i, lua_pop(L, 1))
-		{
-			lua_rawgeti(L, arg, i);	// ..., item
-
-			func(L, i);
-		}
+		for (size_t i : Range(L, arg, bIterOnceIfNonTable)) func(L, i);
 	}
 
 	template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F && func)
@@ -192,19 +189,42 @@ namespace LuaXS {
 		}
 	}
 
-	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P && preamble, F && func)
+	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P && preamble, F && func, bool bIterOnceIfNonTable = false)
 	{
 		size_t n = lua_objlen(L, arg);
 
 		preamble(L, n);
 
-		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
-		{
-			lua_rawgeti(L, arg, i);	// ..., item
-
-			func(L, i);
-		}
+		ForEachI(L, arg, std::forward<F>(func), bIterOnceIfNonTable);
 	}
+
+	struct Range {
+		lua_State * mL;
+		int mArg, mTop;
+		bool mIsTable, mNonTableOK;
+
+		struct Iter {
+			Range & mParent;
+			size_t mIndex;
+
+			Iter & operator ++ (void);
+			bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
+			Iter & operator * (void);
+			operator size_t (void);
+
+			int ReturnFrom (int n);
+
+			Iter (Range & parent) : mParent{parent}
+			{
+			}
+		};
+
+		Iter begin (void);
+		Iter end (void);
+
+		Range (lua_State * L, int arg, bool bIterOnceIfNonTable = false);
+		~Range (void);
+	};
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
 	{

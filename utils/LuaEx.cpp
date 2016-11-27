@@ -251,20 +251,10 @@ namespace LuaXS {
 			// Failing that, see if the property is allowed to be nil.
 			lua_pushvalue(L, lua_upvalueindex(3));	// ud, key, nil, nullable
 
-			for (size_t i = 1, n = lua_objlen(L, 4); i <= n; ++i, lua_pop(L, 1))
-			{
-				lua_rawgeti(L, 4, i);	// ud, key, nil, nullable, entry
-
-				if (lua_equal(L, 2, 5))
-				{
-					lua_pop(L, 2);	// ud, key, nil
-
-					return 1;
-				}
-			}
+			if (Find(L, 4, 2)) return PushArgAndReturn(L, nullptr);	// ud, key, nil, nullable, nil
 
 			// Finally, go to the next getter in the chain.
-			lua_settop(L, 2);	// ud, key
+			lua_pop(L, 2);	// ud, key
 			lua_pushvalue(L, lua_upvalueindex(2));	// ud, key, index
 			lua_insert(L, 1);	// index, ud, key
 			lua_call(L, 2, 1);	// value?
@@ -382,12 +372,7 @@ namespace LuaXS {
 			vnames.push_back(nullptr);
 
 			//
-			if (type == LUA_TSTRING) flags = vflags[luaL_checkoption(L, arg, def, vnames.data())];
-			
-			else ForEachI(L, arg, [=, &flags](lua_State * L, size_t i)
-			{
-				flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
-			});
+			for (auto e : Range(L, arg, true)) flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
 		}
 
 		return flags;
@@ -409,6 +394,97 @@ namespace LuaXS {
 	int NoOp (lua_State * L)
 	{
 		return 0;
+	}
+
+	size_t Find (lua_State * L, int t, int item)
+	{
+		size_t index = 0;
+
+		if (lua_istable(L, t))
+		{
+			item = CoronaLuaNormalize(L, item);
+
+			for (size_t cur : Range(L, t))
+			{
+				if (lua_equal(L, item, -1))
+				{
+					index = cur;
+
+					break;
+				}
+			}
+		}
+
+		return index;
+	}
+
+
+	Range::Iter & Range::Iter::operator ++ (void)
+	{
+		++mIndex;
+
+		lua_settop(mParent.mL, mParent.mTop);	// ...
+
+		return *this;
+	}
+
+	Range::Iter & Range::Iter::operator * (void)
+	{
+		if (mParent.mIsTable) lua_rawgeti(mParent.mL, mParent.mArg, mIndex + 1);// ..., elem
+
+		else lua_pushvalue(mParent.mL, mParent.mArg);	// ..., elem
+
+		return *this;
+	}
+
+	Range::Iter::operator size_t (void)
+	{
+		return mIndex + 1;
+	}
+
+	int Range::Iter::ReturnFrom (int n)
+	{
+		mParent.mTop = lua_gettop(mParent.mL);
+
+		return n;
+	}
+
+	Range::Iter Range::begin (void)
+	{
+		if (mIsTable || mNonTableOK)
+		{
+			Iter ei{*this};
+
+			ei.mIndex = 0U;
+
+			return ei;
+		}
+		
+		else return end();
+	}
+
+	Range::Iter Range::end (void)
+	{
+		Iter ei{*this};
+
+		if (mIsTable) ei.mIndex = lua_objlen(mL, mArg);
+
+		else ei.mIndex = mNonTableOK ? 1U : 0U;
+
+		return ei;
+	}
+
+	Range::Range (lua_State * L, int arg, bool bIterOnceIfNonTable) : mL{L}
+	{
+		mArg = CoronaLuaNormalize(L, arg);
+		mTop = lua_gettop(L);
+		mIsTable = lua_istable(L, arg);
+		mNonTableOK = bIterOnceIfNonTable;
+	}
+
+	Range::~Range (void)
+	{
+		lua_settop(mL, mTop);	// ...
 	}
 
 	bool Bool (lua_State * L, int arg) { return GetArg<bool>(L, arg); }
