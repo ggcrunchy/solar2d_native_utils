@@ -2,6 +2,16 @@
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 
+#ifdef __APPLE__
+	#include "TargetConditionals.h"
+#endif
+
+#if TARGET_OS_IPHONE
+	#include <stdlib.h>
+#else
+	#include <memory>
+#endif
+
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
 	BookmarkDualTables bm;
@@ -250,4 +260,26 @@ void MemoryXS::LuaMemory::Push (void * ptr, const char * type, bool as_userdata,
 
 		if (bRemove) Free(ptr);
 	}
+}
+
+void * MemoryXS::Align (size_t bound, size_t size, void *& ptr, size_t * space)
+{
+	size_t cushion = size + bound - 1U;
+	size_t & space_ref = space ? *space : cushion;
+
+#if TARGET_OS_IPHONE
+	uintptr_t p = uintptr_t(ptr);
+	uintptr_t q = (p + align - 1) & -align;
+	uintptr_t diff = q - p;
+
+	if (space_ref - diff < size) return nullptr;
+    
+	if (space) *space -= diff;
+
+	ptr = static_cast<unsigned char *>(ptr) + q - p;
+    
+	return ptr;
+#else
+	return std::align(bound, size, ptr, space_ref);
+#endif
 }

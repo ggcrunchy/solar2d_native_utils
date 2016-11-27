@@ -261,7 +261,6 @@ namespace LuaXS {
 
 			return 1;
 		}, 3);	// ... meta, Index
-
 		lua_setfield(L, -2, "__index");	// ..., meta = { ..., __index = Index }
 	}
 
@@ -398,17 +397,24 @@ namespace LuaXS {
 
 	size_t Find (lua_State * L, int t, int item)
 	{
+		size_t index = 0;
+
 		if (lua_istable(L, t))
 		{
 			item = CoronaLuaNormalize(L, item);
 
 			for (size_t cur : Range(L, t))
 			{
-				if (lua_equal(L, item, -1)) return cur;
+				if (lua_equal(L, item, -1))
+				{
+					index = cur;
+
+					break;
+				}
 			}
 		}
 
-		return 0U;
+		return index;
 	}
 
 

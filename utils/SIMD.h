@@ -31,22 +31,6 @@
 namespace SimdXS {
 	bool CanUseNeon (void);
 
-	#ifdef _MSC_VER
-		#define ALIGNED16 __declspec(align(16))
-	#else
-		#define ALIGNED16 __attribute__((aligned(16)))
-	#endif
-
-	//
-	template<typename T> struct AlignedVector16 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 16U>>
-	{
-		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, allocator_type>(std::forward<Args>(args)...)
-		{
-		}
-	};
-
-	void * Align (size_t bound, size_t size, void *& ptr, size_t * space = nullptr);
-
 	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n);
 	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n);
 }

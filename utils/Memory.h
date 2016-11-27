@@ -24,6 +24,8 @@
 #pragma once
 
 #include "CoronaLua.h"
+#include "external/aligned_allocator.h"
+#include <type_traits>
 #include <vector>
 
 //
@@ -78,33 +80,66 @@ namespace MemoryXS {
 		void Push (void * ptr, const char * type, bool bAsUserdata, bool bRemove = true);
 	};
 
-	// https://raw.githubusercontent.com/evgeny-panasyuk/cps_alloca/master/core_idea.cpp
+	#ifdef _MSC_VER
+		#define ALIGNED_N(n) __declspec(align(n))
+	#else
+		#define ALIGNED_N(n) __attribute__((aligned(n)))
+	#endif
 
-	template<typename T,unsigned N,typename F>
-	auto cps_alloca_static(F &&f) -> decltype(f(nullptr,nullptr))
+	//
+	template<typename T> struct AlignedVector16 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 16U>>
 	{
-		T data[N];
-		return f(&data[0],&data[0]+N);
-	}
-
-	template<typename T,typename F>
-	auto cps_alloca_dynamic(unsigned n,F &&f) -> decltype(f(nullptr,nullptr))
-	{
-		std::vector<T> data(n);
-		return f(&data[0],&data[0]+n);
-	}
-
-	template<typename T,typename F>
-	auto cps_alloca(unsigned n,F &&f) -> decltype(f(nullptr,nullptr))
-	{
-		switch(n)
+		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, allocator_type>(std::forward<Args>(args)...)
 		{
-			case 1: return cps_alloca_static<T,1>(f);
-			case 2: return cps_alloca_static<T,2>(f);
-			case 3: return cps_alloca_static<T,3>(f);
-			case 4: return cps_alloca_static<T,4>(f);
-			case 0: return f(nullptr,nullptr);
-			default: return cps_alloca_dynamic<T>(n,f);
+		}
+	};
+
+	//
+	template<typename T> struct AlignedVector64 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 64U>>
+	{
+		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, allocator_type>(std::forward<Args>(args)...)
+		{
+		}
+	};
+
+	void * Align (size_t bound, size_t size, void *& ptr, size_t * space = nullptr);
+
+	// Adapted from https://raw.githubusercontent.com/evgeny-panasyuk/cps_alloca/master/core_idea.cpp
+
+	template<typename T, unsigned N, typename F>
+	auto cps_alloca_static (F && f) -> decltype(f(nullptr, nullptr))
+	{
+		ALIGNED_N(64) struct {
+			const size_t kSizeRoundedUp = (sizeof(mUnits) + 63U) & -64U;
+
+			T mUnits[N];
+			char mDad[kSizeRoundedUp - sizeof(mUnits)];
+		} mData;
+
+		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);
+	}
+
+	template<typename T, typename F>
+	auto cps_alloca_dynamic (unsigned n, F && f) -> decltype(f(nullptr, nullptr))
+	{
+		const size_t kExtraN = ((sizeof(T) + 63U) & -64U) / sizeof(T);
+
+		ALIGNED_N(64) AlignedVector64<T> data(n + kExtraN);
+
+		return f(&data[0], &data[0] + n);
+	}
+
+	template<typename T,typename F>
+	auto cps_alloca(unsigned n, F && f) -> decltype(f(nullptr, nullptr))
+	{
+		switch (n)
+		{
+			case 1: return cps_alloca_static<T, 1>(f);
+			case 2: return cps_alloca_static<T, 2>(f);
+			case 3: return cps_alloca_static<T, 3>(f);
+			case 4: return cps_alloca_static<T, 4>(f);
+			case 0: return f(nullptr, nullptr);
+			default: return cps_alloca_dynamic<T>(n, f);
 		}; // mpl::for_each / array / index pack / recursive bsearch / etc variacion
 	}
 }

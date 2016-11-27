@@ -125,19 +125,16 @@ namespace ByteXS {
 
 		if (luaL_newmetatable(L, type))	// ..., ud, mt
 		{
-			lua_pushboolean(L, 1);	// ..., ud, mt, true
-			lua_setfield(L, -2, "__bytes");	// ..., ud, mt = { __bytes = true }
-			lua_pushcfunction(L, [](lua_State * L){
+			LuaXS::SetField(L, -1, "__bytes", true);// ..., ud, mt = { __bytes = true }
+			LuaXS::SetField(L, -1, "__len", [](lua_State * L){
 				return LuaXS::PushArgAndReturn(L, lua_objlen(L, 1));	// bytes, len
-			});	// ..., ud, mt, len
-			lua_setfield(L, -2, "__len");	// ..., ud, mt = { __bytes, __len = len }
+			});	// ..., ud, mt = { __bytes, __len = len }
 
 			const char * name = "bytes_mt";
 
 			if (opts && opts->mMetatableName) name = opts->mMetatableName;
 
-			lua_pushstring(L, name);// ..., ud, mt, name
-			lua_setfield(L, -2, "__metatable");	// ..., ud, mt = { __bytes, __len, __metatable = name }
+			LuaXS::SetField(L, -1, "__metatable", name);// ..., ud, mt = { __bytes, __len, __metatable = name }
 
 			if (opts && opts->mMore) opts->mMore(L);
 		}

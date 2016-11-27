@@ -21,22 +21,13 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
+#include "utils/Memory.h"
 #include "utils/SIMD.h"
 #include "external/DirectXMath.h"
 #include "external/DirectXPackedVector.h"
 
-#ifdef __APPLE__
-	#include "TargetConditionals.h"
-#endif
-
 #ifdef __ANDROID__
 	#include <cpu-features.h>
-#endif
-
-#if TARGET_OS_IPHONE
-	#include <stdlib.h>
-#else
-	#include <memory>
 #endif
 
 namespace SimdXS {
@@ -64,33 +55,11 @@ namespace SimdXS {
 	#endif
 	}
 
-	void * Align (size_t bound, size_t size, void *& ptr, size_t * space)
-	{
-		size_t cushion = size + bound - 1U;
-		size_t & space_ref = space ? *space : cushion;
-
-	#if TARGET_OS_IPHONE
-		uintptr_t p = uintptr_t(ptr);
-		uintptr_t q = (p + align - 1) & -align;
-		uintptr_t diff = q - p;
-
-		if (space_ref - diff < size) return nullptr;
-    
-		if (space) *space -= diff;
-
-		ptr = static_cast<unsigned char *>(ptr) + q - p;
-    
-		return ptr;
-	#else
-		return std::align(bound, size, ptr, space_ref);
-	#endif
-	}
-
 	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n)
 	{
 		void * ptr = const_cast<float *>(pfloats);
 
-		Align(16U, n * sizeof(float), ptr);
+		MemoryXS::Align(16U, n * sizeof(float), ptr);
 
 		DirectX::PackedVector::XMUBYTEN4 out;
 
@@ -131,7 +100,7 @@ namespace SimdXS {
 	{
 		void * ptr = pfloats;
 
-		Align(16U, n * sizeof(float), ptr);
+		MemoryXS::Align(16U, n * sizeof(float), ptr);
 
 		// Peel off any leading floats.
 		if (pfloats != ptr)

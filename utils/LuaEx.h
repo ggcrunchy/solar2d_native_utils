@@ -392,16 +392,19 @@ namespace LuaXS {
 	template<typename U> static void PushArg (lua_State * L, U && arg)
 	{
 		using T = std::remove_reference<U>::type;
-		using arg_type = std::conditional<std::is_pointer<T>::value && !std::is_same<T, lua_CFunction>::value,	// Is the argument a (non-Lua function) pointer?
-			std::conditional<std::is_same<std::decay<T>::type, char>::value,
-				const char *,	// If so, use either strings...
-				void *	// ...or light userdata.
-			>::type,
-			std::conditional<std::is_floating_point<T>::value,
-				lua_Number, // Otherwise, is it a float...
-				std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer?
-					lua_Integer,
-					T	// Boolean, null, Lua function, stack index, or user-specialized: use the raw type.
+		using arg_type = std::conditional<std::is_same<T, std::string>::value || std::is_convertible<T, std::string>::value,// Is it a string...
+			const char *,
+			std::conditional<std::is_same<T, lua_CFunction>::value || std::is_convertible<T, lua_CFunction>::value,	// ...or a Lua function...
+				lua_CFunction,
+				std::conditional<std::is_pointer<T>::value,	// ...or a generic pointer...
+					void *,
+					std::conditional<std::is_floating_point<T>::value,	// ...or a float...
+						lua_Number,
+						std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer...
+							lua_Integer,
+							T	// Otherwise, use the raw type: boolean, null, stack index, or user-specialized.
+						>::type
+					>::type
 				>::type
 			>::type
 		>::type;
@@ -429,6 +432,15 @@ namespace LuaXS {
 		PushMultipleArgs(L, std::forward<Args>(args)...);
 
 		return sizeof...(args);
+	}
+
+	template<typename T> void SetField (lua_State * L, int arg, const char * name, T && value)
+	{
+		arg = CoronaLuaNormalize(L, arg);
+
+		PushArg(L, std::forward<T>(value));	// ..., value
+
+		lua_setfield(L, arg, name);	// ...
 	}
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
