@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <type_traits>
 #include <vector>
 
@@ -129,6 +130,13 @@ namespace ThreadXS {
 	#endif
 	}
 
+	template<typename F> inline void parallel_for (size_t a, size_t b, F && f, bool bParallel)
+	{
+		if (bParallel) parallel_for(a, b, std::forward<F>(f));
+
+		else std::generate_n(a, b - a, std::forward<F>(f));
+	}
+
 	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
 	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f)
 	{
@@ -151,4 +159,17 @@ namespace ThreadXS {
 		__gnu_parallel::for_each(a, b, std::forward<F>(f));
 	#endif
 	}
+
+	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
+	{
+		if (bParallel) parallel_for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f))
+
+		else std::for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
+	}
+
+	// parallel_reduce: http://www.idryman.org/blog/2012/08/05/grand-central-dispatch-vs-openmp/ and https://gist.github.com/m0wfo/1101546
+	// __gnu_parallel:: transform, then accumulate
+	// parallel_scan: GCD?
+	// __gnu_parallel:: prefix_sum
+	// See also thrust, etc.
 }
