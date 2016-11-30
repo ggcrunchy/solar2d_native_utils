@@ -41,38 +41,30 @@
 #endif
 
 namespace CompatXS {
-//
+
+// On most targets we have a fairly full-featured C++11 implementation...
 #if !TARGET_OS_IPHONE
-	//
+	// Bring these into the namespace...
 	using std::conditional;
 	using std::forward;
 
-	//
+	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
 	template<typename T> struct NoThrowTraits {
 		typedef std::is_nothrow_default_constructible<T> is_default_constructible;
 	};
 
-	//
+	// ...ditto...
 	template<typename T> struct TrivialTraits {
 		typedef std::is_trivially_copyable<T> is_copyable;
 		typedef std::is_trivially_destructible<T> is_destructible;
 	};
 
-	//
+	// ...and streamline this namespace.
 	namespace ns_compat = std;
+
+// ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
-	template<typename T> struct NoThrowTraits {
-		typedef std::tr1::has_nothrow_default_constructor<T> is_default_constructible;
-	};
-
-	//
-	template<typename T> struct TrivialTraits {
-		typedef std::tr1::has_trivial_copy<T> is_copyable;
-		typedef std::tr1::has_trivial_destructor<T> is_destructible;
-	};
-
-	template<typename T> T && forward (T value) { return static_cast<T &&>(value); }
-
+	// Missing (or hard to find?), so make our own...
 	template<bool B, typename T, typename F> struct conditional {
 		typedef T type;
 	};
@@ -81,7 +73,22 @@ namespace CompatXS {
 		typedef F type;
 	};
 
-	//
+	// ...ditto. This isn't terribly thorough, e.g. it does no static_assert, but primary development
+	// has usually been done on other platforms, which is expected to tease out any issues.
+	template<typename T> T && forward (T value) { return static_cast<T &&>(value); }
+
+	// As with other targets, but here we need to bring the alternate names into conformity...
+	template<typename T> struct NoThrowTraits {
+		typedef std::tr1::has_nothrow_default_constructor<T> is_default_constructible;
+	};
+
+	// ...ditto...
+	template<typename T> struct TrivialTraits {
+		typedef std::tr1::has_trivial_copy<T> is_copyable;
+		typedef std::tr1::has_trivial_destructor<T> is_destructible;
+	};
+
+	// ...and streamline this namespace.
 	namespace ns_compat = std::tr1;
 #endif
 }

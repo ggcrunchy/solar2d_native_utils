@@ -181,7 +181,7 @@ namespace BlobXS {
 		return GetVectorN<N>(GetVector(L, arg));
 	}
 
-	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts) { UsingPimpl(L).NewBlob(L, size, opts); }
+	inline void NewBlob (lua_State * L, size_t size, const CreateOpts * opts = nullptr) { UsingPimpl(L).NewBlob(L, size, opts); }
 
 	inline BlobPimpl::storage_id Submit (lua_State * L, int arg, void * key = nullptr) { return UsingPimpl(L).Submit(L, arg, key); }
 	inline BlobPimpl::storage_id GetID (lua_State * L, int arg) { return UsingPimpl(L).GetID(L, arg); }
