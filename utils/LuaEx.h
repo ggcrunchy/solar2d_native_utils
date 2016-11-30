@@ -25,10 +25,48 @@
 
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
-#include <initializer_list>
-#include <type_traits>
 #include <string>
 #include <utility>
+
+#ifdef __APPLE__
+    #include "TargetConditionals.h"
+#endif
+
+#if !TARGET_OS_IPHONE
+    #include <array>
+    #include <type_traits>
+
+    namespace ns_compat = std;
+
+    template<typename T> struct NoThrowTraits {
+        typedef std::is_nothrow_constructible<T> is_default_constructible;
+        typedef std::is_trivially_copyable<T> is_trivially_copyable;
+    };
+
+    using std::conditional;
+    using std::forward;
+    using std::nullptr_t;
+#else
+    #include <tr1/array>
+    #include <tr1/type_traits>
+
+    namespace ns_compat = std::tr1;
+
+    template<typename T> struct NoThrowTraits {
+        typedef std::tr1::has_nothrow_constructor<T> is_default_constructible;
+        typedef std::tr1::has_trivial_copy<T> is_trivially_copyable;
+    };
+
+    template<typename T> T && forward (T value) { return static_cast<T &&>(value); }
+
+    template<bool B, typename T, typename F> struct conditional {
+        typedef T type;
+    };
+
+    template<typename T, typename F> struct conditional<false, T, F> {
+        typedef F type;
+    };
+#endif
 
 namespace LuaXS {
 	struct AddParams {
@@ -61,12 +99,81 @@ namespace LuaXS {
 	int BoolResult (lua_State * L, int b);
 	int ErrorAfterFalse (lua_State * L);
 	int ErrorAfterNil (lua_State * L);
-	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
-	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def = nullptr);
 	int NoOp (lua_State * L);
 
-	size_t Find (lua_State * L, int t, int item);
-
+    size_t Find (lua_State * L, int t, int item);
+    
+    struct Range {
+        lua_State * mL;
+        int mArg, mTop;
+        bool mIsTable, mNonTableOK;
+        
+        struct Iter {
+            Range & mParent;
+            size_t mIndex;
+            
+            Iter & operator ++ (void);
+            bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
+            Iter & operator * (void);
+            operator size_t (void);
+            
+            int ReturnFrom (int n);
+            
+            Iter (Range & parent) : mParent{parent}
+            {
+            }
+        };
+        
+        Iter begin (void);
+        Iter end (void);
+        
+        Range (lua_State * L, int arg, bool bIterOnceIfNonTable = false);
+        ~Range (void);
+    };
+    
+    template<size_t N> int GetFlags (lua_State * L, int arg, const ns_compat::array<const char *, N> & lnames, const ns_compat::array<int, N> & lflags, const char * def = nullptr)
+    {
+        luaL_argcheck(L, lnames.size() == lflags.size(), arg, "Flag names and values mismatched");
+        
+        //
+        int flags = 0, type = lua_type(L, arg);
+        
+        if (type == LUA_TTABLE || type == LUA_TSTRING)
+        {
+            //
+            std::vector<const char *> vnames(lnames);
+            std::vector<int> vflags(lflags);
+            
+            if (!def)
+            {
+                def = "";
+                
+                vnames.push_back("");
+                vflags.push_back(0);
+            }
+            
+            vnames.push_back(nullptr);
+            
+            //
+            for (auto e : Range(L, arg, true)) flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
+        }
+        
+        return flags;
+    }
+    
+    template<size_t N> int GetFlags (lua_State * L, int arg, const char * name, const ns_compat::array<const char *, N> & lnames, const ns_compat::array<int, N> & lflags, const char * def = nullptr)
+    {
+        if (!lua_istable(L, arg)) return 0;
+        
+        lua_getfield(L, arg, name);	// ..., flags?
+        
+        int flags = GetFlags(L, arg, lnames, lflags, def);
+        
+        lua_pop(L, 1);	// ...
+        
+        return flags;
+    }
+    
 	template<typename T> int ResultOrNil (lua_State * L, T ok)
 	{
 		if (!ok) lua_pushnil(L);// ..., res[, ok]
@@ -76,7 +183,7 @@ namespace LuaXS {
 
 	template<typename ... Args> int WithError (lua_State * L, const char * format, Args && ... args)
 	{
-		lua_pushfstring(L, format, std::forward<Args>(args)...);// nil / false, err
+		lua_pushfstring(L, format, forward<Args>(args)...);// nil / false, err
 
 		return 2;
 	}
@@ -142,7 +249,7 @@ namespace LuaXS {
 
 	template<typename T> T * NewArray (lua_State * L, size_t n)
 	{
-		static_assert(std::is_nothrow_default_constructible<T>::value, "NewArray() type must be nothrow default-constructible");
+        static_assert(NoThrowTraits<T>::is_default_constuctible::value, "NewArray() type must be nothrow default-constructible");
 
 		return static_cast<T *>(lua_newuserdata(L, n * sizeof(T)));	// ..., ud
 	}
@@ -156,7 +263,7 @@ namespace LuaXS {
 	{
 		T * instance = AllocTyped<T>(L);// ..., ud
 
-		new (instance) T(std::forward<Args>(args)...);
+		new (instance) T(forward<Args>(args)...);
 
 		return instance;
 	}
@@ -167,11 +274,11 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T(std::forward<Args>(args)...);
+		new (instance) T(forward<Args>(args)...);
 
 		return instance;
 	}
-
+    
 	template<typename F> void ForEachI (lua_State * L, int arg, F && func, bool bIterOnceIfNonTable = false)
 	{
 		for (size_t i : Range(L, arg, bIterOnceIfNonTable)) func(L, i);
@@ -181,7 +288,7 @@ namespace LuaXS {
 	{
 		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
 		{
-			lua_rawgeti(L, arg, i);	// ..., item
+			lua_rawgeti(L, arg, int(i));// ..., item
 
 			func(L, i);
 		}
@@ -193,40 +300,12 @@ namespace LuaXS {
 
 		preamble(L, n);
 
-		ForEachI(L, arg, std::forward<F>(func), bIterOnceIfNonTable);
+		ForEachI(L, arg, forward<F>(func), bIterOnceIfNonTable);
 	}
-
-	struct Range {
-		lua_State * mL;
-		int mArg, mTop;
-		bool mIsTable, mNonTableOK;
-
-		struct Iter {
-			Range & mParent;
-			size_t mIndex;
-
-			Iter & operator ++ (void);
-			bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
-			Iter & operator * (void);
-			operator size_t (void);
-
-			int ReturnFrom (int n);
-
-			Iter (Range & parent) : mParent{parent}
-			{
-			}
-		};
-
-		Iter begin (void);
-		Iter end (void);
-
-		Range (lua_State * L, int arg, bool bIterOnceIfNonTable = false);
-		~Range (void);
-	};
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
 	{
-		static_assert(std::is_trivially_copyable<T>::value, "BytesToValue() type must be trivially copyable");
+		static_assert(NoThrowTraits<T>::is_trivially_copyable::value, "BytesToValue() type must be trivially copyable");
 
 		if (lua_type(L, arg) == LUA_TSTRING && lua_objlen(L, arg) == sizeof(T))
 		{
@@ -240,7 +319,7 @@ namespace LuaXS {
 
 	template<typename T> void ValueToBytes (lua_State * L, const T & value)
 	{
-		static_assert(std::is_trivially_copyable<T>::value, "ValueToBytes() type must be trivially copyable");
+		static_assert(NoThrowTraits<T>::is_trivially_copyable::value, "ValueToBytes() type must be trivially copyable");
 
 		lua_pushlstring(L, reinterpret_cast<const char *>(&value), sizeof(T));	// ..., bytes
 	}
@@ -270,16 +349,16 @@ namespace LuaXS {
 
 	template<typename T> T GetArg (lua_State * L, int arg = -1)
 	{
-		using opt_type = std::conditional<!std::is_arithmetic<T>::value || std::is_same<T, bool>::value,// Is the type non-arithmetic (or bool)?
+		using opt_type = typename conditional<!ns_compat::is_arithmetic<T>::value || ns_compat::is_same<T, bool>::value,// Is the type non-arithmetic (or bool)?
 			T, // If so, use it as is.
-			std::conditional<std::is_floating_point<T>::value,	// Otherwise, is it a float?
+			typename conditional<ns_compat::is_floating_point<T>::value,	// Otherwise, is it a float?
 				lua_Number, // If so, use numbers.
-				std::conditional<std::is_same<T, long>::value, long,// Failing that, we have either a long...
-					std::conditional<std::is_unsigned<T>::value, unsigned int, int>::type	// ...or finally an int with a certain signedness.
+				typename conditional<ns_compat::is_same<T, long>::value, long,// Failing that, we have either a long...
+					typename conditional<ns_compat::is_unsigned<T>::value, unsigned int, int>::type	// ...or finally an int with a certain signedness.
 				>::type
 			>::type
 		>::type;
-		using ret_type = std::conditional<std::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
+		using ret_type = typename conditional<ns_compat::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
 
 		return static_cast<T>(GetArgBody<opt_type, ret_type>(L, arg));
 	}
@@ -350,18 +429,21 @@ namespace LuaXS {
 		//
 		template<typename T> Options & Add (const char * name, T & opt)
 		{
-			return Add(name, std::forward<T &>(opt), opt);
+			return Add(name, forward<T &>(opt), opt);
 		}
 
 		//
 		template<typename F, typename ... Args> Options & Call (const char * name, F && func, Args && ... args)
 		{
 			return WithFieldDo(name, [&](){
-				func(mL, std::forward<Args>(args)...);
+				func(mL, forward<Args>(args)...);
 			});
 		}
 	};
 
+    //
+    struct Nil {};
+    
 	//
 	struct StackIndex {
 		int mIndex;
@@ -379,7 +461,7 @@ namespace LuaXS {
 	// Helper to push argument onto Lua's stack
 	template<typename T> void PushArgBody (lua_State *, T arg);
 
-	template<> inline void PushArgBody<nullptr_t> (lua_State * L, nullptr_t) { lua_pushnil(L); }
+    template<> inline void PushArgBody<Nil> (lua_State * L, Nil) { lua_pushnil(L); }
 	template<> inline void PushArgBody<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
 	template<> inline void PushArgBody<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
 	template<> inline void PushArgBody<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
@@ -391,16 +473,16 @@ namespace LuaXS {
 
 	template<typename U> static void PushArg (lua_State * L, U && arg)
 	{
-		using T = std::remove_reference<U>::type;
-		using arg_type = std::conditional<std::is_same<T, std::string>::value || std::is_convertible<T, std::string>::value,// Is it a string...
+        using T = typename ns_compat::remove_reference<U>::type;
+		using arg_type = typename conditional<ns_compat::is_same<T, std::string>::value || ns_compat::is_convertible<T, std::string>::value,// Is it a string...
 			const char *,
-			std::conditional<std::is_same<T, lua_CFunction>::value || std::is_convertible<T, lua_CFunction>::value,	// ...or a Lua function...
+			typename conditional<ns_compat::is_same<T, lua_CFunction>::value || ns_compat::is_convertible<T, lua_CFunction>::value,	// ...or a Lua function...
 				lua_CFunction,
-				std::conditional<std::is_pointer<T>::value,	// ...or a generic pointer...
+				typename conditional<ns_compat::is_pointer<T>::value,	// ...or a generic pointer...
 					void *,
-					std::conditional<std::is_floating_point<T>::value,	// ...or a float...
+					typename conditional<ns_compat::is_floating_point<T>::value,	// ...or a float...
 						lua_Number,
-						std::conditional<std::is_integral<T>::value && !std::is_same<T, bool>::value,	// ...or a non-boolean integer...
+						typename conditional<ns_compat::is_integral<T>::value && !ns_compat::is_same<T, bool>::value,	// ...or a non-boolean integer...
 							lua_Integer,
 							T	// Otherwise, use the raw type: boolean, null, stack index, or user-specialized.
 						>::type
@@ -414,22 +496,22 @@ namespace LuaXS {
 
 	template<typename T> int PushArgAndReturn (lua_State * L, T && arg)
 	{
-		PushArg(L, std::forward<T>(arg));
+		PushArg(L, forward<T>(arg));
 
 		return 1;
 	}
 
-	template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, std::forward<T>(arg)); }
+	template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, forward<T>(arg)); }
 
 	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T && arg, Args && ... args)
 	{
-		PushArg(L, std::forward<T>(arg));
-		PushMultipleArgs(L, std::forward<Args>(args)...);
+		PushArg(L, forward<T>(arg));
+		PushMultipleArgs(L, forward<Args>(args)...);
 	}
 
 	template<typename ... Args> int PushMultipleArgsAndReturn (lua_State * L, Args && ... args)
 	{
-		PushMultipleArgs(L, std::forward<Args>(args)...);
+		PushMultipleArgs(L, forward<Args>(args)...);
 
 		return sizeof...(args);
 	}
@@ -438,28 +520,28 @@ namespace LuaXS {
 	{
 		arg = CoronaLuaNormalize(L, arg);
 
-		PushArg(L, std::forward<T>(value));	// ..., value
+		PushArg(L, forward<T>(value));	// ..., value
 
 		lua_setfield(L, arg, name);	// ...
 	}
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
 	{
-		PushMultipleArgs(L, func, std::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, func, forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
 
 	template<typename ... Args> bool PCallN (lua_State * L, lua_CFunction func, int nresults, Args && ... args)
 	{
-		PushMultipleArgs(L, func, std::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, func, forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), nresults, 0) == 0;	// ..., err / results
 	}
 
 	template<typename A1> inline bool CheckFuncArg (lua_State * L, A1 && arg1)
 	{
-		PushArg(L, std::forward<A1>(arg1));	// ..., func
+		PushArg(L, forward<A1>(arg1));	// ..., func
 
 		if (lua_isfunction(L, -1)) return true;
 
@@ -471,18 +553,18 @@ namespace LuaXS {
 
 	template<typename A1, typename ... Args> bool PCall1 (lua_State * L, A1 && arg1, Args && ... args)
 	{
-		if (!CheckFuncArg(L, std::forward<A1>(arg1))) return false;	// ..., func / err
+		if (!CheckFuncArg(L, forward<A1>(arg1))) return false;	// ..., func / err
 
-		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, 1 + sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
 
 	template<typename A1, typename ... Args> bool PCallN1 (lua_State * L, int nresults, A1 && arg1, Args && ... args)
 	{
-		if (!CheckFuncArg(L, std::forward<A1>(arg1))) return false;	// ..., func / err
+		if (!CheckFuncArg(L, forward<A1>(arg1))) return false;	// ..., func / err
 
-		PushMultipleArgs(L, std::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, 1 + sizeof...(args), nresults, 0) == 0;	// ...[, err]
 	}

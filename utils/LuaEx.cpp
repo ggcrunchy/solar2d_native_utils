@@ -347,49 +347,6 @@ namespace LuaXS {
 		return 2;
 	}
 
-	int GetFlags (lua_State * L, int arg, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def)
-	{
-		luaL_argcheck(L, lnames.size() == lflags.size(), arg, "Flag names and values mismatched");
-
-		//
-		int flags = 0, type = lua_type(L, arg);
-
-		if (type == LUA_TTABLE || type == LUA_TSTRING)
-		{
-			//
-			std::vector<const char *> vnames(lnames);
-			std::vector<int> vflags(lflags);
-
-			if (!def)
-			{
-				def = "";
-
-				vnames.push_back("");
-				vflags.push_back(0);
-			}
-
-			vnames.push_back(nullptr);
-
-			//
-			for (auto e : Range(L, arg, true)) flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
-		}
-
-		return flags;
-	}
-
-	int GetFlags (lua_State * L, int arg, const char * name, std::initializer_list<const char *> lnames, std::initializer_list<int> lflags, const char * def)
-	{
-		if (!lua_istable(L, arg)) return 0;
-
-		lua_getfield(L, arg, name);	// ..., flags?
-
-		int flags = GetFlags(L, arg, lnames, lflags, def);
-
-		lua_pop(L, 1);	// ...
-
-		return flags;
-	}
-
 	int NoOp (lua_State * L)
 	{
 		return 0;

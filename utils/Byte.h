@@ -29,6 +29,20 @@
 #include <vector>
 
 namespace ByteXS {
+    //
+    struct ByteWriter {
+        luaL_Buffer mB;	// Buffer, when not writing to a blob
+        unsigned char * mLine;	// Current line, when writing to a blob
+        size_t mOffset{0U}, mStride;// Offset into line; stride to next line
+        
+        ByteWriter (lua_State * L, unsigned char * out = nullptr, size_t stride = 0U);
+        ~ByteWriter (void);
+        
+        void AddBytes (const void * bytes, size_t n);
+        void NextLine (void);
+        void ZeroPad (size_t n);
+    };
+
 	//
 	template<typename T> size_t GetCount (lua_State * L, int arg)
 	{
@@ -73,19 +87,6 @@ namespace ByteXS {
 	}
 
 	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, bool as_bytes);
-
-	struct ByteWriter {
-		luaL_Buffer mB;	// Buffer, when not writing to a blob
-		unsigned char * mLine;	// Current line, when writing to a blob
-		size_t mOffset{0U}, mStride;// Offset into line; stride to next line
-
-		ByteWriter (lua_State * L, unsigned char * out = nullptr, size_t stride = 0U);
-		~ByteWriter (void);
-
-		void AddBytes (const void * bytes, size_t n);
-		void NextLine (void);
-		void ZeroPad (size_t n);
-	};
 
 	struct BytesMetatableOpts {
 		const char * mMetatableName{nullptr};
