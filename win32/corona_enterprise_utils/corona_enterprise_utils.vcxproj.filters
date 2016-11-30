@@ -53,6 +53,9 @@
     <ClInclude Include="..\..\external\DirectXPackedVector.h">
       <Filter>Header Files\external</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\utils\Compat.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\ByteReader\ByteReader.cpp">

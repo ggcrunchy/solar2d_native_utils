@@ -251,7 +251,7 @@ namespace LuaXS {
 			// Failing that, see if the property is allowed to be nil.
 			lua_pushvalue(L, lua_upvalueindex(3));	// ud, key, nil, nullable
 
-			if (Find(L, 4, 2)) return PushArgAndReturn(L, nullptr);	// ud, key, nil, nullable, nil
+			if (Find(L, 4, 2)) return PushArgAndReturn(L, Nil{});	// ud, key, nil, nullable, nil
 
 			// Finally, go to the next getter in the chain.
 			lua_pop(L, 2);	// ud, key

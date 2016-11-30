@@ -17,6 +17,7 @@
     <ClInclude Include="..\..\external\DirectXPackedVector.h" />
     <ClInclude Include="..\..\utils\Blob.h" />
     <ClInclude Include="..\..\utils\Byte.h" />
+    <ClInclude Include="..\..\utils\Compat.h" />
     <ClInclude Include="..\..\utils\LuaEx.h" />
     <ClInclude Include="..\..\utils\Memory.h" />
     <ClInclude Include="..\..\utils\Path.h" />

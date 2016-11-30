@@ -23,8 +23,8 @@
 
 #pragma once
 
+#include "utils/Compat.h"
 #include <algorithm>
-#include <type_traits>
 #include <vector>
 
 #ifdef _WIN32
@@ -72,7 +72,7 @@ namespace ThreadXS {
 	template<typename T> class TLS {
 		Slot mSlot;
 
-		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
+		static_assert(CompatXS::TrivialTraits<T>::is_copyable::value && CompatXS::TrivialTraits<T>::is_destructible::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
 
 	public:
 		TLS (void) : mSlot{sizeof(T)}
@@ -117,7 +117,7 @@ namespace ThreadXS {
 	#elif __APPLE__
 		using data_t = std::pair<size_t, F>;
 
-		data_t helper = data_t{a, std::forward<F>(f)};
+		data_t helper = data_t{a, CompatXS::forward<F>(f)};
 
 		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
@@ -132,9 +132,9 @@ namespace ThreadXS {
 
 	template<typename F> inline void parallel_for (size_t a, size_t b, F && f, bool bParallel)
 	{
-		if (bParallel) parallel_for(a, b, std::forward<F>(f));
+		if (bParallel) parallel_for(a, b, CompatXS::forward<F>(f));
 
-		else std::generate_n(a, b - a, std::forward<F>(f));
+		else std::generate_n(a, b - a, CompatXS::forward<F>(f));
 	}
 
 	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
@@ -146,7 +146,7 @@ namespace ThreadXS {
 		using data_t = std::pair<It, F>;
 
 		size_t count = std::distance(a, b);
-		data_t helper = data_t{a, std::forward<F>(f)};
+		data_t helper = data_t{a, CompatXS::forward<F>(f)};
 
 		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
@@ -162,9 +162,9 @@ namespace ThreadXS {
 
 	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
 	{
-		if (bParallel) parallel_for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f))
+		if (bParallel) parallel_for_each(CompatXS::forward<It>(a), CompatXS::forward<It>(b), CompatXS::forward<F>(f))
 
-		else std::for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
+		else std::for_each(CompatXS::forward<It>(a), CompatXS::forward<It>(b), CompatXS::forward<F>(f));
 	}
 
 	// parallel_reduce: http://www.idryman.org/blog/2012/08/05/grand-central-dispatch-vs-openmp/ and https://gist.github.com/m0wfo/1101546

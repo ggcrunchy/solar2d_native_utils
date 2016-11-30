@@ -25,7 +25,7 @@
 
 #include "CoronaLua.h"
 #include "external/aligned_allocator.h"
-#include <type_traits>
+#include "utils/Compat.h"
 #include <vector>
 
 //
@@ -89,7 +89,7 @@ namespace MemoryXS {
 	//
 	template<typename T> struct AlignedVector16 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 16U>>
 	{
-		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, allocator_type>(std::forward<Args>(args)...)
+		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, allocator_type>(CompatXS::forward<Args>(args)...)
 		{
 		}
 	};
@@ -97,7 +97,7 @@ namespace MemoryXS {
 	//
 	template<typename T> struct AlignedVector64 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 64U>>
 	{
-		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, allocator_type>(std::forward<Args>(args)...)
+		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, allocator_type>(CompatXS::forward<Args>(args)...)
 		{
 		}
 	};
