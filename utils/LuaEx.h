@@ -27,6 +27,7 @@
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
 #include <string>
+#include <vector>
 
 //
 namespace CEU = CompatXS::ns_compat;
@@ -96,25 +97,36 @@ namespace LuaXS {
         ~Range (void);
     };
     
-    template<size_t N> int GetFlags (lua_State * L, int arg, const CEU::array<const char *, N> & lnames, const CEU::array<int, N> & lflags, const char * def = nullptr)
+	//
+	struct FlagPair {
+		const char * mName;
+		int mFlag;
+	};
+
+	//
+    template<size_t N> int GetFlags (lua_State * L, int arg, const FlagPair (&pairs)[N], const char * def = nullptr)
     {
-        luaL_argcheck(L, lnames.size() == lflags.size(), arg, "Flag names and values mismatched");
-        
-        //
-        int flags = 0, type = lua_type(L, arg);
+		//
+		int flags = 0, type = lua_type(L, arg);
         
         if (type == LUA_TTABLE || type == LUA_TSTRING)
         {
             //
-            std::vector<const char *> vnames(lnames);
-            std::vector<int> vflags(lflags);
+            std::vector<const char *> vnames;
+            std::vector<int> vflags;
             
+			for (auto p : pairs)
+			{
+				vnames.push_back(p.mName);
+				vflags.push_back(p.mFlag);
+			}
+
             if (!def)
             {
                 def = "";
                 
                 vnames.push_back("");
-                vflags.push_back(0);
+				vflags.push_back(0);
             }
             
             vnames.push_back(nullptr);
@@ -126,19 +138,19 @@ namespace LuaXS {
         return flags;
     }
     
-    template<size_t N> int GetFlags (lua_State * L, int arg, const char * name, const CEU::array<const char *, N> & lnames, const CEU::array<int, N> & lflags, const char * def = nullptr)
+    template<size_t N> int GetFlags (lua_State * L, int arg, const char * name, const FlagPair (&pairs)[N], const char * def = nullptr)
     {
         if (!lua_istable(L, arg)) return 0;
         
         lua_getfield(L, arg, name);	// ..., flags?
         
-        int flags = GetFlags(L, arg, lnames, lflags, def);
+        int flags = GetFlags(L, arg, pairs, def);
         
         lua_pop(L, 1);	// ...
         
         return flags;
     }
-    
+
 	template<typename T> int ResultOrNil (lua_State * L, T ok)
 	{
 		if (!ok) lua_pushnil(L);// ..., res[, ok]
@@ -148,7 +160,7 @@ namespace LuaXS {
 
 	template<typename ... Args> int WithError (lua_State * L, const char * format, Args && ... args)
 	{
-		lua_pushfstring(L, format, forward<Args>(args)...);// nil / false, err
+		lua_pushfstring(L, format, CompatXS::forward<Args>(args)...);	// nil / false, err
 
 		return 2;
 	}
@@ -228,7 +240,7 @@ namespace LuaXS {
 	{
 		T * instance = AllocTyped<T>(L);// ..., ud
 
-		new (instance) T(forward<Args>(args)...);
+		new (instance) T(CompatXS::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -239,7 +251,7 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T(forward<Args>(args)...);
+		new (instance) T(CompatXS::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -265,7 +277,7 @@ namespace LuaXS {
 
 		preamble(L, n);
 
-		ForEachI(L, arg, forward<F>(func), bIterOnceIfNonTable);
+		ForEachI(L, arg, CompatXS::forward<F>(func), bIterOnceIfNonTable);
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)

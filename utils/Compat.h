@@ -28,11 +28,9 @@
 #endif
 
 #if !TARGET_OS_IPHONE
-    #include <array>
     #include <type_traits>
 	#include <utility>
 #else
-    #include <tr1/array>
     #include <tr1/type_traits>
 #endif
 
