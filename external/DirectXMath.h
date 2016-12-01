@@ -352,15 +352,19 @@ typedef const XMVECTOR& CXMVECTOR;
 
 // STEVE CHANGE
 #ifdef _MSC_VER
-	#define ALIGNED16 __declspec(align(16))
+	#define ALIGNED16_BEGIN __declspec(align(16))
+	#define ALIGNED16_END
+#elif __ANDROID__
+	#define ALIGNED16_BEGIN
+	#define ALIGNED16_END __attribute__((aligned(16)))
 #else
-	#define ALIGNED16 __attribute__((aligned(16)))
+	#define ALIGNED16_BEGIN __attribute__((aligned(16)))
 #endif
 // /STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // Conversion types for constants
-/*__declspec(align(16))*/ALIGNED16 struct XMVECTORF32	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMVECTORF32	// <- STEVE CHANGE
 {
     union
     {
@@ -374,9 +378,9 @@ typedef const XMVECTOR& CXMVECTOR;
     inline operator __m128i() const { return _mm_castps_si128(v); }
     inline operator __m128d() const { return _mm_castps_pd(v); }
 #endif
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
-/*__declspec(align(16))*/ALIGNED16 struct XMVECTORI32	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMVECTORI32	// <- STEVE CHANGE
 {
     union
     {
@@ -389,9 +393,9 @@ typedef const XMVECTOR& CXMVECTOR;
     inline operator __m128i() const { return _mm_castps_si128(v); }
     inline operator __m128d() const { return _mm_castps_pd(v); }
 #endif
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
-/*__declspec(align(16))*/ALIGNED16 struct XMVECTORU8	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMVECTORU8	// <- STEVE CHANGE
 {
     union
     {
@@ -404,9 +408,9 @@ typedef const XMVECTOR& CXMVECTOR;
     inline operator __m128i() const { return _mm_castps_si128(v); }
     inline operator __m128d() const { return _mm_castps_pd(v); }
 #endif
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
-/*__declspec(align(16))*/ALIGNED16 struct XMVECTORU32	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMVECTORU32	// <- STEVE CHANGE
 {
     union
     {
@@ -419,7 +423,7 @@ typedef const XMVECTOR& CXMVECTOR;
     inline operator __m128i() const { return _mm_castps_si128(v); }
     inline operator __m128d() const { return _mm_castps_pd(v); }
 #endif
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // Vector operators
@@ -461,7 +465,7 @@ typedef const XMMATRIX& CXMMATRIX;
 #ifdef _XM_NO_INTRINSICS_
 struct XMMATRIX
 #else
-/*__declspec(align(16))*/ALIGNED16 struct XMMATRIX	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMMATRIX	// <- STEVE CHANGE
 #endif
 {
 #ifdef _XM_NO_INTRINSICS_
@@ -516,7 +520,7 @@ struct XMMATRIX
     XMMATRIX    operator/ (float S) const;
 
     friend XMMATRIX     XM_CALLCONV     operator* (float S, FXMMATRIX M);
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // 2D Vector; 32 bit floating point components
@@ -533,14 +537,14 @@ struct XMFLOAT2
 };
 
 // 2D Vector; 32 bit floating point components aligned on a 16 byte boundary
-/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT2A : public XMFLOAT2	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMFLOAT2A : public XMFLOAT2	// <- STEVE CHANGE
 {
     XMFLOAT2A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT2A(float _x, float _y) : XMFLOAT2(_x, _y) {}
     explicit XMFLOAT2A(_In_reads_(2) const float *pArray) : XMFLOAT2(pArray) {}
 
     XMFLOAT2A& operator= (const XMFLOAT2A& Float2) { x = Float2.x; y = Float2.y; return *this; }
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // 2D Vector; 32 bit signed integer components
@@ -585,14 +589,14 @@ struct XMFLOAT3
 };
 
 // 3D Vector; 32 bit floating point components aligned on a 16 byte boundary
-/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT3A : public XMFLOAT3	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMFLOAT3A : public XMFLOAT3	// <- STEVE CHANGE
 {
     XMFLOAT3A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT3A(float _x, float _y, float _z) : XMFLOAT3(_x, _y, _z) {}
     explicit XMFLOAT3A(_In_reads_(3) const float *pArray) : XMFLOAT3(pArray) {}
 
     XMFLOAT3A& operator= (const XMFLOAT3A& Float3) { x = Float3.x; y = Float3.y; z = Float3.z; return *this; }
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // 3D Vector; 32 bit signed integer components
@@ -640,14 +644,14 @@ struct XMFLOAT4
 };
 
 // 4D Vector; 32 bit floating point components aligned on a 16 byte boundary
-/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4A : public XMFLOAT4	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMFLOAT4A : public XMFLOAT4	// <- STEVE CHANGE
 {
     XMFLOAT4A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4A(float _x, float _y, float _z, float _w) : XMFLOAT4(_x, _y, _z, _w) {}
     explicit XMFLOAT4A(_In_reads_(4) const float *pArray) : XMFLOAT4(pArray) {}
 
     XMFLOAT4A& operator= (const XMFLOAT4A& Float4) { x = Float4.x; y = Float4.y; z = Float4.z; w = Float4.w; return *this; }
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // 4D Vector; 32 bit signed integer components
@@ -745,7 +749,7 @@ struct XMFLOAT4X3
 };
 
 // 4x3 Matrix: 32 bit floating point components aligned on a 16 byte boundary
-/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4X3A : public XMFLOAT4X3	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMFLOAT4X3A : public XMFLOAT4X3	// <- STEVE CHANGE
 {
     XMFLOAT4X3A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4X3A(float m00, float m01, float m02,
@@ -759,7 +763,7 @@ struct XMFLOAT4X3
     float&      operator() (size_t Row, size_t Column) { return m[Row][Column]; }
 
     XMFLOAT4X3A& operator= (const XMFLOAT4X3A& Float4x3);
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 //------------------------------------------------------------------------------
 // 4x4 Matrix: 32 bit floating point components
@@ -795,7 +799,7 @@ struct XMFLOAT4X4
 };
 
 // 4x4 Matrix: 32 bit floating point components aligned on a 16 byte boundary
-/*__declspec(align(16))*/ALIGNED16 struct XMFLOAT4X4A : public XMFLOAT4X4	// <- STEVE CHANGE
+/*__declspec(align(16))*/ALIGNED16_BEGIN struct XMFLOAT4X4A : public XMFLOAT4X4	// <- STEVE CHANGE
 {
     XMFLOAT4X4A() XM_CTOR_DEFAULT
     XM_CONSTEXPR XMFLOAT4X4A(float m00, float m01, float m02, float m03,
@@ -809,7 +813,7 @@ struct XMFLOAT4X4
     float&      operator() (size_t Row, size_t Column) { return m[Row][Column]; }
 
     XMFLOAT4X4A& operator= (const XMFLOAT4X4A& Float4x4);
-};
+} ALIGNED16_END;// <- STEVE CHANGE
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1762,7 +1766,13 @@ template<uint32_t VSLeftRotateElements, uint32_t Select0, uint32_t Select1, uint
 // separate math routine it would be reloaded.
 
 #ifndef XMGLOBALCONST
+#ifndef __ANDROID__ // <- STEVE CHANGE
 #define XMGLOBALCONST extern const __declspec(selectany)
+// STEVE CHANGE
+#else
+#define XMGLOBALCONST extern const
+#endif
+// /STEVE CHANGE
 #endif
 
 XMGLOBALCONST XMVECTORF32 g_XMSinCoefficients0    = {-0.16666667f, +0.0083333310f, -0.00019840874f, +2.7525562e-06f};

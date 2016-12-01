@@ -81,31 +81,18 @@ namespace MemoryXS {
 	};
 
 	#ifdef _MSC_VER
-		#define ALIGNED_N(n) __declspec(align(n))
+		#define ALIGNED_N(n, object) __declspec(align(n)) object
+	#elif __ANDROID__
+		#define ALIGNED_N(n, object) object __attribute__((aligned(n)))
 	#else
-		#define ALIGNED_N(n) __attribute__((aligned(n)))
+		#define ALIGNED_N(n, object) __attribute__((aligned(n))) object
 	#endif
 
-    // no allocator_type (Android)? :/
-    template<typename T, size_t N> struct AlignedAlloc {
-        typedef simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N> alloc_type;
-    };
-
     //
-    template<typename T> struct AlignedVector16 : std::vector<T, typename AlignedAlloc<T, 16U>::alloc_type>
-    {
-		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, typename AlignedAlloc<T, 16U>::alloc_type>(CompatXS::forward<Args>(args)...)
-		{
-		}
-	};
-
-	//
-	template<typename T> struct AlignedVector64 : std::vector<T, typename AlignedAlloc<T, 64U>::alloc_type>
-	{
-		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, typename AlignedAlloc<T, 64U>::alloc_type>(CompatXS::forward<Args>(args)...)
-		{
-		}
-	};
+    template<typename T, size_t N> struct AlignedVectorN {
+        typedef simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N> alloc_type;
+		typedef std::vector<T, typename alloc_type> vector_type;
+    };
 
 	void * Align (size_t bound, size_t size, void *& ptr, size_t * space = nullptr);
 
@@ -114,10 +101,10 @@ namespace MemoryXS {
 	template<typename T, unsigned N, typename F>
 	auto cps_alloca_static (F && f) -> decltype(f(nullptr, nullptr))
 	{
-		ALIGNED_N(64) struct {
+		ALIGNED_N(64, struct {
 			T mUnits[N];
-			char mDad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];
-		} mData;
+			char mDad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];// unsure how to declare this as a constant portably :/
+		}) mData;
 
 		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);
 	}
@@ -127,7 +114,7 @@ namespace MemoryXS {
 	{
 		const size_t kExtraN = ((sizeof(T) + 63U) & -64U) / sizeof(T);
 
-		ALIGNED_N(64) AlignedVector64<T> data(n + kExtraN);
+		ALIGNED_N(64, AlignedVector64<T>) data(n + kExtraN);
 
 		return f(&data[0], &data[0] + n);
 	}

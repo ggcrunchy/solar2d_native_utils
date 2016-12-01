@@ -99,7 +99,7 @@ namespace ThreadXS {
 			return *reinterpret_cast<T *>(&value);
 		}
 
-	#ifdef _WIN32 // workaround for lack of SFINAE on MSVC 2013
+	#ifdef _WIN32 // workaround for MSVC 2013, which throws internal compiler errors with enable_if :(
 		template<bool is_pointer = std::is_pointer<T>::value> typename std::conditional<is_pointer, T, void>::type operator -> (void);
 
 		template<> inline T operator -> <true> (void) { return T{*this}; }
