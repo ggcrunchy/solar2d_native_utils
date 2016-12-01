@@ -105,7 +105,13 @@
 #pragma warning(push)
 #pragma warning(disable : 4987)
 // C4987: Off by default noise
+// STEVE CHANGE
+#ifndef __ANDROID__
+// /STEVE CHANGE
 #include <intrin.h>
+// STEVE CHANGE
+#endif
+// /STEVE CHANGE
 #pragma warning(pop)
 
 #ifdef _XM_SSE_INTRINSICS_

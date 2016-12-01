@@ -105,7 +105,7 @@ namespace ThreadXS {
 		template<> inline T operator -> <true> (void) { return T{*this}; }
 		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
 	#else
-		template<typename T> std::enable_if<std::is_pointer<T>::value, T>::type operator -> () { return T{*this}; }
+		template<typename U = T> typename std::enable_if<std::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
 	#endif
 	};
 

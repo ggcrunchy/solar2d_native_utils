@@ -86,18 +86,23 @@ namespace MemoryXS {
 		#define ALIGNED_N(n) __attribute__((aligned(n)))
 	#endif
 
-	//
-	template<typename T> struct AlignedVector16 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 16U>>
-	{
-		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, allocator_type>(CompatXS::forward<Args>(args)...)
+    // no allocator_type (Android)? :/
+    template<typename T, size_t N> struct AlignedAlloc {
+        typedef simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N> alloc_type;
+    };
+
+    //
+    template<typename T> struct AlignedVector16 : std::vector<T, typename AlignedAlloc<T, 16U>::alloc_type>
+    {
+		template<typename ... Args> AlignedVector16 (Args && ... args) : std::vector<T, typename AlignedAlloc<T, 16U>::alloc_type>(CompatXS::forward<Args>(args)...)
 		{
 		}
 	};
 
 	//
-	template<typename T> struct AlignedVector64 : std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, 64U>>
+	template<typename T> struct AlignedVector64 : std::vector<T, typename AlignedAlloc<T, 64U>::alloc_type>
 	{
-		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, allocator_type>(CompatXS::forward<Args>(args)...)
+		template<typename ... Args> AlignedVector64 (Args && ... args) : std::vector<T, typename AlignedAlloc<T, 64U>::alloc_type>(CompatXS::forward<Args>(args)...)
 		{
 		}
 	};
@@ -110,10 +115,8 @@ namespace MemoryXS {
 	auto cps_alloca_static (F && f) -> decltype(f(nullptr, nullptr))
 	{
 		ALIGNED_N(64) struct {
-			const size_t kSizeRoundedUp = (sizeof(mUnits) + 63U) & -64U;
-
 			T mUnits[N];
-			char mDad[kSizeRoundedUp - sizeof(mUnits)];
+			char mDad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];
 		} mData;
 
 		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);
