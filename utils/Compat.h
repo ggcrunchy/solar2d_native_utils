@@ -28,9 +28,11 @@
 #endif
 
 #if !TARGET_OS_IPHONE
+    #include <memory>
     #include <type_traits>
 	#include <utility>
 #else
+    #include <tr1/memory>
     #include <tr1/type_traits>
 #endif
 
@@ -79,7 +81,7 @@ namespace CompatXS {
 
 	// As with other targets, but here we need to bring the alternate names into conformity...
 	template<typename T> struct NoThrowTraits {
-		typedef std::tr1::has_nothrow_default_constructor<T> is_default_constructible;
+		typedef std::tr1::has_nothrow_constructor<T> is_default_constructible;  // Not quite the trait we want, but see note for forward()
 	};
 
 	// ...ditto...

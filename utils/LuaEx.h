@@ -97,6 +97,30 @@ namespace LuaXS {
         ~Range (void);
     };
     
+    template<typename F> void ForEachI (lua_State * L, int arg, F && func, bool bIterOnceIfNonTable = false)
+    {
+        for (size_t i : Range(L, arg, bIterOnceIfNonTable)) func(L, i);
+    }
+    
+    template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F && func)
+    {
+        for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
+        {
+            lua_rawgeti(L, arg, int(i));// ..., item
+            
+            func(L, i);
+        }
+    }
+    
+    template<typename P, typename F> void ForEachI (lua_State * L, int arg, P && preamble, F && func, bool bIterOnceIfNonTable = false)
+    {
+        size_t n = lua_objlen(L, arg);
+        
+        preamble(L, n);
+        
+        ForEachI(L, arg, CompatXS::forward<F>(func), bIterOnceIfNonTable);
+    }
+    
 	//
 	struct FlagPair {
 		const char * mName;
@@ -132,7 +156,9 @@ namespace LuaXS {
             vnames.push_back(nullptr);
             
             //
-            for (auto e : Range(L, arg, true)) flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
+            ForEachI(L, arg, [=, &flags](lua_State *, size_t) {
+                flags |= vflags[luaL_checkoption(L, -1, def, vnames.data())];
+            }, true);
         }
         
         return flags;
@@ -254,30 +280,6 @@ namespace LuaXS {
 		new (instance) T(CompatXS::forward<Args>(args)...);
 
 		return instance;
-	}
-    
-	template<typename F> void ForEachI (lua_State * L, int arg, F && func, bool bIterOnceIfNonTable = false)
-	{
-		for (size_t i : Range(L, arg, bIterOnceIfNonTable)) func(L, i);
-	}
-
-	template<typename F> void ForEachI (lua_State * L, int arg, size_t n, F && func)
-	{
-		for (size_t i = 1; i <= n; ++i, lua_pop(L, 1))
-		{
-			lua_rawgeti(L, arg, int(i));// ..., item
-
-			func(L, i);
-		}
-	}
-
-	template<typename P, typename F> void ForEachI (lua_State * L, int arg, P && preamble, F && func, bool bIterOnceIfNonTable = false)
-	{
-		size_t n = lua_objlen(L, arg);
-
-		preamble(L, n);
-
-		ForEachI(L, arg, CompatXS::forward<F>(func), bIterOnceIfNonTable);
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)

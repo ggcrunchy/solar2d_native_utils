@@ -91,9 +91,15 @@ namespace BlobXS {
 		// blob in `mOpt`, on the other hand, says "use me if I'm satisfactory, otherwise seek
 		// alternatives". Blob-related information may be found in the table in `mInfo`.
 		struct Keys {
-			const char * mBlob, * mOpt, * mInfo;// Defaults = "blob", "opt_blob", "blob_info"
-
-			Keys (void);
+            const char * mBlob, * mOpt, * mInfo;
+            
+            const char * Blob (void) const { return mBlob ? mBlob : "blob"; }
+            const char * Opt (void) const { return mOpt ? mOpt : "opt_blob"; }
+            const char * Info (void) const { return mInfo ? mInfo : "blob_info"; }
+            
+            Keys (void) : mBlob{nullptr}, mOpt{nullptr}, mInfo{nullptr}
+            {
+            }
 		} mKeys;
 
 		// An info table might look like so:
@@ -104,18 +110,14 @@ namespace BlobXS {
 		bool mDiscardOK;// Allow destructive resizing, e.g. along the x-axis; defaults to false
 		bool mMustUseBlob;	// If true, blob must be used
 
-		Options (lua_State * L, int arg, const Keys & keys = Keys());
+        Options (lua_State * L, int arg, const Keys & keys = Keys{});
 	};
 
 	//
 	struct CreateOpts {
-		size_t mAlignment;	// Multiple of 4 detailing what sort of memory alignment to assume (with 0 meaning none)
-		bool mResizable;// If true, the userdata holds a vector that contains the blob; otherwise, it is the blob
-		const char * mType;	// User-defined blob type (if unspecified, "xs.blob")
-
-		CreateOpts (void) : mAlignment{0}, mType{nullptr}, mResizable{false}
-		{
-		}
+        size_t mAlignment{0U};	// Multiple of 4 detailing what sort of memory alignment to assume (with 0 meaning none)
+        bool mResizable{false}; // If true, the userdata holds a vector that contains the blob; otherwise, it is the blob
+        const char * mType{nullptr};// User-defined blob type (if unspecified, "xs.blob")
 	};
 
 	//

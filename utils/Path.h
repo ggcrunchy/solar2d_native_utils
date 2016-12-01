@@ -47,15 +47,11 @@ namespace PathXS {
 
 	struct LibLoader {
 	#ifdef _WIN32
-		HMODULE mLib;
+        HMODULE mLib{nullptr};
 	#else
-		void * mLib;
+        void * mLib{nullptr};
 	#endif
 
-		LibLoader (void) : mLib{nullptr}
-		{
-		}
-	
 		bool IsLoaded (void) const { return mLib != nullptr; }
 		bool LateLoad (void);
 		void Close (void);
