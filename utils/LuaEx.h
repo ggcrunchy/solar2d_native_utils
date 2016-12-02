@@ -76,12 +76,12 @@ namespace LuaXS {
         
         struct Iter {
             Range & mParent;
-            size_t mIndex;
+            int mIndex;
             
             Iter & operator ++ (void);
             bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
             Iter & operator * (void);
-            operator size_t (void);
+            operator int (void);
             
             int ReturnFrom (int n);
             

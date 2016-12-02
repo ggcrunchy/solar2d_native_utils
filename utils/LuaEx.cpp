@@ -393,7 +393,7 @@ namespace LuaXS {
 		return *this;
 	}
 
-	Range::Iter::operator size_t (void)
+	Range::Iter::operator int (void)
 	{
 		return mIndex + 1;
 	}
@@ -411,7 +411,7 @@ namespace LuaXS {
 		{
 			Iter ei{*this};
 
-			ei.mIndex = 0U;
+			ei.mIndex = 0;
 
 			return ei;
 		}
@@ -423,9 +423,9 @@ namespace LuaXS {
 	{
 		Iter ei{*this};
 
-		if (mIsTable) ei.mIndex = lua_objlen(mL, mArg);
+		if (mIsTable) ei.mIndex = int(lua_objlen(mL, mArg));
 
-		else ei.mIndex = mNonTableOK ? 1U : 0U;
+		else ei.mIndex = mNonTableOK ? 1 : 0;
 
 		return ei;
 	}

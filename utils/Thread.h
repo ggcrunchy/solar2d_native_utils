@@ -110,16 +110,16 @@ namespace ThreadXS {
 	};
 
 	// Adapted from parallel_for_each, which follows
-	template<typename F> inline void parallel_for (size_t a, size_t b, F && f)
+	template<typename I, typename F> inline void parallel_for (I a, I b, F && f)
 	{
 	#ifdef _WIN32
 		Concurrency::parallel_for(a, b, std::forward<F>(f));
 	#elif __APPLE__
-		using data_t = std::pair<size_t, F>;
+		using data_t = std::pair<I, F>;
 
 		data_t helper = data_t{a, CompatXS::forward<F>(f)};
 
-		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
+		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, I cnt)
 		{
 			data_t * d = static_cast<data_t *>(ctx);
 
@@ -130,7 +130,7 @@ namespace ThreadXS {
 	#endif
 	}
 
-	template<typename F> inline void parallel_for (size_t a, size_t b, F && f, bool bParallel)
+	template<typename I, typename F> inline void parallel_for (I a, I b, F && f, bool bParallel)
 	{
 		if (bParallel) parallel_for(a, b, CompatXS::forward<F>(f));
 
