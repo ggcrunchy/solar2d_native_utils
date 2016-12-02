@@ -31,6 +31,10 @@
 #define XM_CALLCONV __vectorcall
 /*#else*/#elif _MSC_VER	// <- STEVE CHANGE
 #define XM_CALLCONV __fastcall
+// STEVE CHANGE
+#else
+#define XM_CALLCONV
+// /STEVE CHANGE
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
@@ -46,7 +50,13 @@
 #endif
 
 #ifndef XM_DEPRECATED
+#ifndef __ANDROID__ // <- STEVE CHANGE
 #define XM_DEPRECATED __declspec(deprecated("This is deprecated and will be removed in a future version."))
+// STEVE CHANGE
+#else
+#define XM_DEPRECATED
+#endif
+// /STEVE CHANGE
 #endif
 
 #if !defined(_XM_F16C_INTRINSICS_) && defined(__AVX2__) && !defined(_XM_NO_INTRINSICS_)
@@ -144,8 +154,11 @@
 // STEVE CHANGE
 #else
 	#define _In_
-	#define _In_reads_
+	#define _In_reads_(n)
+    #define _In_reads_bytes_(n)
 	#define _Out_
+    #define _Out_writes_(n)
+    #define _Out_writes_bytes_(n)
 	#define _Use_decl_annotations_
 #endif
 // /STEVE CHANGE
@@ -377,6 +390,10 @@ typedef const XMVECTOR& CXMVECTOR;
 #if !defined(_XM_NO_INTRINSICS_) && defined(_XM_SSE_INTRINSICS_)
     inline operator __m128i() const { return _mm_castps_si128(v); }
     inline operator __m128d() const { return _mm_castps_pd(v); }
+// STEVE CHANGE
+#elif _XM_ARM_NEON_INTRINSICS_
+    inline operator int32x4_t() const { return *(int32x4_t *)f; }
+// /STEVE CHANGE
 #endif
 } ALIGNED16_END;// <- STEVE CHANGE
 
@@ -421,7 +438,10 @@ typedef const XMVECTOR& CXMVECTOR;
     inline operator XMVECTOR() const { return v; }
 #if !defined(_XM_NO_INTRINSICS_) && defined(_XM_SSE_INTRINSICS_)
     inline operator __m128i() const { return _mm_castps_si128(v); }
-    inline operator __m128d() const { return _mm_castps_pd(v); }
+    inline operator __m128d() const { return _mm_castps_pd(v); }// STEVE CHANGE
+#elif _XM_ARM_NEON_INTRINSICS_
+    inline operator uint32x4_t() const { return *(uint32x4_t *)u; }
+    // /STEVE CHANGE
 #endif
 } ALIGNED16_END;// <- STEVE CHANGE
 

@@ -81,17 +81,20 @@ namespace MemoryXS {
 	};
 
 	#ifdef _MSC_VER
-		#define ALIGNED_N(n, object) __declspec(align(n)) object
+		#define ALIGNED_N_BEGIN(n) __declspec(align(n))
+        #define ALIGNED_N_END(n)
 	#elif __ANDROID__
-		#define ALIGNED_N(n, object) object __attribute__((aligned(n)))
+		#define ALIGNED_N_BEGIN(n) __attribute__((aligned(n)))
+        #define ALIGNED_N_END(n)
 	#else
-		#define ALIGNED_N(n, object) __attribute__((aligned(n))) object
+		#define ALIGNED_N_BEGIN(n)
+        #define ALIGNED_N_END(n) __attribute__((aligned(n)))
 	#endif
 
     //
     template<typename T, size_t N> struct AlignedVectorN {
         typedef simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N> alloc_type;
-		typedef std::vector<T, typename alloc_type> vector_type;
+		typedef std::vector<T, alloc_type> vector_type;
     };
 
 	void * Align (size_t bound, size_t size, void *& ptr, size_t * space = nullptr);
@@ -101,10 +104,10 @@ namespace MemoryXS {
 	template<typename T, unsigned N, typename F>
 	auto cps_alloca_static (F && f) -> decltype(f(nullptr, nullptr))
 	{
-		ALIGNED_N(64, struct {
+		ALIGNED_N_BEGIN(64) struct {
 			T mUnits[N];
 			char mDad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];// unsure how to declare this as a constant portably :/
-		}) mData;
+		} ALIGNED_N_END(64) mData;
 
 		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);
 	}
@@ -114,7 +117,7 @@ namespace MemoryXS {
 	{
 		const size_t kExtraN = ((sizeof(T) + 63U) & -64U) / sizeof(T);
 
-		ALIGNED_N(64, AlignedVector64<T>) data(n + kExtraN);
+		ALIGNED_N_BEGIN(64) AlignedVectorN<T, 64U> ALIGNED_N_END(64) data(n + kExtraN);
 
 		return f(&data[0], &data[0] + n);
 	}

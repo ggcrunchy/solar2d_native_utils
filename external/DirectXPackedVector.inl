@@ -18,10 +18,10 @@
  * Data conversion
  *
  ****************************************************************************/
-
+namespace PackedVector {    // <- STEVE CHANGE
 //------------------------------------------------------------------------------
 
-inline float PackedVector::XMConvertHalfToFloat
+inline float /*/*PackedVector::*/*/XMConvertHalfToFloat
 (
     HALF Value
 )
@@ -73,7 +73,7 @@ inline float PackedVector::XMConvertHalfToFloat
 #pragma prefast(disable : 26015 26019, "PREfast noise: Esp:1307" )
 
 _Use_decl_annotations_
-inline float* PackedVector::XMConvertHalfToFloatStream
+inline float* /*PackedVector::*/XMConvertHalfToFloatStream
 (
     float*      pOutputStream, 
     size_t      OutputStride, 
@@ -272,7 +272,7 @@ inline float* PackedVector::XMConvertHalfToFloatStream
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::HALF PackedVector::XMConvertFloatToHalf
+inline /*PackedVector::*/HALF /*PackedVector::*/XMConvertFloatToHalf
 (
     float Value
 )
@@ -323,7 +323,7 @@ inline PackedVector::HALF PackedVector::XMConvertFloatToHalf
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::HALF* PackedVector::XMConvertFloatToHalfStream
+inline /*PackedVector::*/HALF* /*PackedVector::*/XMConvertFloatToHalfStream
 (
     HALF* pOutputStream, 
     size_t       OutputStride, 
@@ -527,7 +527,7 @@ inline PackedVector::HALF* PackedVector::XMConvertFloatToHalfStream
 #pragma prefast(disable:28931, "PREfast noise: Esp:1266")
 
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadColor
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadColor
 (
     const XMCOLOR* pSource
 )
@@ -570,7 +570,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadColor
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadHalf2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadHalf2
 (
     const XMHALF2* pSource
 )
@@ -592,7 +592,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadHalf2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShortN2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadShortN2
 (
     const XMSHORTN2* pSource
 )
@@ -634,7 +634,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShortN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShort2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadShort2
 (
     const XMSHORT2* pSource
 )
@@ -672,7 +672,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShort2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShortN2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUShortN2
 (
     const XMUSHORTN2* pSource
 )
@@ -715,7 +715,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShortN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShort2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUShort2
 (
     const XMUSHORT2* pSource
 )
@@ -755,7 +755,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShort2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByteN2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadByteN2
 (
     const XMBYTEN2* pSource
 )
@@ -799,7 +799,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByteN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByte2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadByte2
 (
     const XMBYTE2* pSource
 )
@@ -839,7 +839,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByte2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByteN2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUByteN2
 (
     const XMUBYTEN2* pSource
 )
@@ -880,7 +880,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByteN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByte2
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUByte2
 (
     const XMUBYTE2* pSource
 )
@@ -920,7 +920,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByte2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadU565
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadU565
 (
     const XMU565* pSource
 )
@@ -959,7 +959,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadU565
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadFloat3PK
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadFloat3PK
 (
     const XMFLOAT3PK* pSource
 )
@@ -1077,7 +1077,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadFloat3PK
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadFloat3SE
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadFloat3SE
 (
     const XMFLOAT3SE* pSource
 )
@@ -1098,7 +1098,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadFloat3SE
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadHalf4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadHalf4
 (
     const XMHALF4* pSource
 )
@@ -1120,7 +1120,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadHalf4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShortN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadShortN4
 (
     const XMSHORTN4* pSource
 )
@@ -1162,7 +1162,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShortN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShort4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadShort4
 (
     const XMSHORT4* pSource
 )
@@ -1200,7 +1200,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadShort4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShortN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUShortN4
 (
     const XMUSHORTN4* pSource
 )
@@ -1241,7 +1241,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShortN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShort4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUShort4
 (
     const XMUSHORT4* pSource
 )
@@ -1280,7 +1280,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUShort4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadXDecN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadXDecN4
 (
     const XMXDECN4* pSource
 )
@@ -1332,7 +1332,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadXDecN4
 // C4996: ignore deprecation warning
 
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadXDec4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadXDec4
 (
     const XMXDEC4* pSource
 )
@@ -1384,7 +1384,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadXDec4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDecN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUDecN4
 (
     const XMUDECN4* pSource
 )
@@ -1431,7 +1431,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDecN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDecN4_XR
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUDecN4_XR
 (
     const XMUDECN4* pSource
 )
@@ -1485,7 +1485,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDecN4_XR
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDec4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUDec4
 (
     const XMUDEC4* pSource
 )
@@ -1531,7 +1531,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUDec4
 // C4996: ignore deprecation warning
 
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadDecN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadDecN4
 (
     const XMDECN4* pSource
 )
@@ -1583,7 +1583,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadDecN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadDec4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadDec4
 (
     const XMDEC4* pSource
 )
@@ -1633,7 +1633,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadDec4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByteN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUByteN4
 (
     const XMUBYTEN4* pSource
 )
@@ -1673,7 +1673,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByteN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByte4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUByte4
 (
     const XMUBYTE4* pSource
 )
@@ -1712,7 +1712,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUByte4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByteN4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadByteN4
 (
     const XMBYTEN4* pSource
 )
@@ -1754,7 +1754,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByteN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByte4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadByte4
 (
     const XMBYTE4* pSource
 )
@@ -1793,7 +1793,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadByte4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUNibble4
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadUNibble4
 (
      const XMUNIBBLE4* pSource
 )
@@ -1832,7 +1832,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadUNibble4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline XMVECTOR XM_CALLCONV PackedVector::XMLoadU555
+inline XMVECTOR XM_CALLCONV /*PackedVector::*/XMLoadU555
 (
      const XMU555* pSource
 )
@@ -1877,7 +1877,7 @@ inline XMVECTOR XM_CALLCONV PackedVector::XMLoadU555
  *
  ****************************************************************************/
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreColor
+inline void XM_CALLCONV /*PackedVector::*/XMStoreColor
 (
     XMCOLOR* pDestination, 
     FXMVECTOR V
@@ -1930,7 +1930,7 @@ inline void XM_CALLCONV PackedVector::XMStoreColor
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreHalf2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreHalf2
 (
     XMHALF2* pDestination, 
     FXMVECTOR V
@@ -1948,7 +1948,7 @@ inline void XM_CALLCONV PackedVector::XMStoreHalf2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreShortN2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreShortN2
 (
     XMSHORTN2* pDestination, 
     FXMVECTOR V
@@ -1986,7 +1986,7 @@ inline void XM_CALLCONV PackedVector::XMStoreShortN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreShort2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreShort2
 (
     XMSHORT2* pDestination, 
     FXMVECTOR V
@@ -2024,7 +2024,7 @@ inline void XM_CALLCONV PackedVector::XMStoreShort2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUShortN2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUShortN2
 (
     XMUSHORTN2* pDestination, 
     FXMVECTOR V
@@ -2068,7 +2068,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUShortN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUShort2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUShort2
 (
     XMUSHORT2* pDestination, 
     FXMVECTOR V
@@ -2107,7 +2107,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUShort2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreByteN2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreByteN2
 (
     XMBYTEN2* pDestination, 
     FXMVECTOR V
@@ -2151,7 +2151,7 @@ inline void XM_CALLCONV PackedVector::XMStoreByteN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreByte2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreByte2
 (
     XMBYTE2* pDestination, 
     FXMVECTOR V
@@ -2191,7 +2191,7 @@ inline void XM_CALLCONV PackedVector::XMStoreByte2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUByteN2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUByteN2
 (
     XMUBYTEN2* pDestination, 
     FXMVECTOR V
@@ -2237,7 +2237,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUByteN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUByte2
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUByte2
 (
     XMUBYTE2* pDestination, 
     FXMVECTOR V
@@ -2277,7 +2277,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUByte2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreU565
+inline void XM_CALLCONV /*PackedVector::*/XMStoreU565
 (
     XMU565* pDestination,
     FXMVECTOR V
@@ -2330,7 +2330,7 @@ inline void XM_CALLCONV PackedVector::XMStoreU565
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreFloat3PK
+inline void XM_CALLCONV /*PackedVector::*/XMStoreFloat3PK
 (
     XMFLOAT3PK* pDestination,
     FXMVECTOR V
@@ -2446,7 +2446,7 @@ inline void XM_CALLCONV PackedVector::XMStoreFloat3PK
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreFloat3SE
+inline void XM_CALLCONV /*PackedVector::*/XMStoreFloat3SE
 (
     XMFLOAT3SE* pDestination,
     FXMVECTOR V
@@ -2492,7 +2492,7 @@ inline void XM_CALLCONV PackedVector::XMStoreFloat3SE
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreHalf4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreHalf4
 (
     XMHALF4* pDestination, 
     FXMVECTOR V
@@ -2515,7 +2515,7 @@ inline void XM_CALLCONV PackedVector::XMStoreHalf4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreShortN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreShortN4
 (
     XMSHORTN4* pDestination, 
     FXMVECTOR V
@@ -2555,7 +2555,7 @@ inline void XM_CALLCONV PackedVector::XMStoreShortN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreShort4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreShort4
 (
     XMSHORT4* pDestination, 
     FXMVECTOR V
@@ -2595,7 +2595,7 @@ inline void XM_CALLCONV PackedVector::XMStoreShort4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUShortN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUShortN4
 (
     XMUSHORTN4* pDestination, 
     FXMVECTOR V
@@ -2643,7 +2643,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUShortN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUShort4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUShort4
 (
     XMUSHORT4* pDestination, 
     FXMVECTOR V
@@ -2686,7 +2686,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUShort4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreXDecN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreXDecN4
 (
     XMXDECN4* pDestination, 
     FXMVECTOR V
@@ -2759,7 +2759,7 @@ inline void XM_CALLCONV PackedVector::XMStoreXDecN4
 // C4996: ignore deprecation warning
 
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreXDec4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreXDec4
 (
     XMXDEC4* pDestination, 
     FXMVECTOR V
@@ -2832,7 +2832,7 @@ inline void XM_CALLCONV PackedVector::XMStoreXDec4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUDecN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUDecN4
 (
     XMUDECN4* pDestination, 
     FXMVECTOR V
@@ -2899,7 +2899,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUDecN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUDecN4_XR
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUDecN4_XR
 (
     XMUDECN4* pDestination, 
     FXMVECTOR V
@@ -2978,7 +2978,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUDecN4_XR
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUDec4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUDec4
 (
     XMUDEC4* pDestination, 
     FXMVECTOR V
@@ -3050,7 +3050,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUDec4
 // C4996: ignore deprecation warning
 
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreDecN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreDecN4
 (
     XMDECN4* pDestination, 
     FXMVECTOR V
@@ -3110,7 +3110,7 @@ inline void XM_CALLCONV PackedVector::XMStoreDecN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreDec4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreDec4
 (
     XMDEC4*  pDestination, 
     FXMVECTOR V
@@ -3176,7 +3176,7 @@ inline void XM_CALLCONV PackedVector::XMStoreDec4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUByteN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUByteN4
 (
     XMUBYTEN4* pDestination, 
     FXMVECTOR V
@@ -3233,7 +3233,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUByteN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUByte4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUByte4
 (
     XMUBYTE4* pDestination, 
     FXMVECTOR V
@@ -3288,7 +3288,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUByte4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreByteN4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreByteN4
 (
     XMBYTEN4* pDestination, 
     FXMVECTOR V
@@ -3343,7 +3343,7 @@ inline void XM_CALLCONV PackedVector::XMStoreByteN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreByte4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreByte4
 (
     XMBYTE4*  pDestination, 
     FXMVECTOR V
@@ -3396,7 +3396,7 @@ inline void XM_CALLCONV PackedVector::XMStoreByte4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreUNibble4
+inline void XM_CALLCONV /*PackedVector::*/XMStoreUNibble4
 (
      XMUNIBBLE4* pDestination,
      FXMVECTOR V
@@ -3452,7 +3452,7 @@ inline void XM_CALLCONV PackedVector::XMStoreUNibble4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline void XM_CALLCONV PackedVector::XMStoreU555
+inline void XM_CALLCONV /*PackedVector::*/XMStoreU555
 (
      XMU555* pDestination,
      FXMVECTOR V
@@ -3518,7 +3518,7 @@ inline void XM_CALLCONV PackedVector::XMStoreU555
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMCOLOR::XMCOLOR
+inline /*PackedVector::*/XMCOLOR::XMCOLOR
 (
     float _r,
     float _g,
@@ -3531,7 +3531,7 @@ inline PackedVector::XMCOLOR::XMCOLOR
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMCOLOR::XMCOLOR
+inline /*PackedVector::*/XMCOLOR::XMCOLOR
 (
     const float* pArray
 )
@@ -3547,7 +3547,7 @@ inline PackedVector::XMCOLOR::XMCOLOR
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMHALF2::XMHALF2
+inline /*PackedVector::*/XMHALF2::XMHALF2
 (
     float _x,
     float _y
@@ -3559,7 +3559,7 @@ inline PackedVector::XMHALF2::XMHALF2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMHALF2::XMHALF2
+inline /*PackedVector::*/XMHALF2::XMHALF2
 (
     const float* pArray
 )
@@ -3577,7 +3577,7 @@ inline PackedVector::XMHALF2::XMHALF2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMSHORTN2::XMSHORTN2
+inline /*PackedVector::*/XMSHORTN2::XMSHORTN2
 (
     float _x,
     float _y
@@ -3588,7 +3588,7 @@ inline PackedVector::XMSHORTN2::XMSHORTN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMSHORTN2::XMSHORTN2
+inline /*PackedVector::*/XMSHORTN2::XMSHORTN2
 (
     const float* pArray
 )
@@ -3604,7 +3604,7 @@ inline PackedVector::XMSHORTN2::XMSHORTN2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMSHORT2::XMSHORT2
+inline /*PackedVector::*/XMSHORT2::XMSHORT2
 (
     float _x,
     float _y
@@ -3615,7 +3615,7 @@ inline PackedVector::XMSHORT2::XMSHORT2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMSHORT2::XMSHORT2
+inline /*PackedVector::*/XMSHORT2::XMSHORT2
 (
     const float* pArray
 )
@@ -3631,7 +3631,7 @@ inline PackedVector::XMSHORT2::XMSHORT2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUSHORTN2::XMUSHORTN2
+inline /*PackedVector::*/XMUSHORTN2::XMUSHORTN2
 (
     float _x,
     float _y
@@ -3642,7 +3642,7 @@ inline PackedVector::XMUSHORTN2::XMUSHORTN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUSHORTN2::XMUSHORTN2
+inline /*PackedVector::*/XMUSHORTN2::XMUSHORTN2
 (
     const float* pArray
 )
@@ -3658,7 +3658,7 @@ inline PackedVector::XMUSHORTN2::XMUSHORTN2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUSHORT2::XMUSHORT2
+inline /*PackedVector::*/XMUSHORT2::XMUSHORT2
 (
     float _x,
     float _y
@@ -3669,7 +3669,7 @@ inline PackedVector::XMUSHORT2::XMUSHORT2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUSHORT2::XMUSHORT2
+inline /*PackedVector::*/XMUSHORT2::XMUSHORT2
 (
     const float* pArray
 )
@@ -3685,7 +3685,7 @@ inline PackedVector::XMUSHORT2::XMUSHORT2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMBYTEN2::XMBYTEN2
+inline /*PackedVector::*/XMBYTEN2::XMBYTEN2
 (
     float _x,
     float _y
@@ -3696,7 +3696,7 @@ inline PackedVector::XMBYTEN2::XMBYTEN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMBYTEN2::XMBYTEN2
+inline /*PackedVector::*/XMBYTEN2::XMBYTEN2
 (
     const float* pArray
 )
@@ -3712,7 +3712,7 @@ inline PackedVector::XMBYTEN2::XMBYTEN2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMBYTE2::XMBYTE2
+inline /*PackedVector::*/XMBYTE2::XMBYTE2
 (
     float _x,
     float _y
@@ -3723,7 +3723,7 @@ inline PackedVector::XMBYTE2::XMBYTE2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMBYTE2::XMBYTE2
+inline /*PackedVector::*/XMBYTE2::XMBYTE2
 (
     const float* pArray
 )
@@ -3739,7 +3739,7 @@ inline PackedVector::XMBYTE2::XMBYTE2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUBYTEN2::XMUBYTEN2
+inline /*PackedVector::*/XMUBYTEN2::XMUBYTEN2
 (
     float _x,
     float _y
@@ -3750,7 +3750,7 @@ inline PackedVector::XMUBYTEN2::XMUBYTEN2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUBYTEN2::XMUBYTEN2
+inline /*PackedVector::*/XMUBYTEN2::XMUBYTEN2
 (
     const float* pArray
 )
@@ -3766,7 +3766,7 @@ inline PackedVector::XMUBYTEN2::XMUBYTEN2
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUBYTE2::XMUBYTE2
+inline /*PackedVector::*/XMUBYTE2::XMUBYTE2
 (
     float _x,
     float _y
@@ -3777,7 +3777,7 @@ inline PackedVector::XMUBYTE2::XMUBYTE2
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUBYTE2::XMUBYTE2
+inline /*PackedVector::*/XMUBYTE2::XMUBYTE2
 (
     const float* pArray
 )
@@ -3791,7 +3791,7 @@ inline PackedVector::XMUBYTE2::XMUBYTE2
  *
  ****************************************************************************/
 
-inline PackedVector::XMU565::XMU565
+inline /*PackedVector::*/XMU565::XMU565
 (
     float _x,
     float _y,
@@ -3802,7 +3802,7 @@ inline PackedVector::XMU565::XMU565
 }
 
 _Use_decl_annotations_
-inline PackedVector::XMU565::XMU565
+inline /*PackedVector::*/XMU565::XMU565
 (
     const float *pArray
 )
@@ -3816,7 +3816,7 @@ inline PackedVector::XMU565::XMU565
  *
  ****************************************************************************/
 
-inline PackedVector::XMFLOAT3PK::XMFLOAT3PK
+inline /*PackedVector::*/XMFLOAT3PK::XMFLOAT3PK
 (
     float _x,
     float _y,
@@ -3827,7 +3827,7 @@ inline PackedVector::XMFLOAT3PK::XMFLOAT3PK
 }
 
 _Use_decl_annotations_
-inline PackedVector::XMFLOAT3PK::XMFLOAT3PK
+inline /*PackedVector::*/XMFLOAT3PK::XMFLOAT3PK
 (
     const float *pArray
 )
@@ -3841,7 +3841,7 @@ inline PackedVector::XMFLOAT3PK::XMFLOAT3PK
  *
  ****************************************************************************/
 
-inline PackedVector::XMFLOAT3SE::XMFLOAT3SE
+inline /*PackedVector::*/XMFLOAT3SE::XMFLOAT3SE
 (
     float _x,
     float _y,
@@ -3852,7 +3852,7 @@ inline PackedVector::XMFLOAT3SE::XMFLOAT3SE
 }
 
 _Use_decl_annotations_
-inline PackedVector::XMFLOAT3SE::XMFLOAT3SE
+inline /*PackedVector::*/XMFLOAT3SE::XMFLOAT3SE
 (
     const float *pArray
 )
@@ -3868,7 +3868,7 @@ inline PackedVector::XMFLOAT3SE::XMFLOAT3SE
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMHALF4::XMHALF4
+inline /*PackedVector::*/XMHALF4::XMHALF4
 (
     float _x,
     float _y,
@@ -3885,7 +3885,7 @@ inline PackedVector::XMHALF4::XMHALF4
 //------------------------------------------------------------------------------
 
 _Use_decl_annotations_
-inline PackedVector::XMHALF4::XMHALF4
+inline /*PackedVector::*/XMHALF4::XMHALF4
 (
     const float* pArray
 )
@@ -3901,7 +3901,7 @@ inline PackedVector::XMHALF4::XMHALF4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMSHORTN4::XMSHORTN4
+inline /*PackedVector::*/XMSHORTN4::XMSHORTN4
 (
     float _x,
     float _y,
@@ -3914,7 +3914,7 @@ inline PackedVector::XMSHORTN4::XMSHORTN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMSHORTN4::XMSHORTN4
+inline /*PackedVector::*/XMSHORTN4::XMSHORTN4
 (
     const float* pArray
 )
@@ -3930,7 +3930,7 @@ inline PackedVector::XMSHORTN4::XMSHORTN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMSHORT4::XMSHORT4
+inline /*PackedVector::*/XMSHORT4::XMSHORT4
 (
     float _x,
     float _y,
@@ -3943,7 +3943,7 @@ inline PackedVector::XMSHORT4::XMSHORT4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMSHORT4::XMSHORT4
+inline /*PackedVector::*/XMSHORT4::XMSHORT4
 (
     const float* pArray
 )
@@ -3959,7 +3959,7 @@ inline PackedVector::XMSHORT4::XMSHORT4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUSHORTN4::XMUSHORTN4
+inline /*PackedVector::*/XMUSHORTN4::XMUSHORTN4
 (
     float _x,
     float _y,
@@ -3972,7 +3972,7 @@ inline PackedVector::XMUSHORTN4::XMUSHORTN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUSHORTN4::XMUSHORTN4
+inline /*PackedVector::*/XMUSHORTN4::XMUSHORTN4
 (
     const float* pArray
 )
@@ -3988,7 +3988,7 @@ inline PackedVector::XMUSHORTN4::XMUSHORTN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUSHORT4::XMUSHORT4
+inline /*PackedVector::*/XMUSHORT4::XMUSHORT4
 (
     float _x,
     float _y,
@@ -4001,7 +4001,7 @@ inline PackedVector::XMUSHORT4::XMUSHORT4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUSHORT4::XMUSHORT4
+inline /*PackedVector::*/XMUSHORT4::XMUSHORT4
 (
     const float* pArray
 )
@@ -4017,7 +4017,7 @@ inline PackedVector::XMUSHORT4::XMUSHORT4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMXDECN4::XMXDECN4
+inline /*PackedVector::*/XMXDECN4::XMXDECN4
 (
     float _x,
     float _y,
@@ -4030,7 +4030,7 @@ inline PackedVector::XMXDECN4::XMXDECN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMXDECN4::XMXDECN4
+inline /*PackedVector::*/XMXDECN4::XMXDECN4
 (
     const float* pArray
 )
@@ -4050,7 +4050,7 @@ inline PackedVector::XMXDECN4::XMXDECN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMXDEC4::XMXDEC4
+inline /*PackedVector::*/XMXDEC4::XMXDEC4
 (
     float _x,
     float _y,
@@ -4063,7 +4063,7 @@ inline PackedVector::XMXDEC4::XMXDEC4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMXDEC4::XMXDEC4
+inline /*PackedVector::*/XMXDEC4::XMXDEC4
 (
     const float* pArray
 )
@@ -4079,7 +4079,7 @@ inline PackedVector::XMXDEC4::XMXDEC4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMDECN4::XMDECN4
+inline /*PackedVector::*/XMDECN4::XMDECN4
 (
     float _x,
     float _y,
@@ -4092,7 +4092,7 @@ inline PackedVector::XMDECN4::XMDECN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMDECN4::XMDECN4
+inline /*PackedVector::*/XMDECN4::XMDECN4
 (
     const float* pArray
 )
@@ -4108,7 +4108,7 @@ inline PackedVector::XMDECN4::XMDECN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMDEC4::XMDEC4
+inline /*PackedVector::*/XMDEC4::XMDEC4
 (
     float _x,
     float _y,
@@ -4121,7 +4121,7 @@ inline PackedVector::XMDEC4::XMDEC4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMDEC4::XMDEC4
+inline /*PackedVector::*/XMDEC4::XMDEC4
 (
     const float* pArray
 )
@@ -4139,7 +4139,7 @@ inline PackedVector::XMDEC4::XMDEC4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUDECN4::XMUDECN4
+inline /*PackedVector::*/XMUDECN4::XMUDECN4
 (
     float _x,
     float _y,
@@ -4152,7 +4152,7 @@ inline PackedVector::XMUDECN4::XMUDECN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUDECN4::XMUDECN4
+inline /*PackedVector::*/XMUDECN4::XMUDECN4
 (
     const float* pArray
 )
@@ -4168,7 +4168,7 @@ inline PackedVector::XMUDECN4::XMUDECN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUDEC4::XMUDEC4
+inline /*PackedVector::*/XMUDEC4::XMUDEC4
 (
     float _x,
     float _y,
@@ -4181,7 +4181,7 @@ inline PackedVector::XMUDEC4::XMUDEC4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUDEC4::XMUDEC4
+inline /*PackedVector::*/XMUDEC4::XMUDEC4
 (
     const float* pArray
 )
@@ -4197,7 +4197,7 @@ inline PackedVector::XMUDEC4::XMUDEC4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMBYTEN4::XMBYTEN4
+inline /*PackedVector::*/XMBYTEN4::XMBYTEN4
 (
     float _x,
     float _y,
@@ -4210,7 +4210,7 @@ inline PackedVector::XMBYTEN4::XMBYTEN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMBYTEN4::XMBYTEN4
+inline /*PackedVector::*/XMBYTEN4::XMBYTEN4
 (
     const float* pArray
 )
@@ -4226,7 +4226,7 @@ inline PackedVector::XMBYTEN4::XMBYTEN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMBYTE4::XMBYTE4
+inline /*PackedVector::*/XMBYTE4::XMBYTE4
 (
     float _x,
     float _y,
@@ -4239,7 +4239,7 @@ inline PackedVector::XMBYTE4::XMBYTE4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMBYTE4::XMBYTE4
+inline /*PackedVector::*/XMBYTE4::XMBYTE4
 (
     const float* pArray
 )
@@ -4255,7 +4255,7 @@ inline PackedVector::XMBYTE4::XMBYTE4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUBYTEN4::XMUBYTEN4
+inline /*PackedVector::*/XMUBYTEN4::XMUBYTEN4
 (
     float _x,
     float _y,
@@ -4268,7 +4268,7 @@ inline PackedVector::XMUBYTEN4::XMUBYTEN4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUBYTEN4::XMUBYTEN4
+inline /*PackedVector::*/XMUBYTEN4::XMUBYTEN4
 (
     const float* pArray
 )
@@ -4284,7 +4284,7 @@ inline PackedVector::XMUBYTEN4::XMUBYTEN4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUBYTE4::XMUBYTE4
+inline /*PackedVector::*/XMUBYTE4::XMUBYTE4
 (
     float _x,
     float _y,
@@ -4297,7 +4297,7 @@ inline PackedVector::XMUBYTE4::XMUBYTE4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUBYTE4::XMUBYTE4
+inline /*PackedVector::*/XMUBYTE4::XMUBYTE4
 (
     const float* pArray
 )
@@ -4313,7 +4313,7 @@ inline PackedVector::XMUBYTE4::XMUBYTE4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMUNIBBLE4::XMUNIBBLE4
+inline /*PackedVector::*/XMUNIBBLE4::XMUNIBBLE4
 (
     float _x,
     float _y,
@@ -4326,7 +4326,7 @@ inline PackedVector::XMUNIBBLE4::XMUNIBBLE4
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMUNIBBLE4::XMUNIBBLE4
+inline /*PackedVector::*/XMUNIBBLE4::XMUNIBBLE4
 (
     const float *pArray
 )
@@ -4342,7 +4342,7 @@ inline PackedVector::XMUNIBBLE4::XMUNIBBLE4
 
 //------------------------------------------------------------------------------
 
-inline PackedVector::XMU555::XMU555
+inline /*PackedVector::*/XMU555::XMU555
 (
     float _x,
     float _y,
@@ -4355,7 +4355,7 @@ inline PackedVector::XMU555::XMU555
 
 //------------------------------------------------------------------------------
 _Use_decl_annotations_
-inline PackedVector::XMU555::XMU555
+inline /*/*PackedVector::*/*/XMU555::XMU555
 (
     const float *pArray,
     bool _w
@@ -4365,4 +4365,4 @@ inline PackedVector::XMU555::XMU555
     XMStoreU555(this, XMVectorSetW(V, ((_w) ? 1.0f : 0.0f) ));
 }
 
-
+} // PackedVector <- STEVE CHANGE
