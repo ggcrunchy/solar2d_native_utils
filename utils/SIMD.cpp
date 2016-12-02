@@ -23,10 +23,17 @@
 
 #include "utils/Memory.h"
 #include "utils/SIMD.h"
-#include "external/DirectXMath.h"
-#include "external/DirectXPackedVector.h"
 
-#ifdef __ANDROID__
+#ifdef _WIN32
+	#include "DirectXMath/Inc/DirectXMath.h"
+	#include "DirectXMath/Inc/DirectXPackedVector.h"
+#elif __APPLE__
+	#include "TargetConditionals.h"
+
+	#if !TARGET_OS_IOS
+		#include <Accelerate.h>
+	#endif
+#else
 	#include <cpu-features.h>
 #endif
 
@@ -55,10 +62,10 @@ namespace SimdXS {
 	#endif
 	}
 
-	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n)
+	void FloatsToUnorm8s (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n)
 	{
 		void * ptr = const_cast<float *>(pfloats);
-
+	#ifdef _WIN32 // todo: try to streamline this to include Android / iOS
 		MemoryXS::Align(16U, n * sizeof(float), ptr);
 
 		DirectX::PackedVector::XMUBYTEN4 out;
@@ -94,12 +101,15 @@ namespace SimdXS {
 
 			memcpy(u8, &out, n);
 		}
+	#else
+		for (size_t i = 0; i < n; ++i) u8[i] = unsigned char(floats[i] * 255.0f);
+	#endif
 	}
 
-	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n)
+	void Unorm8sToFloats (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n)
 	{
 		void * ptr = pfloats;
-
+	#ifdef _WIN32 // todo: try to streamline this to include Android / iOS
 		MemoryXS::Align(16U, n * sizeof(float), ptr);
 
 		// Peel off any leading floats.
@@ -140,5 +150,8 @@ namespace SimdXS {
 
 			memcpy(to, &result, n * sizeof(float));
 		}
+	#else
+		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f;
+	#endif
 	}
 }

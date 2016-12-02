@@ -47,12 +47,6 @@
     <ClInclude Include="..\..\external\aligned_allocator.h">
       <Filter>Header Files\external</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\external\DirectXMath.h">
-      <Filter>Header Files\external</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\DirectXPackedVector.h">
-      <Filter>Header Files\external</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\utils\Compat.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -82,16 +76,5 @@
     <ClCompile Include="..\..\utils\Thread.cpp">
       <Filter>Source Files\utils</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\external\DirectXMathConvert.inl">
-      <Filter>Header Files\external</Filter>
-    </None>
-    <None Include="..\..\external\DirectXMathVector.inl">
-      <Filter>Header Files\external</Filter>
-    </None>
-    <None Include="..\..\external\DirectXPackedVector.inl">
-      <Filter>Header Files\external</Filter>
-    </None>
   </ItemGroup>
 </Project>

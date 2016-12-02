@@ -38,8 +38,11 @@
 
 #ifdef _WIN32
 	#include <yvals.h>
+
+	#define _RESTRICT __restrict
 #else
 	#define _NOEXCEPT noexcept
+	#define _RESTRICT __restrict__
 #endif
 
 namespace CompatXS {

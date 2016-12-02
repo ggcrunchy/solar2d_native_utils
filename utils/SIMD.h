@@ -23,14 +23,14 @@
 
 #pragma once
 
+#include "utils/Compat.h"
 #include "external/aligned_allocator.h"
 #include <utility>
 #include <vector>
 
-
 namespace SimdXS {
 	bool CanUseNeon (void);
 
-	void FloatsToUnorm8s (const float * pfloats, unsigned char * u8, size_t n);
-	void Unorm8sToFloats (const unsigned char * u8, float * pfloats, size_t n);
+	void FloatsToUnorm8s (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n);
+	void Unorm8sToFloats (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n);
 }

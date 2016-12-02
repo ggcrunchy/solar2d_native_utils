@@ -79,9 +79,9 @@ namespace LuaXS {
             int mIndex;
             
             Iter & operator ++ (void);
-            bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
             Iter & operator * (void);
             operator int (void);
+            bool operator != (const Iter & other) const { return mIndex != other.mIndex; }
             
             int ReturnFrom (int n);
             
