@@ -434,9 +434,20 @@ namespace LuaXS {
 
 		static StackIndex Top (lua_State * L) { return StackIndex(L, -1); }
 
-		operator int (void) { return mIndex; }
+        operator int (void) { return mIndex; }
 	};
 
+    //
+    struct This {
+        const void * mPointer;
+        
+        This (const void * p) : mPointer{p}
+        {
+        }
+        
+        operator void * (void) { return const_cast<void *>(mPointer); }
+    };
+    
 	// Helper to push argument onto Lua's stack
 	template<typename T> void PushArgBody (lua_State *, T arg);
 
@@ -447,8 +458,9 @@ namespace LuaXS {
 	template<> inline void PushArgBody<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
 	template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
 	template<> inline void PushArgBody<const std::string &> (lua_State * L, const std::string & s) { lua_pushlstring(L, s.data(), s.length()); }
-	template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
-	template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
+    template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
+    template<> inline void PushArgBody<This> (lua_State * L, This t) { lua_pushlightuserdata(L, t); }
+    template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
 
 	template<typename U> static void PushArg (lua_State * L, U && arg)
 	{
@@ -463,7 +475,7 @@ namespace LuaXS {
 						lua_Number,
 						typename CompatXS::conditional<CEU::is_integral<T>::value && !CEU::is_same<T, bool>::value,	// ...or a non-boolean integer...
 							lua_Integer,
-							T	// Otherwise, use the raw type: boolean, null, stack index, or user-specialized.
+							T	// Otherwise, use the raw type: boolean, null, stack index, this pointer, or user-specialized.
 						>::type
 					>::type
 				>::type
@@ -480,7 +492,7 @@ namespace LuaXS {
 		return 1;
 	}
 
-	template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, CompatXS::forward<T>(arg)); }
+    template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, CompatXS::forward<T>(arg)); }
 
 	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T && arg, Args && ... args)
 	{
