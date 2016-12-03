@@ -31,7 +31,7 @@
 	#include "TargetConditionals.h"
 
 	#if !TARGET_OS_IOS
-		#include <Accelerate.h>
+		#include <Accelerate/Accelerate.h>
 	#endif
 #else
 	#include <cpu-features.h>
@@ -102,7 +102,7 @@ namespace SimdXS {
 			memcpy(u8, &out, n);
 		}
 	#else
-		for (size_t i = 0; i < n; ++i) u8[i] = unsigned char(floats[i] * 255.0f);
+		for (size_t i = 0; i < n; ++i) u8[i] = (unsigned char)(pfloats[i] * 255.0f);
 	#endif
 	}
 

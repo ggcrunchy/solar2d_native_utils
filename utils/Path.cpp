@@ -52,7 +52,7 @@ namespace PathXS {
 
 	const char * Directories::Canonicalize (lua_State * L, bool bRead)
 	{
-		const char * str = luaL_checkstring(L, 1);
+	//	const char * str = luaL_checkstring(L, 1);
 
 	//	if (*str == '!') return ++str; // <- probably more problems than it's worth
 

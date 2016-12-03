@@ -28,11 +28,9 @@
 #endif
 
 #if !TARGET_OS_IPHONE
-    #include <memory>
     #include <type_traits>
 	#include <utility>
 #else
-    #include <tr1/memory>
     #include <tr1/type_traits>
 #endif
 
@@ -51,6 +49,7 @@ namespace CompatXS {
 #if !TARGET_OS_IPHONE
 	// Bring these into the namespace...
 	using std::conditional;
+    using std::enable_if;
 	using std::forward;
 
 	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
@@ -78,7 +77,14 @@ namespace CompatXS {
 		typedef F type;
 	};
 
-	// ...ditto. This isn't terribly thorough, e.g. it does no static_assert, but primary development
+    // ...ditto... (see e.g. eli.thegreenplace.net/2014/sfinae-and-enable-if/)
+    template<bool, typename T = void> struct enable_if {};
+    
+    template<typename T> struct enable_if<true, T> {
+        typedef T type;
+    };
+    
+	// ...and again. This isn't terribly thorough, e.g. it does no static_assert, but primary development
 	// has usually been done on other platforms, which is expected to tease out any issues.
 	template<typename T> T && forward (T value) { return static_cast<T &&>(value); }
 

@@ -21,11 +21,16 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
+#include "utils/Compat.h"
 #include "utils/Blob.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 #include "utils/SIMD.h"
 #include <cstddef>
+
+#if !TARGET_OS_IOS
+    using std::max_align_t;
+#endif
 
 namespace ByteXS {
 	//
@@ -110,7 +115,7 @@ namespace ByteXS {
 
 		else
 		{
-			const size_t kPadBufferSize = sizeof(std::max_align_t);
+			const size_t kPadBufferSize = sizeof(max_align_t);
 			static char pad[kPadBufferSize] = { 0 };
 
 			for ( ; n >= kPadBufferSize; n -= kPadBufferSize) luaL_addlstring(&mB, pad, kPadBufferSize);

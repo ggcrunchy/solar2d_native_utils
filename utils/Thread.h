@@ -25,6 +25,7 @@
 
 #include "utils/Compat.h"
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 #ifdef _WIN32
@@ -37,6 +38,8 @@
 #else
 	#error "Unsupported target"
 #endif
+
+namespace CEU = CompatXS::ns_compat;
 
 namespace ThreadXS {
 	// Macro to declare type with thread-local duration, preferring compiler support when available.
@@ -92,20 +95,20 @@ namespace ThreadXS {
 
 		operator T ()
 		{
-			std::aligned_union<0U, T> value;// Use POD data so that T need not be trivially constructible
+            CEU::aligned_storage<sizeof(T), CEU::alignment_of<T>::value> value;  // Use POD data so that T need not be trivially constructible
 
 			mSlot.GetVar(&value);
 
 			return *reinterpret_cast<T *>(&value);
 		}
 
-	#ifdef _WIN32 // workaround for MSVC 2013, which throws internal compiler errors with enable_if :(
-		template<bool is_pointer = std::is_pointer<T>::value> typename std::conditional<is_pointer, T, void>::type operator -> (void);
+	#if defined(_WIN32) // workaround for MSVC 2013, which throws internal compiler errors with enable_if :( (iOS too, it seems)
+		template<bool is_pointer = CEU::is_pointer<T>::value> typename CompatXS::conditional<is_pointer, T, void>::type operator -> (void);
 
 		template<> inline T operator -> <true> (void) { return T{*this}; }
 		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
 	#else
-		template<typename U = T> typename std::enable_if<std::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
+		template<typename U = T> typename CompatXS::enable_if<CEU::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
 	#endif
 	};
 
@@ -119,11 +122,11 @@ namespace ThreadXS {
 
 		data_t helper = data_t{a, CompatXS::forward<F>(f)};
 
-		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, I cnt)
+		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
 			data_t * d = static_cast<data_t *>(ctx);
 
-			(*d).second(d->first + cnt);
+			(*d).second(d->first + I(cnt));
 		});
 	#elif __ANDROID__
 		__gnu_parallel::generate_n(a, b - a, std::forward<F>(f));
@@ -151,8 +154,8 @@ namespace ThreadXS {
 		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
 			data_t * d = static_cast<data_t *>(ctx);
-			auto elem_it = std::next(d->first, cnt);
-
+            auto elem_it = d->first;
+            std::advance(elem_it, count);
 			(*d).second(*(elem_it));
 		});
 	#elif __ANDROID__
@@ -162,7 +165,7 @@ namespace ThreadXS {
 
 	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
 	{
-		if (bParallel) parallel_for_each(CompatXS::forward<It>(a), CompatXS::forward<It>(b), CompatXS::forward<F>(f))
+        if (bParallel) parallel_for_each(CompatXS::forward<It>(a), CompatXS::forward<It>(b), CompatXS::forward<F>(f));
 
 		else std::for_each(CompatXS::forward<It>(a), CompatXS::forward<It>(b), CompatXS::forward<F>(f));
 	}

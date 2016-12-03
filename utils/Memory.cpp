@@ -26,7 +26,9 @@
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 
-namespace CEU = CompatXS::ns_compat;
+#if !TARGET_OS_IOS
+    #include <memory>
+#endif
 
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
@@ -283,5 +285,19 @@ void * MemoryXS::Align (size_t bound, size_t size, void *& ptr, size_t * space)
 	size_t cushion = size + bound - 1U;
 	size_t & space_ref = space ? *space : cushion;
 
-	return CEU::align(bound, size, ptr, space_ref);
+    #if TARGET_OS_IPHONE
+        uintptr_t p = uintptr_t(ptr);
+    	uintptr_t q = (p + bound - 1) & -bound;
+    	uintptr_t diff = q - p;
+    
+    	if (space_ref - diff < size) return nullptr;
+    
+    	if (space) *space -= diff;
+    
+    	ptr = static_cast<unsigned char *>(ptr) + q - p;
+    
+    	return ptr;
+    #else
+        return std::align(bound, size, ptr, space_ref);
+    #endif
 }
