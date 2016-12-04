@@ -34,6 +34,8 @@
 	#include <dispatch/dispatch.h>
 	#include "TargetConditionals.h"
 #elif __ANDROID__
+	#include <thread>
+	#include <numeric>
 	#include <parallel/algorithm>
 #else
 	#error "Unsupported target"
@@ -115,7 +117,7 @@ namespace ThreadXS {
 	// Adapted from parallel_for_each, which follows
 	template<typename I, typename F> inline void parallel_for (I a, I b, F && f)
 	{
-	#ifdef _WIN32
+	#ifdef _WIN32		
 		Concurrency::parallel_for(a, b, std::forward<F>(f));
 	#elif __APPLE__
 		using data_t = std::pair<I, F>;
@@ -129,7 +131,19 @@ namespace ThreadXS {
 			(*d).second(d->first + I(cnt));
 		});
 	#elif __ANDROID__
-		__gnu_parallel::generate_n(a, b - a, std::forward<F>(f));
+		unsigned int n = std::thread::hardware_concurrency();
+		I count = (std::max)(b - a, static_cast<I>(n)) / n;
+
+		std::vector<I> splits(n);
+		
+		std::iota(splits.begin(), splits.end(), I(0));
+
+		parallel_for_each(splits.begin(), splits.end(), [=](I range)
+		{
+			I from = a + range * count, to = (std::min)(from + count, b);
+
+			while (from < to) f(from++);
+		}, n > 0U && count > I(0));
 	#endif
 	}
 
@@ -137,7 +151,7 @@ namespace ThreadXS {
 	{
 		if (bParallel) parallel_for(a, b, CompatXS::forward<F>(f));
 
-		else std::generate_n(a, b - a, CompatXS::forward<F>(f));
+		else while (a != b) f(a++);
 	}
 
 	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
@@ -155,7 +169,9 @@ namespace ThreadXS {
 		{
 			data_t * d = static_cast<data_t *>(ctx);
             auto elem_it = d->first;
+
             std::advance(elem_it, count);
+
 			(*d).second(*(elem_it));
 		});
 	#elif __ANDROID__
