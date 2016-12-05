@@ -23,11 +23,13 @@
 
 #pragma once
 
+#include <cstddef>
+
 #ifdef __APPLE__
     #include "TargetConditionals.h"
 #endif
 
-#if !TARGET_OS_IPHONE
+#if !TARGET_OS_IOS
     #include <type_traits>
 	#include <utility>
 #else
@@ -46,11 +48,12 @@
 namespace CompatXS {
 
 // On most targets we have a fairly full-featured C++11 implementation...
-#if !TARGET_OS_IPHONE
+#if !TARGET_OS_IOS
 	// Bring these into the namespace...
 	using std::conditional;
     using std::enable_if;
 	using std::forward;
+    using std::max_align_t;
 
 	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
 	template<typename T> struct NoThrowTraits {
@@ -68,6 +71,8 @@ namespace CompatXS {
 
 // ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
+	using max_align_t;
+
 	// Missing (or hard to find?), so make our own...
 	template<bool B, typename T, typename F> struct conditional {
 		typedef T type;
@@ -98,6 +103,8 @@ namespace CompatXS {
 		typedef std::tr1::has_trivial_copy<T> is_copyable;
 		typedef std::tr1::has_trivial_destructor<T> is_destructible;
 	};
+
+	// TODO: atomic support?
 
 	// ...and streamline this namespace.
 	namespace ns_compat = std::tr1;
