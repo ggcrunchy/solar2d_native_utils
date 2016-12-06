@@ -26,6 +26,7 @@
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <string>
