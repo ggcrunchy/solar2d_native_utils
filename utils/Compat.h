@@ -30,9 +30,11 @@
 #endif
 
 #if !TARGET_OS_IOS
+	#include <atomic>
     #include <type_traits>
 	#include <utility>
 #else
+	// TODO: boost/atomic
     #include <tr1/type_traits>
 #endif
 
@@ -50,6 +52,8 @@ namespace CompatXS {
 // On most targets we have a fairly full-featured C++11 implementation...
 #if !TARGET_OS_IOS
 	// Bring these into the namespace...
+	using std::atomic;
+	using std::atomic_flag;
 	using std::conditional;
     using std::enable_if;
 	using std::forward;
@@ -71,6 +75,7 @@ namespace CompatXS {
 
 // ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
+	// TODO: atomics
     using ::max_align_t;
 
 	// Missing (or hard to find?), so make our own...

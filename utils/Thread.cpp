@@ -26,9 +26,7 @@
 #include <map>
 #include <pthread.h>
 
-#ifndef TARGET_OS_IOS
-    #include <atomic>
-#else
+#if TARGET_OS_IOS
     static pthread_mutex_t sMutexID = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -59,7 +57,7 @@ namespace ThreadXS {
 
 		//
     #if !TARGET_OS_IOS
-		static std::atomic<size_t> sID{0U};
+		static CompatXS::atomic<size_t> sID{0U};
     #else
         static size_t sID = 0U;
 

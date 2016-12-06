@@ -25,6 +25,8 @@
 #include <vector>
 
 namespace LuaXS {
+	std::mutex symbols_mutex;
+
 	bool IsMainState (lua_State * L)
 	{
 		int top = lua_gettop(L);

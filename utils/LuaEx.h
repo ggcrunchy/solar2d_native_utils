@@ -26,6 +26,8 @@
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
+#include <limits>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -280,6 +282,69 @@ namespace LuaXS {
 		new (instance) T(CompatXS::forward<Args>(args)...);
 
 		return instance;
+	}
+
+	extern std::mutex symbols_mutex;
+
+	template<typename T> size_t GenSym (lua_State * L, T & counter, std::vector<uint64_t> * cache = nullptr)
+	{
+		static_assert(CEU::is_integral<T>::value && CEU::is_unsigned<T>::value, "Counter must have unsigned integral type");
+
+		lua_pushlightuserdata(L, &counter);	// ..., counter
+		lua_rawget(L, LUA_REGISTRYINDEX);	// ..., index?
+
+		uint64_t * index;
+
+		if (!lua_isnil(L, -1)) index = UD<uint64_t>(L, -1);
+
+		else
+		{
+			lua_pushlightuserdata(L, &counter);	// ..., nil, counter, index
+
+			index = NewTyped<uint64_t>(L);	// ..., nil, index
+
+			if (cache)
+			{
+				lua_createtable(L, 0, 1);	// ..., nil, index, mt
+				lua_pushlightuserdata(L, cache);// ..., nil, index, mt, cache
+				lua_pushcclosure(L, [](lua_State * L)
+				{
+					std::lock_guard<std::mutex> lock(symbols_mutex);
+
+					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
+
+					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
+
+					return 0;
+				}, 1);	// ..., nil, index, mt, gc
+				lua_setfield(L, -2, "__gc");// ..., nil, index, mt = { __gc = gc }
+				lua_setmetatable(L, -2);// ..., nil, index
+			}
+
+			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
+
+			std::lock_guard<std::mutex> lock(symbols_mutex);
+
+			if (cache && !cache->empty())
+			{
+				*index = cache->back();
+
+				cache->pop_back();
+			}
+
+			else
+			{
+				*index = counter++;
+
+				const uint64_t slice = (std::numeric_limits<uint64_t>::max)() / 65536ULL;	// Dole out 48-bit chunks (allows 64K clients)
+
+				*index *= slice;
+			}
+		}
+
+		lua_pop(L, 1);	// ...
+
+		return std::hash<uint64_t>{}(*index++);
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)

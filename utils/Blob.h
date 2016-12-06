@@ -122,7 +122,7 @@ namespace BlobXS {
 
 	//
 	struct BlobPimpl {
-		typedef unsigned long long storage_id;
+		typedef size_t storage_id;
 
 		// Helper functions
 		static storage_id BadID (void);

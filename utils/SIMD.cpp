@@ -194,8 +194,6 @@ namespace SimdXS {
 
 			memcpy(u8, &out, n);
 		}
-
-		return;	// TODO: temporary
 	#elif !TARGET_OS_SIMULATOR
         vImage_Buffer src, dst;
           
@@ -264,8 +262,6 @@ namespace SimdXS {
 
 			memcpy(to, &result, n * sizeof(float));
 		}
-
-		return;	// TODO: temporary
     #elif !TARGET_OS_SIMULATOR
         vImage_Buffer src, dst;
                 
