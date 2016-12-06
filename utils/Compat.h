@@ -71,7 +71,7 @@ namespace CompatXS {
 
 // ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
-	using max_align_t;
+    using ::max_align_t;
 
 	// Missing (or hard to find?), so make our own...
 	template<bool B, typename T, typename F> struct conditional {

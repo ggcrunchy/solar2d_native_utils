@@ -61,7 +61,7 @@ namespace ThreadXS {
 		static_assert(CompatXS::TrivialTraits<T>::is_copyable::value && CompatXS::TrivialTraits<T>::is_destructible::value, "ThreadXS::SharedArray only supports types that are trivally copyable and destructible");
 
 		struct Block {
-			std::aligned_storage<sizeof(CompatXS::max_align_t) * 8U, CEU::alignment_of<CompatXS::max_align_t>::value> mItems;	//
+			CEU::aligned_storage<sizeof(CompatXS::max_align_t) * 8U, CEU::alignment_of<CompatXS::max_align_t>::value> mItems;	//
 			Block * mNext{nullptr};	// 
 
 			void AddItem (size_t pos, const void * item);
@@ -70,10 +70,10 @@ namespace ThreadXS {
 
 		struct BlockEntry {
 			Block * mRef{nullptr};	//
-			size_t mUsage{~0};	//
+			size_t mUsage{~0U};	//
 
 			bool IsValid (void) const { return mUsage != ~0; }
-			size_t GetFirst (void) const { return ~0 };	// TODO!
+            size_t GetFirst (void) const { return ~0; };	// TODO!
 
 			void * GetItem (size_t pos) const { return reinterpret_cast<CompatXS::max_align_t *>(&mRef->mItems) + pos; }
 		};
@@ -109,15 +109,15 @@ namespace ThreadXS {
 
 			if (mDtor)
 			{
-				for (auto block : mBlocks)
+                for (Block * block = &mBlock0; block; block = block->mNext)
 				{
-					while (block.mUsage)
+					while (block->mUsage)
 					{
-						size_t index = block.GetFirst();
+						size_t index = block->GetFirst();
 
-						mDtor(static_cast<T *>(block.GetItem(index)));
+						mDtor(static_cast<T *>(block->GetItem(index)));
 
-						block.mUsage &= ~(1U << index);
+						block->mUsage &= ~(1U << index);
 					}
 				}
 			}
