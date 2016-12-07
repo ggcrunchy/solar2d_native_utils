@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace LuaXS {
-	std::mutex symbols_mutex;
+	pthread_mutex_t symbols_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 	bool IsMainState (lua_State * L)
 	{

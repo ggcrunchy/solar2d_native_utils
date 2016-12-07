@@ -56,7 +56,7 @@ namespace ThreadXS {
 		} sKeyLifetime;
 
 		//
-    #if !TARGET_OS_IOS
+    #if 0 //!TARGET_OS_IOS
 		static CompatXS::atomic<size_t> sID{0U};
     #else
         static size_t sID = 0U;

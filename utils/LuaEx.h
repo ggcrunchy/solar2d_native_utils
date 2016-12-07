@@ -26,9 +26,9 @@
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
-#include <functional>
+#include <pthread.h>
+#include <stdint.h>
 #include <limits>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -285,7 +285,7 @@ namespace LuaXS {
 		return instance;
 	}
 
-	extern std::mutex symbols_mutex;
+	extern pthread_mutex_t symbols_mutex;
 
 	template<typename T> size_t GenSym (lua_State * L, T & counter, std::vector<uint64_t> * cache = nullptr)
 	{
@@ -310,11 +310,13 @@ namespace LuaXS {
 				lua_pushlightuserdata(L, cache);// ..., nil, index, mt, cache
 				lua_pushcclosure(L, [](lua_State * L)
 				{
-					std::lock_guard<std::mutex> lock(symbols_mutex);
-
 					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
-
+                    
+                    pthread_mutex_lock(&symbols_mutex);
+                    
 					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
+                    
+                    pthread_mutex_unlock(&symbols_mutex);
 
 					return 0;
 				}, 1);	// ..., nil, index, mt, gc
@@ -324,7 +326,7 @@ namespace LuaXS {
 
 			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
 
-			std::lock_guard<std::mutex> lock(symbols_mutex);
+            pthread_mutex_lock(&symbols_mutex);
 
 			if (cache && !cache->empty())
 			{
@@ -341,11 +343,13 @@ namespace LuaXS {
 
 				*index *= slice;
 			}
+
+            pthread_mutex_unlock(&symbols_mutex);
 		}
 
 		lua_pop(L, 1);	// ...
 
-		return std::hash<uint64_t>{}(*index++);
+		return CEU::hash<uint64_t>{}(*index++);
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
@@ -503,40 +507,54 @@ namespace LuaXS {
         operator int (void) { return mIndex; }
 	};
 
-    //
-    struct This {
-        const void * mPointer;
-        
-        This (const void * p) : mPointer{p}
-        {
-        }
-        
-        operator void * (void) { return const_cast<void *>(mPointer); }
-    };
-    
 	// Helper to push argument onto Lua's stack
 	template<typename T> void PushArgBody (lua_State *, T arg);
 
-    template<> inline void PushArgBody<Nil> (lua_State * L, Nil) { lua_pushnil(L); }
-	template<> inline void PushArgBody<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
-	template<> inline void PushArgBody<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
+    template<> inline void PushArgBody<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
 	template<> inline void PushArgBody<lua_Integer> (lua_State * L, lua_Integer i) { lua_pushinteger(L, i); }
 	template<> inline void PushArgBody<lua_Number> (lua_State * L, lua_Number n) { lua_pushnumber(L, n); }
-	template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
-	template<> inline void PushArgBody<const std::string &> (lua_State * L, const std::string & s) { lua_pushlstring(L, s.data(), s.length()); }
+    template<> inline void PushArgBody<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
     template<> inline void PushArgBody<void *> (lua_State * L, void * p) { lua_pushlightuserdata(L, p); }
-    template<> inline void PushArgBody<This> (lua_State * L, This t) { lua_pushlightuserdata(L, t); }
-    template<> inline void PushArgBody<StackIndex> (lua_State * L, StackIndex si) { return lua_pushvalue(L, si); }
 
-	template<typename U> static void PushArg (lua_State * L, U && arg)
+    template<bool is_pointerlike> struct Pusher {
+        template<typename U> void operator () (lua_State * L, U arg)
+        {
+            using arg_type = typename CompatXS::conditional<CEU::is_floating_point<U>::value,// ...or a float...
+                lua_Number,
+                typename CompatXS::conditional<CEU::is_integral<U>::value,	// ...or a non-boolean integer...
+                    lua_Integer,
+                    U	// Otherwise, use the raw type: boolean, null, stack index, this pointer, or user-specialized.
+                >::type
+            >::type;
+            
+            PushArgBody(L, static_cast<arg_type>(arg));
+        }
+    };
+    
+    template<> struct Pusher<true> {
+        template<typename U> void operator () (lua_State * L, U arg)
+        {
+            using arg_type = typename CompatXS::conditional<CEU::is_same<U, const char *>::value || CEU::is_convertible<U, std::string>::value,	// Is it a string...
+                const char *,
+                typename CompatXS::conditional<CEU::is_same<U, lua_CFunction>::value || CEU::is_convertible<U, lua_CFunction>::value,	// ...or a Lua function...
+                    lua_CFunction,
+                    void *
+                >::type
+            >::type;
+            
+            PushArgBody<arg_type>(L, arg);
+        }
+    };
+	template<typename U> static void PushArg (lua_State * L, U arg)
 	{
         using T = typename CEU::remove_reference<U>::type;
-		using arg_type = typename CompatXS::conditional<CEU::is_same<T, std::string>::value || CEU::is_convertible<T, std::string>::value,	// Is it a string...
+        const bool is_pointerlike = CEU::is_pointer<T>::value || CEU::is_convertible<T, std::string>::value || CEU::is_convertible<T, lua_CFunction>::value;
+/*		using arg_type = typename CompatXS::conditional<CEU::is_same<T, std::string>::value || CEU::is_convertible<T, std::string>::value,	// Is it a string...
 			const char *,
 			typename CompatXS::conditional<CEU::is_same<T, lua_CFunction>::value || CEU::is_convertible<T, lua_CFunction>::value,	// ...or a Lua function...
 				lua_CFunction,
 				typename CompatXS::conditional<CEU::is_pointer<T>::value,	// ...or a generic pointer...
-					void *,
+                    void *,
 					typename CompatXS::conditional<CEU::is_floating_point<T>::value,// ...or a float...
 						lua_Number,
 						typename CompatXS::conditional<CEU::is_integral<T>::value && !CEU::is_same<T, bool>::value,	// ...or a non-boolean integer...
@@ -548,9 +566,33 @@ namespace LuaXS {
 			>::type
 		>::type;
 
-		PushArgBody(L, static_cast<arg_type>(arg));
-	}
-
+ PushArgBody(L, arg_type(arg));*/
+        Pusher<is_pointerlike>{}(L, arg);
+    }
+    
+    template<> inline void PushArg<Nil> (lua_State * L, Nil) { lua_pushnil(L); }
+    template<> inline void PushArg<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
+//    template<> inline void PushArg<const char *> (lua_State * L, const char * s) { lua_pushstring(L, s); }
+    template<> inline void PushArg<const std::string &> (lua_State * L, const std::string & s) { lua_pushlstring(L, s.data(), s.length()); }
+//    template<> inline void PushArg<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
+    template<> inline void PushArg<StackIndex> (lua_State * L, StackIndex si) { lua_pushvalue(L, si); }
+//    template<> inline void PushArg<const void *> (lua_State * L, const void * p) { lua_pushlightuserdata(L, const_cast<void *>(p)); }
+    /*
+    template<typename U> static void PushArg (lua_State * L, U * arg)
+    {
+        using T = typename CEU::remove_reference<U>::type;
+        
+        using arg_type = typename CompatXS::conditional<CEU::is_convertible<T, std::string>::value,	// Is it a string...
+            const char *,
+            typename CompatXS::conditional<CEU::is_same<T, lua_CFunction>::value || CEU::is_convertible<T, lua_CFunction>::value,	// ...or a Lua function...
+                lua_CFunction,
+                const void *
+            >::type
+        >::type;
+        
+        PushArg<arg_type>(L, arg);
+    }*/
+    
 	template<typename T> int PushArgAndReturn (lua_State * L, T && arg)
 	{
 		PushArg(L, CompatXS::forward<T>(arg));
@@ -583,12 +625,19 @@ namespace LuaXS {
 	}
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
-	{
+    {
 		PushMultipleArgs(L, func, CompatXS::forward<Args>(args)...);// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
 
+    template<typename ... Args> bool PCallThis (lua_State * L, lua_CFunction func, void * pthis, Args && ... args)
+    {
+        PushMultipleArgs(L, func, pthis, CompatXS::forward<Args>(args)...);// ..., func, ...
+        
+        return lua_pcall(L, sizeof...(args) + 1, 0, 0) == 0;// ...[, err]
+    }
+    
 	template<typename ... Args> bool PCallN (lua_State * L, lua_CFunction func, int nresults, Args && ... args)
 	{
 		PushMultipleArgs(L, func, CompatXS::forward<Args>(args)...);// ..., func, ...
