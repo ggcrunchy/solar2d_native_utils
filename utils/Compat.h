@@ -100,9 +100,18 @@ namespace CompatXS {
         typedef T type;
     };
     
-	// ...and again. This isn't terribly thorough, e.g. it does no static_assert, but primary development
-	// has usually been done on other platforms, which is expected to tease out any issues.
-	template<typename T> T && forward (T value) { return static_cast<T &&>(value); }
+	// ...and again. See http://stackoverflow.com/a/27501759
+	template <typename T> inline T&& forward (typename std::tr1::remove_reference<T>::type& t) noexcept
+	{
+		return static_cast<T&&>(t);
+	}
+
+	template <typename T> inline T&& forward (typename std::tr1::remove_reference<T>::type&& t) noexcept
+	{
+		static_assert(!std::tr1::is_lvalue_reference<T>::value, "Can not forward an rvalue as an lvalue.");
+
+		return static_cast<T&&>(t);
+	}
 
 	// As with other targets, but here we need to bring the alternate names into conformity...
 	template<typename T> struct NoThrowTraits {
