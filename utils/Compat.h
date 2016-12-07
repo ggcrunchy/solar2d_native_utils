@@ -32,6 +32,7 @@
 #if !TARGET_OS_IOS
 	#include <atomic>
     #include <functional>
+	#include <mutex>
     #include <type_traits>
 	#include <utility>
 #else
@@ -59,7 +60,9 @@ namespace CompatXS {
 	using std::conditional;
     using std::enable_if;
 	using std::forward;
+	using std::lock_guard;
     using std::max_align_t;
+	using std::mutex;
 
 	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
 	template<typename T> struct NoThrowTraits {

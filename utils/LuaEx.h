@@ -26,7 +26,6 @@
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
-#include <pthread.h>
 #include <stdint.h>
 #include <limits>
 #include <string>
@@ -285,7 +284,7 @@ namespace LuaXS {
 		return instance;
 	}
 
-	extern pthread_mutex_t symbols_mutex;
+	extern CompatXS::mutex symbols_mutex;
 
 	template<typename T> size_t GenSym (lua_State * L, T & counter, std::vector<uint64_t> * cache = nullptr)
 	{
@@ -312,11 +311,9 @@ namespace LuaXS {
 				{
 					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
                     
-                    pthread_mutex_lock(&symbols_mutex);
+                    CompatXS::lock_guard<CompatXS::mutex> lock(symbols_mutex);
                     
 					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
-                    
-                    pthread_mutex_unlock(&symbols_mutex);
 
 					return 0;
 				}, 1);	// ..., nil, index, mt, gc
@@ -326,7 +323,7 @@ namespace LuaXS {
 
 			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
 
-            pthread_mutex_lock(&symbols_mutex);
+            CompatXS::lock_guard<CompatXS::mutex> lock(symbols_mutex);
 
 			if (cache && !cache->empty())
 			{
@@ -343,8 +340,6 @@ namespace LuaXS {
 
 				*index *= slice;
 			}
-
-            pthread_mutex_unlock(&symbols_mutex);
 		}
 
 		lua_pop(L, 1);	// ...
