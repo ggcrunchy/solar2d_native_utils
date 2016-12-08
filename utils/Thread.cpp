@@ -23,6 +23,7 @@
 
 #include "utils/Compat.h"
 #include "utils/Thread.h"
+#include <pthread.h>
 #include <map>
 
 namespace ThreadXS {
