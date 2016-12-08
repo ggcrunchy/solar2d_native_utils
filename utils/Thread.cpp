@@ -24,11 +24,6 @@
 #include "utils/Compat.h"
 #include "utils/Thread.h"
 #include <map>
-#include <pthread.h>
-
-#if TARGET_OS_IOS
-    static pthread_mutex_t sMutexID = PTHREAD_MUTEX_INITIALIZER;
-#endif
 
 namespace ThreadXS {
 	//
@@ -56,17 +51,9 @@ namespace ThreadXS {
 		} sKeyLifetime;
 
 		//
-    #if !TARGET_OS_IOS
 		static CompatXS::atomic<size_t> sID{0U};
-    #else
-        static size_t sID = 0U;
 
-        pthread_mutex_lock(&sMutexID);
-    #endif
 		mIndex = sID++;
-    #if TARGET_OS_IOS
-        pthread_mutex_unlock(&sMutexID);
-    #endif
 	}
 
 	//

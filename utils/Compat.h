@@ -36,7 +36,10 @@
     #include <type_traits>
 	#include <utility>
 #else
-    #include <boost/atomic.hpp>
+    #define BOOST_NO_CXX11_RVALUE_REFERENCES
+    #define BOOST_SYSTEM_NO_DEPRECATED
+
+    #include <boost/thread.hpp>
     #include <tr1/functional>
     #include <tr1/type_traits>
 #endif
@@ -82,6 +85,8 @@ namespace CompatXS {
 #else
     using boost::atomic;
     using boost::atomic_flag;
+    using boost::lock_guard;
+    using boost::mutex;
     using ::max_align_t;
 
 	// Missing (or hard to find?), so make our own...
@@ -108,7 +113,7 @@ namespace CompatXS {
 
 	template <typename T> inline T&& forward (typename std::tr1::remove_reference<T>::type&& t) noexcept
 	{
-		static_assert(!std::tr1::is_lvalue_reference<T>::value, "Can not forward an rvalue as an lvalue.");
+	//	static_assert(!std::tr1::is_lvalue_reference<T>::value, "Can not forward an rvalue as an lvalue.");
 
 		return static_cast<T&&>(t);
 	}
