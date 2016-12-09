@@ -40,6 +40,7 @@ namespace BlobXS {
 	//
 	class State {
 	public:
+		// Private implementation details
 		struct Pimpl {
 			// Methods
 			virtual bool CanBind (lua_State * L, int, int, int, int) { return false; } // Other, options? (sets reason if false)
@@ -57,13 +58,20 @@ namespace BlobXS {
 
 			// Lifetime
 			virtual void Initialize (lua_State *, int, const char *, bool) {}
+			virtual bool Initialize (lua_State *, int, const char *, const char *, bool) { return false; }
 			virtual ~Pimpl (void) {}
 		};
 
 	private:
 		Pimpl * mPimpl;	// Implementation details
 
-	public:
+	public:		
+		// 
+		std::vector<size_t> mOffsets;	// Zero or more offsets into blob, >= 0
+		bool mNoResize{false};	// If true, forbid resizing blob even when possible
+		bool mDiscardOK{false};	// If true, allow destructive resizing, e.g. along the x-axis
+		bool mMustUseBlob{false};	// If true, operation fails if blob is available but not usable (e.g. too small, locked, etc.)
+
 		bool Bound (void) const { return mPimpl->Bound(); }
 		bool Fit (lua_State * L, int x, int y, int w, int h) { return mPimpl->Fit(L, x, y, w, h); }
 		bool InterpretAs (lua_State * L, int w, int h, int bpp, int stride = 0) { return mPimpl->InterpretAs(L, w, h, bpp, stride); }
@@ -74,6 +82,7 @@ namespace BlobXS {
 		const char * GetReason (void) const { return mPimpl->GetReason(); }
 
 		State (lua_State * L, int arg, const char * key = nullptr, bool bLeave = true);
+		State (lua_State * L, int arg, const char * req_key, const char * opt_key, bool bLeave = true);
 		~State (void) { delete mPimpl; }
 
 		static void Instantiate (lua_State * L, size_t size, const char * type = "xs.blob");
@@ -81,36 +90,6 @@ namespace BlobXS {
 		unsigned char * PointToDataIfBound (lua_State * L, int x, int y, int w, int h, int stride, int bpp = 1);
 		unsigned char * PointToData (lua_State * L, int x, int y, int w, int h, int stride, bool bZero = true, int bpp = 1);
 		int PushData (lua_State * L, unsigned char * out, const char * btype, bool bAsUserdata);
-	};
-
-	// Check for blobs in an options table. If present, the blob is pushed onto the stack and
-	// the members of this structure are filled in; otherwise, pushes nil.
-	struct Options {
-		// Lookup keys: a blob may be in one or the other of `mBlob` or `mOpt`, favoring the
-		// former. If a blob is found in `mBlob`, it must be used, or else we have an error; a
-		// blob in `mOpt`, on the other hand, says "use me if I'm satisfactory, otherwise seek
-		// alternatives". Blob-related information may be found in the table in `mInfo`.
-		struct Keys {
-            const char * mBlob, * mOpt, * mInfo;
-            
-            const char * Blob (void) const { return mBlob ? mBlob : "blob"; }
-            const char * Opt (void) const { return mOpt ? mOpt : "opt_blob"; }
-            const char * Info (void) const { return mInfo ? mInfo : "blob_info"; }
-            
-            Keys (void) : mBlob{nullptr}, mOpt{nullptr}, mInfo{nullptr}
-            {
-            }
-		} mKeys;
-
-		// An info table might look like so:
-		// { x = 7, y = 2, stride = 100, no_resize = false, discard_ok = true }
-		int mX, mY;	// Offsets into blob, >= 0; both default to 0
-		int mStride;// Stride of blob data; defaults to 0, meaning it will be calculated as width * bytes-per-component
-		bool mNoResize;	// Request to not resize blob even if possible; defaults to false
-		bool mDiscardOK;// Allow destructive resizing, e.g. along the x-axis; defaults to false
-		bool mMustUseBlob;	// If true, blob must be used
-
-        Options (lua_State * L, int arg, const Keys & keys = Keys{});
 	};
 
 	//
@@ -134,6 +113,7 @@ namespace BlobXS {
 		virtual bool Lock (lua_State *, int, void *) { return false; }
 		virtual bool Unlock (lua_State *, int, void *) { return false; }
 		virtual bool Resize (lua_State *, int, size_t, void *) { return false; }
+		virtual bool WhitelistUser (lua_State *, int, void *, void *) { return false; }
 		virtual size_t GetAlignment (lua_State *, int) { return 0U; }
 		virtual size_t GetSize (lua_State *, int, bool) { return 0U; }
 		virtual unsigned char * GetData (lua_State *, int) { return nullptr; }
@@ -168,6 +148,7 @@ namespace BlobXS {
 	inline bool Lock (lua_State * L, int arg, void * key) { return UsingPimpl(L).Lock(L, arg, key); }
 	inline bool Unlock (lua_State * L, int arg, void * key) { return UsingPimpl(L).Unlock(L, arg, key); }
 	inline bool Resize (lua_State * L, int arg, size_t size, void * key = nullptr) { return UsingPimpl(L).Resize(L, arg, size, key); }
+	inline bool WhitelistUser (lua_State * L, int arg, void * key, void * user_key) { return UsingPimpl(L).WhitelistUser(L, arg, key, user_key); }
 	inline size_t GetAlignment (lua_State * L, int arg) { return UsingPimpl(L).GetAlignment(L, arg); }
 	inline size_t GetSize (lua_State * L, int arg, bool bNSized = false) { return UsingPimpl(L).GetSize(L, arg, bNSized); }
 	inline unsigned char * GetData (lua_State * L, int arg) { return UsingPimpl(L).GetData(L, arg); }

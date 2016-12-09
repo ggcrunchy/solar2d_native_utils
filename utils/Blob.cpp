@@ -35,6 +35,14 @@ BlobXS::State::State (lua_State * L, int arg, const char * key, bool bLeave) : m
 	mPimpl->Initialize(L, arg, key, bLeave);
 }
 
+BlobXS::State::State (lua_State * L, int arg, const char * req_key, const char * opt_key, bool bLeave) : mPimpl{nullptr}
+{
+	auto impl = GetImplementations(L);
+
+	mPimpl = impl ? impl->mMake() : new BlobXS::State::Pimpl();
+	mMustUseBlob = mPimpl->Initialize(L, arg, req_key, opt_key, bLeave);
+}
+
 void BlobXS::State::Instantiate (lua_State * L, size_t size, const char * name)
 {
 	auto impl = GetImplementations(L);
