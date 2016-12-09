@@ -31,17 +31,16 @@
 
 #if !TARGET_OS_IOS
 	#include <atomic>
-    #include <functional>
 	#include <mutex>
     #include <type_traits>
 	#include <utility>
 #else
     #define BOOST_NO_CXX11_RVALUE_REFERENCES
-    #define BOOST_SYSTEM_NO_DEPRECATED
 
+    #include <boost/core/enable_if.hpp>
+    #include <boost/move/utility.hpp>
     #include <boost/thread.hpp>
-    #include <tr1/functional>
-    #include <tr1/type_traits>
+    #include <boost/type_traits.hpp>
 #endif
 
 #ifdef _WIN32
@@ -85,53 +84,25 @@ namespace CompatXS {
 #else
     using boost::atomic;
     using boost::atomic_flag;
+    using boost::conditional;
+    using boost::enable_if;
+    using boost::forward;
     using boost::lock_guard;
-    using boost::mutex;
     using ::max_align_t;
-
-	// Missing (or hard to find?), so make our own...
-	template<bool B, typename T, typename F> struct conditional {
-		typedef T type;
-	};
-
-	template<typename T, typename F> struct conditional<false, T, F> {
-		typedef F type;
-	};
-
-    // ...ditto... (see e.g. eli.thegreenplace.net/2014/sfinae-and-enable-if/)
-    template<bool, typename T = void> struct enable_if {};
-    
-    template<typename T> struct enable_if<true, T> {
-        typedef T type;
-    };
-    
-	// ...and again. See http://stackoverflow.com/a/27501759
-	template <typename T> inline T&& forward (typename std::tr1::remove_reference<T>::type& t) noexcept
-	{
-		return static_cast<T&&>(t);
-	}
-
-	template <typename T> inline T&& forward (typename std::tr1::remove_reference<T>::type&& t) noexcept
-	{
-	//	static_assert(!std::tr1::is_lvalue_reference<T>::value, "Can not forward an rvalue as an lvalue.");
-
-		return static_cast<T&&>(t);
-	}
+    using boost::mutex;
 
 	// As with other targets, but here we need to bring the alternate names into conformity...
 	template<typename T> struct NoThrowTraits {
-		typedef std::tr1::has_nothrow_constructor<T> is_default_constructible;  // Not quite the trait we want, but see note for forward()
+		typedef boost::has_nothrow_constructor<T> is_default_constructible; // Not quite the trait we want, but see note for forward()
 	};
 
 	// ...ditto...
 	template<typename T> struct TrivialTraits {
-		typedef std::tr1::has_trivial_copy<T> is_copyable;
-		typedef std::tr1::has_trivial_destructor<T> is_destructible;
+		typedef boost::has_trivial_copy<T> is_copyable;
+		typedef boost::has_trivial_destructor<T> is_destructible;
 	};
 
-	// TODO: atomic support?
-
 	// ...and streamline this namespace.
-	namespace ns_compat = std::tr1;
+	namespace ns_compat = boost;
 #endif
 }

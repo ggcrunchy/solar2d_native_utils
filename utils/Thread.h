@@ -110,7 +110,7 @@ namespace ThreadXS {
 		template<> inline T operator -> <true> (void) { return T{*this}; }
 		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
 	#else
-		template<typename U = T> typename CompatXS::enable_if<CEU::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
+		template<typename U = T> typename CompatXS::enable_if<typename CEU::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
 	#endif
 	};
 
