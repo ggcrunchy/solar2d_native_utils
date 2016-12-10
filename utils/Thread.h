@@ -104,46 +104,48 @@ namespace ThreadXS {
 			return *reinterpret_cast<T *>(&value);
 		}
 
-	#if defined(_WIN32) // workaround for MSVC 2013, which throws internal compiler errors with enable_if :( (iOS too, it seems)
+	#if defined(_WIN32) // workaround for MSVC 2013, which throws internal compiler errors with enable_if
 		template<bool is_pointer = CEU::is_pointer<T>::value> typename CompatXS::conditional<is_pointer, T, void>::type operator -> (void);
 
 		template<> inline T operator -> <true> (void) { return T{*this}; }
 		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
-	#else
-		template<typename U = T> typename CompatXS::enable_if<typename CEU::is_pointer<U>::value, U>::type operator -> () { return U{*this}; }
+    #elif !TARGET_OS_IOS
+        template<typename U = T, typename CompatXS::enable_if<CEU::is_pointer<U>::value, int>::type = 0> U operator -> () { return U{*this}; }
+    #else
+        template<typename U = T, typename CompatXS::enable_if<CEU::is_pointer<U>, int>::type = 0> U operator -> () { return U{*this}; }
 	#endif
 	};
 
 	// Adapted from parallel_for_each, which follows
-	template<typename I, typename F> inline void parallel_for (I a, I b, F && f)
+	template<typename I1, typename I2, typename F> inline void parallel_for (I1 a, I2 b, F && f)
 	{
 	#ifdef _WIN32		
 		Concurrency::parallel_for(a, b, std::forward<F>(f));
 	#elif __APPLE__
-		using data_t = std::pair<I, F>;
+	//	using data_t = std::pair<I, F>;
 
-		data_t helper = data_t{a, CompatXS::forward<F>(f)};
+        auto helper = std::make_pair(a, f);//CompatXS::forward<F>(f));
 
 		dispatch_apply_f(b - a, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
-			data_t * d = static_cast<data_t *>(ctx);
+			decltype(helper) * d = static_cast<decltype(helper) *>(ctx);
 
-			(*d).second(d->first + I(cnt));
+			(*d).second(d->first + I1(cnt));
 		});
 	#elif __ANDROID__
 		unsigned int n = std::thread::hardware_concurrency();
-		I count = (std::max)(b - a, static_cast<I>(n)) / n;
+		I1 count = (std::max)(b - a, static_cast<I1>(n)) / n;
 
-		std::vector<I> splits(n);
+		std::vector<I1> splits(n);
 		
-		std::iota(splits.begin(), splits.end(), I(0));
+		std::iota(splits.begin(), splits.end(), I1(0));
 
-		parallel_for_each(splits.begin(), splits.end(), [=](I range)
+		parallel_for_each(splits.begin(), splits.end(), [=](I1 range)
 		{
-			I from = a + range * count, to = (std::min)(from + count, b);
+			I1 from = a + range * count, to = (std::min)(from + count, b);
 
 			while (from < to) f(from++);
-		}, n > 0U && count > I(0));
+		}, n > 0U && count > I1(0));
 	#endif
 	}
 
