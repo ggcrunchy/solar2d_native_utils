@@ -83,9 +83,6 @@ namespace MemoryXS {
 	#ifdef _MSC_VER
 		#define ALIGNED_N_BEGIN(n) __declspec(align(n))
         #define ALIGNED_N_END(n)
-	#elif __ANDROID__
-		#define ALIGNED_N_BEGIN(n) __attribute__((aligned(n)))
-        #define ALIGNED_N_END(n)
 	#else
 		#define ALIGNED_N_BEGIN(n)
         #define ALIGNED_N_END(n) __attribute__((aligned(n)))
@@ -106,7 +103,7 @@ namespace MemoryXS {
 	{
 		ALIGNED_N_BEGIN(64) struct {
 			T mUnits[N];
-			char mDad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];// unsure how to declare this as a constant portably :/
+			char mPad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];
 		} ALIGNED_N_END(64) mData;
 
 		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);

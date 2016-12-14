@@ -149,7 +149,7 @@ namespace ThreadXS {
 	#endif
 	}
 
-	template<typename I, typename F> inline void parallel_for (I a, I b, F && f, bool bParallel)
+	template<typename I1, typename I2, typename F> inline void parallel_for (I1 a, I2 b, F && f, bool bParallel)
 	{
 		if (bParallel) parallel_for(a, b, CompatXS::forward<F>(f));
 

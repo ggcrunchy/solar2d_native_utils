@@ -35,10 +35,18 @@
 	#include <cpu-features.h>
 #endif
 
-#if defined(__ANDROID__) || (!TARGET_OS_SIMULATOR && (TARGET_OS_IOS || TARGET_OS_TV))
+#if defined(__ANDROID__) || (TARGET_OS_IOS && !TARGET_OS_SIMULATOR) || TARGET_OS_TV
     #define MIGHT_HAVE_NEON
 
     #include <arm_neon.h>
+#endif
+
+#ifdef __ANDROID__
+	#define ELSE } else
+#elif defined(_WIN32) || !(TARGET_OS_IOS && !TARGET_OS_SIMULATOR)
+	#define ELSE return;
+#else
+	#define ELSE
 #endif
 
 namespace SimdXS {
@@ -206,11 +214,8 @@ namespace SimdXS {
         vImageConvert_PlanarFtoPlanar8(&src, &dst, 1.0f, 0.0f, bNoTile ? kvImageDoNotTile : 0);
 	#endif
 
-	#ifdef __ANDROID__
-		} else
-	#endif
-		// Neon unavailable, so just use scalar approach.
-		for (size_t i = 0; i < n; ++i) u8[i] = (unsigned char)(pfloats[i] * 255.0f);
+		// Accelerate or Neon unavailable, so just use scalar approach.
+		ELSE for (size_t i = 0; i < n; ++i) u8[i] = (unsigned char)(pfloats[i] * 255.0f);
 	}
 
 	void Unorm8sToFloats (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n, bool bNoTile)
@@ -274,12 +279,10 @@ namespace SimdXS {
         vImageConvert_Planar8toPlanarF(&src, &dst, 1.0f, 0.0f, bNoTile ? kvImageDoNotTile : 0);
 	#endif
 
-	#ifdef __ANDROID__
-		} else
-	#endif
-		// Neon unavailable, so just use scalar approach.
-		for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f;
+		// Accelerate or Neon unavailable, so just use scalar approach.
+		ELSE for (size_t i = 0; i < n; ++i) pfloats[i] = float(u8[i]) / 255.0f;
 	}
     
+	#undef ELSE
     #undef MIGHT_HAVE_NEON
 }
