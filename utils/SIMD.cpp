@@ -30,7 +30,9 @@
 #elif __APPLE__
 	#include "TargetConditionals.h"
 
-	#include <Accelerate/Accelerate.h>
+    #if !TARGET_OS_IOS
+        #include <Accelerate/Accelerate.h>
+    #endif
 #else
 	#include <cpu-features.h>
 #endif
@@ -43,7 +45,7 @@
 
 #ifdef __ANDROID__
 	#define ELSE } else
-#elif defined(_WIN32) || !(TARGET_OS_IOS && !TARGET_OS_SIMULATOR)
+#elif defined(_WIN32) || !TARGET_OS_IOS
 	#define ELSE return;
 #else
 	#define ELSE
