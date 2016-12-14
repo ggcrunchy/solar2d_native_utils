@@ -37,7 +37,7 @@
 	#include <cpu-features.h>
 #endif
 
-#if defined(__ANDROID__) || (TARGET_OS_IOS && !TARGET_OS_SIMULATOR) || TARGET_OS_TV
+#if defined(__ANDROID__) || (TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR)
     #define MIGHT_HAVE_NEON
 
     #include <arm_neon.h>
