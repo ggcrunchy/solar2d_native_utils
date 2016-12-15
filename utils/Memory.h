@@ -101,22 +101,17 @@ namespace MemoryXS {
 	template<typename T, unsigned N, typename F>
 	auto cps_alloca_static (F && f) -> decltype(f(nullptr, nullptr))
 	{
-		ALIGNED_N_BEGIN(64) struct {
-			T mUnits[N];
-			char mPad[((sizeof(mUnits) + 63U) & -64U) - sizeof(mUnits)];
-		} ALIGNED_N_END(64) mData;
+		ALIGNED_N_BEGIN(64) T ALIGNED_N_END(64) mData[N];
 
-		return f(reinterpret_cast<T *>(&mData.mUnits[0]), reinterpret_cast<T *>(&mData.mUnits[0]) + N);
+		return f(&mData[0], &mData[N]);
 	}
 
 	template<typename T, typename F>
 	auto cps_alloca_dynamic (unsigned n, F && f) -> decltype(f(nullptr, nullptr))
 	{
-		const size_t kExtraN = ((sizeof(T) + 63U) & -64U) / sizeof(T);
+		ALIGNED_N_BEGIN(64) AlignedVectorN<T, 64U> ALIGNED_N_END(64) data(n);
 
-		ALIGNED_N_BEGIN(64) AlignedVectorN<T, 64U> ALIGNED_N_END(64) data(n + kExtraN);
-
-		return f(&data[0], &data[0] + n);
+		return f(&data[0], &data[n]);
 	}
 
 	template<typename T,typename F>

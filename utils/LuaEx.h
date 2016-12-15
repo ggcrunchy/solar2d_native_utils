@@ -311,7 +311,7 @@ namespace LuaXS {
 				{
 					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
                     
-                    CompatXS::lock_guard<CompatXS::mutex> lock(symbols_mutex);
+					CompatXS::lock_guard<CompatXS::mutex> lock{symbols_mutex};
                     
 					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
 
@@ -323,7 +323,7 @@ namespace LuaXS {
 
 			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
 
-            CompatXS::lock_guard<CompatXS::mutex> lock(symbols_mutex);
+			CompatXS::lock_guard<CompatXS::mutex> lock{symbols_mutex};
 
 			if (cache && !cache->empty())
 			{
