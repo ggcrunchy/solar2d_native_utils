@@ -52,30 +52,27 @@ namespace PathXS {
 
 	const char * Directories::Canonicalize (lua_State * L, bool bRead)
 	{
-	//	const char * str = luaL_checkstring(L, 1);
-
-	//	if (*str == '!') return ++str; // <- probably more problems than it's worth
-
 		lua_rawgeti(L, LUA_REGISTRYINDEX, mPathForFile);// str[, dir], ..., pathForFile
-		luaL_argcheck(L, !lua_isnil(L, -1), -1, "Missing pathForFile()");
 		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
 
 		bool has_userdata = lua_isuserdata(L, 2) != 0;
 
-		if (has_userdata) lua_pushvalue(L, 2);	// str, dir, ..., pathForFile, str, dir
+		if (has_userdata)
+		{
+			lua_pushvalue(L, 2);// str, dir, ..., pathForFile, str, dir
+			lua_remove(L, 2);	// str, ..., pathForFile, str, dir
+		}
 
 		else lua_rawgeti(L, LUA_REGISTRYINDEX, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
 
-		if (lua_pcall(L, 2, 1, 0) == 0)	// str[, dir], ..., file
+		if (lua_pcall(L, 2, 1, 0) == 0)	// str, ..., file
 		{
-			if (has_userdata) lua_remove(L, 2);	// str, ..., file
-
 			lua_replace(L, 1);	// file, ...
+
+			return lua_tostring(L, 1);
 		}
 
-		else lua_error(L);
-
-		return lua_tostring(L, 1);
+		else return nullptr;
 	}
 
 	void LibLoader::Close (void)
