@@ -112,12 +112,12 @@ namespace PathXS {
 			mH = luaL_checkint(L, 3);
 
 			//
-			WriteAuxReader waux(L, mW, mH, 5, dirs);
+			WriteAuxReader waux{L, mW, mH, 5, dirs};
 
 			mFilename = waux.mFilename;
 			mComp = luaL_checkint(L, 4);
 
-			LuaXS::Options opts(L, 6);
+			LuaXS::Options opts{L, 6};
 			
 			opts.Add("as_userdata", mAsUserdata);
 
