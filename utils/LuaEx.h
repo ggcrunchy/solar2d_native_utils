@@ -588,6 +588,18 @@ namespace LuaXS {
 		lua_setfield(L, arg, name);	// ...
 	}
 
+	template<typename T> int ErrorAfter (lua_State * L, T falsy)
+	{
+		PushArg(L, falsy);	// ..., err, falsy
+
+		lua_insert(L, -2);	// ..., falsy, err
+
+		return 2;
+	}
+
+	bool PCallWithStack (lua_State * L, lua_CFunction func, int nresults = 0);
+	bool PCallWithStackAndUpvalues (lua_State * L, lua_CFunction func, int nupvalues, int nresults = 0);
+
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
     {
 		PushMultipleArgs(L, func, CompatXS::forward<Args>(args)...);// ..., func, ...
@@ -630,5 +642,37 @@ namespace LuaXS {
 		PushMultipleArgs(L, CompatXS::forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, 1 + sizeof...(args), nresults, 0) == 0;	// ...[, err]
+	}
+
+	template<typename F, typename T> static int PCallWithStackThenReturn (lua_State * L, F func, T falsy)
+	{
+		lua_pushlightuserdata(L, &func);// ..., func
+
+		if (LuaXS::PCallWithStack(L, [](lua_State * L)
+		{
+			auto func = static_cast<F *>(lua_touserdata(L, -1));
+
+			lua_pop(L, 1);	// ...
+
+			return (*func)(L);	// results...
+		}, LUA_MULTRET)) return lua_gettop(L);
+	
+		else return LuaXS::ErrorAfter(L, falsy);// false, falsy, err
+	}
+
+	template<typename F, typename T> static int PCallWithStackAndUpvaluesThenReturn (lua_State * L, int nupvalues, F func, T falsy)
+	{
+		lua_pushlightuserdata(L, &func);// ..., func
+
+		if (LuaXS::PCallWithStackAndUpvalues(L, [](lua_State * L)
+		{
+			auto func = static_cast<F *>(lua_touserdata(L, -1));
+
+			lua_pop(L, 1);	// ...
+
+			return (*func)(L);	// results...
+		}, nupvalues, LUA_MULTRET)) return lua_gettop(L);
+	
+		else return LuaXS::ErrorAfter(L, falsy);// false, falsy, err
 	}
 };

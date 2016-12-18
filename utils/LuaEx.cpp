@@ -335,18 +335,12 @@ namespace LuaXS {
 
 	int ErrorAfterFalse (lua_State * L)
 	{
-		lua_pushboolean(L, 0);	// ..., err, false
-		lua_insert(L, -2);	// ..., false, err
-
-		return 2;
+		return ErrorAfter(L, false);// ..., false, err
 	}
 
 	int ErrorAfterNil (lua_State * L)
 	{
-		lua_pushnil(L);	// ..., err, nil
-		lua_insert(L, -2);	// ..., nil, err
-
-		return 2;
+		return ErrorAfter(L, Nil{});// ..., nil, err
 	}
 
 	int NoOp (lua_State * L)
@@ -478,5 +472,23 @@ namespace LuaXS {
 			lua_getfield(mL, mArg, field);// ..., opts, ..., value
 			lua_replace(mL, mArg);	// ..., value, ...
 		}
+	}
+
+	bool PCallWithStack (lua_State * L, lua_CFunction func, int nresults)
+	{
+		lua_pushcfunction(L, func);	// ..., func
+		lua_insert(L, 1);	// func, ...
+		
+		return lua_pcall(L, lua_gettop(L) - 1, nresults, 0) == 0;	// ..., ok[, results / err]
+	}
+
+	bool PCallWithStackAndUpvalues (lua_State * L, lua_CFunction func, int nupvalues, int nresults)
+	{
+		for (int i = 1; i <= nupvalues; ++i) lua_pushvalue(L, lua_upvalueindex(i));	// ..., upvalues
+
+		lua_pushcclosure(L, func, nupvalues);	// ..., func
+		lua_insert(L, 1);	// func, ...
+		
+		return lua_pcall(L, lua_gettop(L) - 1, nresults, 0) == 0;	// ..., ok[, results / err]
 	}
 }
