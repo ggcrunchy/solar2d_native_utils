@@ -31,16 +31,26 @@
 
 #if !TARGET_OS_IOS
 	#include <atomic>
+    #include <functional>
+    #include <memory>
 	#include <mutex>
     #include <type_traits>
+    #include <tuple>
 	#include <utility>
 #else
-    #define BOOST_NO_CXX11_RVALUE_REFERENCES
-
     #include <boost/core/enable_if.hpp>
+    #include <boost/move/unique_ptr.hpp>
     #include <boost/move/utility.hpp>
-    #include <boost/thread.hpp>
+    #include <boost/function.hpp>
     #include <boost/type_traits.hpp>
+    #include <boost/tuple/tuple.hpp>
+    #include <boost/tuple/tuple_comparison.hpp>
+
+    #define BOOST_NO_CXX11_RVALUE_REFERENCES // ????!!!
+    #define BOOST_THREAD_PROVIDES_FUTURE
+
+    #include <boost/thread.hpp>
+    #include <boost/thread/future.hpp>
 #endif
 
 #ifdef _WIN32
@@ -57,14 +67,23 @@ namespace CompatXS {
 // On most targets we have a fairly full-featured C++11 implementation...
 #if !TARGET_OS_IOS
 	// Bring these into the namespace...
+    using std::async;
 	using std::atomic;
 	using std::atomic_flag;
 	using std::conditional;
     using std::enable_if;
 	using std::forward;
+    using std::future;
+    using std::function;
+    using std::get;
 	using std::lock_guard;
+    using std::make_shared;
     using std::max_align_t;
+    using std::move;
 	using std::mutex;
+    using std::shared_ptr;
+    using std::tuple;
+    using std::unique_ptr;
 
 	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
 	template<typename T> struct NoThrowTraits {
@@ -82,14 +101,23 @@ namespace CompatXS {
 
 // ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
+    using boost::async;
     using boost::atomic;
     using boost::atomic_flag;
     using boost::conditional;
     using boost::enable_if;
     using boost::forward;
+    using boost::function;
+    using boost::future;
+    using boost::tuples::get;
     using boost::lock_guard;
+    using boost::make_shared;
     using ::max_align_t;
+    using boost::move;
     using boost::mutex;
+    using boost::shared_ptr;
+    using boost::tuple;
+    using boost::movelib::unique_ptr;
 
 	// As with other targets, but here we need to bring the alternate names into conformity...
 	template<typename T> struct NoThrowTraits {
