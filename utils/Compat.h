@@ -32,7 +32,6 @@
 #if !TARGET_OS_IOS
 	#include <atomic>
     #include <functional>
-	#include <future>
     #include <memory>
 	#include <mutex>
     #include <type_traits>
@@ -47,11 +46,12 @@
     #include <boost/tuple/tuple.hpp>
     #include <boost/tuple/tuple_comparison.hpp>
 
+#define BOOST_RESULT_OF_USE_DECLTYPE
     #define BOOST_NO_CXX11_RVALUE_REFERENCES // ????!!!
-    #define BOOST_THREAD_PROVIDES_FUTURE
 
     #include <boost/thread.hpp>
-    #include <boost/thread/future.hpp>
+
+    #undef BOOST_NO_CXX11_RVALUE_REFERENCES
 #endif
 
 #ifdef _WIN32
@@ -74,7 +74,6 @@ namespace CompatXS {
 	using std::conditional;
     using std::enable_if;
 	using std::forward;
-    using std::future;
     using std::function;
     using std::get;
 	using std::lock_guard;
@@ -109,7 +108,6 @@ namespace CompatXS {
     using boost::enable_if;
     using boost::forward;
     using boost::function;
-    using boost::future;
     using boost::tuples::get;
     using boost::lock_guard;
     using boost::make_shared;
