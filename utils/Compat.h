@@ -32,6 +32,7 @@
 #if !TARGET_OS_IOS
 	#include <atomic>
     #include <functional>
+	#include <future>
     #include <memory>
 	#include <mutex>
     #include <type_traits>
