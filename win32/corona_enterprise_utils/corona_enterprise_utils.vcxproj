@@ -19,6 +19,7 @@
     <ClInclude Include="..\..\utils\LuaEx.h" />
     <ClInclude Include="..\..\utils\Memory.h" />
     <ClInclude Include="..\..\utils\Path.h" />
+    <ClInclude Include="..\..\utils\Platform.h" />
     <ClInclude Include="..\..\utils\SIMD.h" />
     <ClInclude Include="..\..\utils\Thread.h" />
   </ItemGroup>

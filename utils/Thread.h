@@ -120,7 +120,7 @@ namespace ThreadXS {
 	template<typename I1, typename I2, typename F> inline void parallel_for (I1 a, I2 b, F && f)
 	{
 	#ifdef _WIN32		
-		Concurrency::parallel_for(a, b, std::forward<F>(f));
+		Concurrency::parallel_for(a, I1(b), std::forward<F>(f));
 	#elif __APPLE__
 	//	using data_t = std::pair<I, F>;
 

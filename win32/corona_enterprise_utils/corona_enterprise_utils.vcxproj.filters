@@ -50,6 +50,9 @@
     <ClInclude Include="..\..\utils\Compat.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\utils\Platform.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\ByteReader\ByteReader.cpp">

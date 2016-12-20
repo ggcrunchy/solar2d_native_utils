@@ -69,7 +69,7 @@ namespace CompatXS {
 // On most targets we have a fairly full-featured C++11 implementation...
 #if !TARGET_OS_IOS
 	// Bring these into the namespace...
-    using std::async;
+    using std::async; // maybe remove (just use libdispatch on iOS)
 	using std::atomic;
 	using std::atomic_flag;
 	using std::conditional;
@@ -84,7 +84,7 @@ namespace CompatXS {
 	using std::mutex;
     using std::shared_ptr;
     using std::tuple;
-    using std::unique_ptr;
+    using std::unique_ptr; // ???? (lots of trouble :/)
 
 	// ...give these a common name, slimming them down slightly to avoid redundancy from the struct...
 	template<typename T> struct NoThrowTraits {
@@ -102,7 +102,7 @@ namespace CompatXS {
 
 // ...whereas on iPhone we must use libstdc++ 6, which is likewise or still has many things in TR1.
 #else
-    using boost::async;
+    using boost::async; // maybe remove
     using boost::atomic;
     using boost::atomic_flag;
     using boost::conditional;
@@ -117,7 +117,7 @@ namespace CompatXS {
     using boost::mutex;
     using boost::shared_ptr;
     using boost::tuple;
-    using boost::movelib::unique_ptr;
+    using boost::movelib::unique_ptr; // :/
 
 	// As with other targets, but here we need to bring the alternate names into conformity...
 	template<typename T> struct NoThrowTraits {
