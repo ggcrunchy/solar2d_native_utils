@@ -25,6 +25,8 @@
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
+#include "utils/Compat.h"
+#include "utils/LuaEx.h"
 #include "external/aligned_allocator.h"
 #include <vector>
 
@@ -120,5 +122,19 @@ namespace ByteXS {
 	template<typename T> T * PointToData (T * start, int x, int y, int bpp, int stride)
 	{
 		return start + y * stride + x * bpp;
+	}
+
+	//
+	template<int kPos = 1, typename F, typename T> int WithByteReader (lua_State * L, F func, T falsy)
+	{
+		CompatXS::function<int (lua_State *)> wrapped = [func](lua_State * L) {
+			ByteReader reader{L, kPos};
+
+			if (!reader.mBytes) lua_error(L);
+
+			return func(L, reader);
+		};
+
+		return LuaXS::PCallWithStackThenReturn(L, wrapped, falsy);
 	}
 }
