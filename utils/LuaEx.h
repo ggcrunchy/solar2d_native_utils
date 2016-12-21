@@ -120,7 +120,7 @@ namespace LuaXS {
         
         preamble(L, n);
         
-        ForEachI(L, arg, CompatXS::forward<F>(func), bIterOnceIfNonTable);
+        ForEachI(L, arg, CEU::forward<F>(func), bIterOnceIfNonTable);
     }
     
 	//
@@ -188,7 +188,7 @@ namespace LuaXS {
 
 	template<typename ... Args> int WithError (lua_State * L, const char * format, Args && ... args)
 	{
-		lua_pushfstring(L, format, CompatXS::forward<Args>(args)...);	// nil / false, err
+		lua_pushfstring(L, format, CEU::forward<Args>(args)...);	// nil / false, err
 
 		return 2;
 	}
@@ -268,7 +268,7 @@ namespace LuaXS {
 	{
 		T * instance = AllocTyped<T>(L);// ..., ud
 
-		new (instance) T(CompatXS::forward<Args>(args)...);
+		new (instance) T(CEU::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -279,12 +279,12 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T(CompatXS::forward<Args>(args)...);
+		new (instance) T(CEU::forward<Args>(args)...);
 
 		return instance;
 	}
 
-	extern CompatXS::mutex symbols_mutex;
+	extern CEU::mutex symbols_mutex;
 
 	template<typename T> size_t GenSym (lua_State * L, T & counter, std::vector<uint64_t> * cache = nullptr)
 	{
@@ -311,7 +311,7 @@ namespace LuaXS {
 				{
 					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
                     
-					CompatXS::lock_guard<CompatXS::mutex> lock{symbols_mutex};
+					CEU::lock_guard<CEU::mutex> lock{symbols_mutex};
                     
 					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
 
@@ -323,7 +323,7 @@ namespace LuaXS {
 
 			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
 
-			CompatXS::lock_guard<CompatXS::mutex> lock{symbols_mutex};
+			CEU::lock_guard<CEU::mutex> lock{symbols_mutex};
 
 			if (cache && !cache->empty())
 			{
@@ -393,16 +393,16 @@ namespace LuaXS {
 
 	template<typename T> T GetArg (lua_State * L, int arg = -1)
 	{
-		using opt_type = typename CompatXS::conditional<!CEU::is_arithmetic<T>::value || CEU::is_same<T, bool>::value,	// Is the type non-arithmetic (or bool)?
+		using opt_type = typename CEU::conditional<!CEU::is_arithmetic<T>::value || CEU::is_same<T, bool>::value,	// Is the type non-arithmetic (or bool)?
 			T, // If so, use it as is.
-			typename CompatXS::conditional<CEU::is_floating_point<T>::value,// Otherwise, is it a float?
+			typename CEU::conditional<CEU::is_floating_point<T>::value,// Otherwise, is it a float?
 				lua_Number, // If so, use numbers.
-				typename CompatXS::conditional<CEU::is_same<T, long>::value, long,	// Failing that, we have either a long...
-					typename CompatXS::conditional<CEU::is_unsigned<T>::value, unsigned int, int>::type	// ...or finally an int with a certain signedness.
+				typename CEU::conditional<CEU::is_same<T, long>::value, long,	// Failing that, we have either a long...
+					typename CEU::conditional<CEU::is_unsigned<T>::value, unsigned int, int>::type	// ...or finally an int with a certain signedness.
 				>::type
 			>::type
 		>::type;
-		using ret_type = typename CompatXS::conditional<CEU::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
+		using ret_type = typename CEU::conditional<CEU::is_same<opt_type, unsigned int>::value, lua_Integer, opt_type>::type;
 
 		return static_cast<T>(GetArgBody<opt_type, ret_type>(L, arg));
 	}
@@ -473,14 +473,14 @@ namespace LuaXS {
 		//
 		template<typename T> Options & Add (const char * name, T & opt)
 		{
-			return Add(name, CompatXS::forward<T &>(opt), opt);
+			return Add(name, CEU::forward<T &>(opt), opt);
 		}
 
 		//
 		template<typename F, typename ... Args> Options & Call (const char * name, F && func, Args && ... args)
 		{
 			return WithFieldDo(name, [&](){
-				func(mL, CompatXS::forward<Args>(args)...);
+				func(mL, CEU::forward<Args>(args)...);
 			});
 		}
 	};
@@ -514,9 +514,9 @@ namespace LuaXS {
     template<bool is_pointerlike> struct Pusher {
         template<typename U> void operator () (lua_State * L, U arg)
         {
-            using arg_type = typename CompatXS::conditional<CEU::is_floating_point<U>::value,// Is it a float...
+            using arg_type = typename CEU::conditional<CEU::is_floating_point<U>::value,// Is it a float...
                 lua_Number,
-                typename CompatXS::conditional<CEU::is_integral<U>::value,	// ...or a non-boolean integer...
+                typename CEU::conditional<CEU::is_integral<U>::value,	// ...or a non-boolean integer...
                     lua_Integer,
                     bool    // Error!
                 >::type
@@ -531,9 +531,9 @@ namespace LuaXS {
     template<> struct Pusher<true> {
         template<typename U> void operator () (lua_State * L, U arg)
         {
-            using arg_type = typename CompatXS::conditional<CEU::is_same<U, const char *>::value,	// Is it a string...
+            using arg_type = typename CEU::conditional<CEU::is_same<U, const char *>::value,	// Is it a string...
                 const char *,
-                typename CompatXS::conditional<CEU::is_convertible<U, lua_CFunction>::value,	// ...or a Lua function...
+                typename CEU::conditional<CEU::is_convertible<U, lua_CFunction>::value,	// ...or a Lua function...
                     lua_CFunction,
                     void *
                 >::type
@@ -559,22 +559,22 @@ namespace LuaXS {
     
 	template<typename T> int PushArgAndReturn (lua_State * L, T && arg)
 	{
-		PushArg(L, CompatXS::forward<T>(arg));
+		PushArg(L, CEU::forward<T>(arg));
 
 		return 1;
 	}
 
-    template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, CompatXS::forward<T>(arg)); }
+    template<typename T> void PushMultipleArgs (lua_State * L, T && arg) { PushArg(L, CEU::forward<T>(arg)); }
 
 	template<typename T, typename ... Args> void PushMultipleArgs (lua_State * L, T && arg, Args && ... args)
 	{
-		PushArg(L, CompatXS::forward<T>(arg));
-		PushMultipleArgs(L, CompatXS::forward<Args>(args)...);
+		PushArg(L, CEU::forward<T>(arg));
+		PushMultipleArgs(L, CEU::forward<Args>(args)...);
 	}
 
 	template<typename ... Args> int PushMultipleArgsAndReturn (lua_State * L, Args && ... args)
 	{
-		PushMultipleArgs(L, CompatXS::forward<Args>(args)...);
+		PushMultipleArgs(L, CEU::forward<Args>(args)...);
 
 		return sizeof...(args);
 	}
@@ -583,7 +583,7 @@ namespace LuaXS {
 	{
 		arg = CoronaLuaNormalize(L, arg);
 
-		PushArg(L, CompatXS::forward<T>(value));// ..., value
+		PushArg(L, CEU::forward<T>(value));// ..., value
 
 		lua_setfield(L, arg, name);	// ...
 	}
@@ -602,21 +602,21 @@ namespace LuaXS {
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
     {
-		PushMultipleArgs(L, func, CompatXS::forward<Args>(args)...);// ..., func, ...
+		PushMultipleArgs(L, func, CEU::forward<Args>(args)...);// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
     
 	template<typename ... Args> bool PCallN (lua_State * L, lua_CFunction func, int nresults, Args && ... args)
 	{
-		PushMultipleArgs(L, func, CompatXS::forward<Args>(args)...);// ..., func, ...
+		PushMultipleArgs(L, func, CEU::forward<Args>(args)...);// ..., func, ...
 
 		return lua_pcall(L, sizeof...(args), nresults, 0) == 0;	// ..., err / results
 	}
 
 	template<typename A1> inline bool CheckFuncArg (lua_State * L, A1 && arg1)
 	{
-		PushArg(L, CompatXS::forward<A1>(arg1));// ..., func
+		PushArg(L, CEU::forward<A1>(arg1));// ..., func
 
 		if (lua_isfunction(L, -1)) return true;
 
@@ -628,18 +628,18 @@ namespace LuaXS {
 
 	template<typename A1, typename ... Args> bool PCall1 (lua_State * L, A1 && arg1, Args && ... args)
 	{
-		if (!CheckFuncArg(L, CompatXS::forward<A1>(arg1))) return false;// ..., func / err
+		if (!CheckFuncArg(L, CEU::forward<A1>(arg1))) return false;// ..., func / err
 
-		PushMultipleArgs(L, CompatXS::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, CEU::forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, 1 + sizeof...(args), 0, 0) == 0;// ...[, err]
 	}
 
 	template<typename A1, typename ... Args> bool PCallN1 (lua_State * L, int nresults, A1 && arg1, Args && ... args)
 	{
-		if (!CheckFuncArg(L, CompatXS::forward<A1>(arg1))) return false;// ..., func / err
+		if (!CheckFuncArg(L, CEU::forward<A1>(arg1))) return false;// ..., func / err
 
-		PushMultipleArgs(L, CompatXS::forward<Args>(args)...);	// ..., func, ...
+		PushMultipleArgs(L, CEU::forward<Args>(args)...);	// ..., func, ...
 
 		return lua_pcall(L, 1 + sizeof...(args), nresults, 0) == 0;	// ...[, err]
 	}

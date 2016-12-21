@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace LuaXS {
-	CompatXS::mutex symbols_mutex;
+	CEU::mutex symbols_mutex;
 
 	bool IsMainState (lua_State * L)
 	{

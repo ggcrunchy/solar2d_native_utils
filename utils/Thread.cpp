@@ -52,7 +52,7 @@ namespace ThreadXS {
 		} sKeyLifetime;
 
 		//
-		static CompatXS::atomic<size_t> sID{0U};
+		static CEU::atomic<size_t> sID{0U};
 
 		mIndex = sID++;
 	}

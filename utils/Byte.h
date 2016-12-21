@@ -30,6 +30,8 @@
 #include "external/aligned_allocator.h"
 #include <vector>
 
+namespace CEU = CompatXS::ns_compat;
+
 namespace ByteXS {
     //
     struct ByteWriter {
@@ -127,7 +129,7 @@ namespace ByteXS {
 	//
 	template<int kPos = 1, typename F, typename T> int WithByteReader (lua_State * L, F func, T falsy)
 	{
-		CompatXS::function<int (lua_State *)> wrapped = [func](lua_State * L) {
+		CEU::function<int (lua_State *)> wrapped = [func](lua_State * L) {
 			ByteReader reader{L, kPos};
 
 			if (!reader.mBytes) lua_error(L);
