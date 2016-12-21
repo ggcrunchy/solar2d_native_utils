@@ -32,8 +32,6 @@
 #if !TARGET_OS_IOS
     #include <array>
 	#include <atomic>
-    #include <chrono>
-    #include <exception>
     #include <functional>
 	#include <future>
     #include <memory>
@@ -48,11 +46,7 @@
     #include <boost/core/enable_if.hpp>
     #include <boost/move/unique_ptr.hpp>
     #include <boost/move/utility.hpp>
-    #include <boost/array.hpp>
-    #include <boost/chrono.hpp>
-    #include <boost/exception_ptr.hpp>
     #include <boost/function.hpp>
-    #include <boost/ref.hpp>
     #include <boost/type_traits.hpp>
     #include <boost/tuple/tuple.hpp>
     #include <boost/tuple/tuple_comparison.hpp>
