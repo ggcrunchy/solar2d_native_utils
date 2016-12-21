@@ -28,7 +28,20 @@
 #ifdef _WIN32
 	#include "DirectXMath/Inc/DirectXMath.h"
 	#include "DirectXMath/Inc/DirectXPackedVector.h"
-#elif __ANDROID__
+#else
+    #ifdef MIGHT_HAVE_NEON
+        #define _XM_ARM_NEON_NO_ALIGN_
+        #define _XM_NO_CALL_CONVENTION_
+        #define _XM_ARM_NEON_INTRINSICS_
+    #else
+        #define _XM_SSE_INTRINSICS_
+    #endif
+
+    #include "XMath/Inc/Xmath.h"
+    #include "XMath/Inc/XPackedVector.h"
+#endif
+
+#ifdef __ANDROID__
 	#include <cpu-features.h>
 #endif
 
@@ -50,7 +63,7 @@ namespace SimdXS {
 		return PlatformXS::has_neon;
 	#endif
 	}
-
+/*
 	#ifdef MIGHT_HAVE_NEON
         namespace Neon {	// Everything here is pared down from DirectXMath
 			typedef float32x4_t XMVECTOR;
@@ -131,8 +144,13 @@ namespace SimdXS {
 		}
 
 		namespace ns_f2u8 = Neon;
-	#elif _WIN32
+        namespace ns_pv = Neon::PackedVector;*/
+	#if _WIN32
 		namespace ns_f2u8 = DirectX;
+        namespace ns_pv = DirectX::PackedVector;
+    #else
+        namespace ns_f2u8 = XMath;
+        namespace  ns_pv = ns_f2u8;
 	#endif
 
 	#ifdef HAS_ACCELERATE
@@ -155,7 +173,7 @@ namespace SimdXS {
 
 			MemoryXS::Align(16U, n * sizeof(float), ptr);
 
-			ns_f2u8::PackedVector::XMUBYTEN4 out;
+			ns_pv::XMUBYTEN4 out;
 
 			// Peel off any leading floats.
 			if (pfloats != ptr)
@@ -165,7 +183,7 @@ namespace SimdXS {
 
 				for (size_t i = 0; i < extra; ++i, --n) padding.f[4U - extra + i] = pfloats[i];
 
-				ns_f2u8::PackedVector::XMStoreUByteN4(&out, padding.v);
+				ns_pv::XMStoreUByteN4(&out, padding.v);
 
 				memcpy(u8, reinterpret_cast<unsigned char *>(&out) + 4U - extra, extra);
 
@@ -175,7 +193,7 @@ namespace SimdXS {
 			// Blast through the aligned region.
 			auto from = reinterpret_cast<const ns_f2u8::XMVECTOR *>(ptr);
 
-			for (; n >= 4U; u8 += 4U, n-= 4U) ns_f2u8::PackedVector::XMStoreUByteN4(reinterpret_cast<ns_f2u8::PackedVector::XMUBYTEN4 *>(u8), *from++);
+			for (; n >= 4U; u8 += 4U, n-= 4U) ns_pv::XMStoreUByteN4(reinterpret_cast<ns_pv::XMUBYTEN4 *>(u8), *from++);
 
 			// Peel off any trailing floats.
 			if (n)
@@ -184,7 +202,7 @@ namespace SimdXS {
 
 				memcpy(padding.f, from, n * sizeof(float));
 
-				ns_f2u8::PackedVector::XMStoreUByteN4(&out, padding.v);
+				ns_pv::XMStoreUByteN4(&out, padding.v);
 
 				memcpy(u8, &out, n);
 			}
@@ -233,9 +251,9 @@ namespace SimdXS {
 
 				for (size_t i = 0; i < extra; ++i, --n) padding[4U - extra + i] = *u8++;
 			
-				ns_f2u8::PackedVector::XMUBYTEN4 bytes{padding};
+				ns_pv::XMUBYTEN4 bytes{padding};
 
-				auto result = ns_f2u8::PackedVector::XMLoadUByteN4(&bytes);
+				auto result = ns_pv::XMLoadUByteN4(&bytes);
 
 				memcpy(pfloats - extra, reinterpret_cast<float *>(&result) + 4U - extra, extra * sizeof(float));
 			}
@@ -245,9 +263,9 @@ namespace SimdXS {
 
 			for (; n >= 4U; u8 += 4U, n-= 4U)
 			{
-				ns_f2u8::PackedVector::XMUBYTEN4 bytes{u8};
+				ns_pv::XMUBYTEN4 bytes{u8};
 
-				*to++ = ns_f2u8::PackedVector::XMLoadUByteN4(&bytes);
+				*to++ = ns_pv::XMLoadUByteN4(&bytes);
 			}
 
 			// Peel off any trailing floats.
@@ -257,9 +275,9 @@ namespace SimdXS {
 
 				for (size_t i = 0; i < n; ++i) padding[i] = u8[i];
 
-				ns_f2u8::PackedVector::XMUBYTEN4 bytes{padding};
+				ns_pv::XMUBYTEN4 bytes{padding};
 
-				auto result = ns_f2u8::PackedVector::XMLoadUByteN4(&bytes);
+				auto result = ns_pv::XMLoadUByteN4(&bytes);
 
 				memcpy(to, &result, n * sizeof(float));
 			}

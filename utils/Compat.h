@@ -47,7 +47,6 @@
     #include <boost/tuple/tuple.hpp>
     #include <boost/tuple/tuple_comparison.hpp>
 
-#define BOOST_RESULT_OF_USE_DECLTYPE
     #define BOOST_NO_CXX11_RVALUE_REFERENCES // ????!!!
 
     #include <boost/thread.hpp>

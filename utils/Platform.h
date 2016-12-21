@@ -74,21 +74,22 @@ namespace PlatformXS {
 	const bool has_accelerate = is_apple && !is_ios && !is_iphone_simulator;
 	const bool has_neon = is_iphone && !is_iphone_simulator;
 	const bool might_have_neon = is_android || has_neon;
-
-	//
-	#if defined(__APPLE__) && !TARGET_OS_IOS && !(TARGET_OS_IPHONE && TARGET_OS_SIMULATOR)
-		static_assert(has_accelerate, "Broken Accelerate test");
-
-        #include <Accelerate/Accelerate.h>
-
-		#define HAS_ACCELERATE
-	#endif
-
-	//
-	#if defined(__ANDROID__) || (TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR)
-		static_assert(might_have_neon, "Broken NEON test");
-		#define MIGHT_HAVE_NEON
-
-		#include <arm_neon.h>
-	#endif
 }
+
+//
+#if defined(__APPLE__) && !TARGET_OS_IOS && !(TARGET_OS_IPHONE && TARGET_OS_SIMULATOR)
+    static_assert(PlatformXS::has_accelerate, "Broken Accelerate test");
+
+    #include <Accelerate/Accelerate.h>
+
+    #define HAS_ACCELERATE
+#endif
+
+//
+#if defined(__ANDROID__) || (TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR)
+    static_assert(PlatformXS::might_have_neon, "Broken NEON test");
+
+    #include <arm_neon.h>
+
+    #define MIGHT_HAVE_NEON
+#endif
