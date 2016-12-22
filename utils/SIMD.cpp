@@ -28,7 +28,7 @@
 #ifdef _WIN32
 	#include "DirectXMath/Inc/DirectXMath.h"
 	#include "DirectXMath/Inc/DirectXPackedVector.h"
-#else
+#elif !defined(__ANDROID__) // ??? :/
     #ifdef MIGHT_HAVE_NEON
         #define _XM_ARM_NEON_NO_ALIGN_
         #define _XM_NO_CALL_CONVENTION_
@@ -63,8 +63,8 @@ namespace SimdXS {
 		return PlatformXS::has_neon;
 	#endif
 	}
-/*
-	#ifdef MIGHT_HAVE_NEON
+
+	#ifdef __ANDROID__ // *grumble*
         namespace Neon {	// Everything here is pared down from DirectXMath
 			typedef float32x4_t XMVECTOR;
 			typedef const XMVECTOR FXMVECTOR;
@@ -144,8 +144,8 @@ namespace SimdXS {
 		}
 
 		namespace ns_f2u8 = Neon;
-        namespace ns_pv = Neon::PackedVector;*/
-#ifdef _WIN32
+        namespace ns_pv = Neon::PackedVector;
+#elif defined(_WIN32)
 	namespace ns_f2u8 = DirectX;
     namespace ns_pv = DirectX::PackedVector;
 #else
@@ -208,7 +208,7 @@ namespace SimdXS {
 		}
 	}
 
-	template<> static void AuxFloatsToUnorm8s<true> (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n, bool)
+	template<> void AuxFloatsToUnorm8s<true> (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n, bool)
 	{
 		if (CanUseNeon()) AuxFloatsToUnorm8s<false>(pfloats, u8, n, true);
 
@@ -281,7 +281,7 @@ namespace SimdXS {
 		}
 	}
 
-	template<> static void AuxUnorm8sToFloats<true> (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n, bool)
+	template<> void AuxUnorm8sToFloats<true> (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n, bool)
 	{
 		if (CanUseNeon()) AuxUnorm8sToFloats<false>(u8, pfloats, n, true);
 
