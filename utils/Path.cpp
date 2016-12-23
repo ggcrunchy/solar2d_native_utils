@@ -52,6 +52,7 @@ namespace PathXS {
 
 	const char * Directories::Canonicalize (lua_State * L, bool bRead)
 	{
+		luaL_checkstring(L, 1);
 		lua_rawgeti(L, LUA_REGISTRYINDEX, mPathForFile);// str[, dir], ..., pathForFile
 		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
 
@@ -65,14 +66,10 @@ namespace PathXS {
 
 		else lua_rawgeti(L, LUA_REGISTRYINDEX, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
 
-		if (lua_pcall(L, 2, 1, 0) == 0)	// str, ..., file
-		{
-			lua_replace(L, 1);	// file, ...
+		lua_call(L, 2, 1);	// str, ..., file
+		lua_replace(L, 1);	// file, ...
 
-			return lua_tostring(L, 1);
-		}
-
-		else return nullptr;
+		return lua_tostring(L, 1);
 	}
 
 	void LibLoader::Close (void)

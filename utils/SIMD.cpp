@@ -64,93 +64,92 @@ namespace SimdXS {
 	#endif
 	}
 
-	#ifdef __ANDROID__ // *grumble*
-        namespace Neon {	// Everything here is pared down from DirectXMath
-			typedef float32x4_t XMVECTOR;
-			typedef const XMVECTOR FXMVECTOR;
+#ifdef __ANDROID__ // *grumble*
+    namespace ns_f2u8 {	// Everything here is pared down from DirectXMath
+		typedef float32x4_t XMVECTOR;
+		typedef const XMVECTOR FXMVECTOR;
 
-			struct XMFLOAT4
+		struct XMFLOAT4
+		{
+			float x;
+			float y;
+			float z;
+			float w;
+
+			explicit XMFLOAT4 (const float *pArray) : x(pArray[0]), y(pArray[1]), z(pArray[2]), w(pArray[3]) {}
+		};
+
+		ALIGNED_N_BEGIN(16) struct XMVECTORF32
+		{
+			union
 			{
-				float x;
-				float y;
-				float z;
-				float w;
-
-				explicit XMFLOAT4 (const float *pArray) : x(pArray[0]), y(pArray[1]), z(pArray[2]), w(pArray[3]) {}
+				float f[4];
+				XMVECTOR v;
 			};
 
-			ALIGNED_N_BEGIN(16) struct XMVECTORF32
+			inline operator XMVECTOR() const { return v; }
+			inline operator const float*() const { return f; }
+		} ALIGNED_N_END(16);
+
+		inline XMVECTOR XMLoadFloat4 (const XMFLOAT4* pSource)
+		{
+			return vld1q_f32( reinterpret_cast<const float*>(pSource) );
+		}
+
+        namespace PackedVector {
+			struct XMUBYTEN4
 			{
 				union
 				{
-					float f[4];
-					XMVECTOR v;
+					struct
+					{
+						uint8_t x;
+						uint8_t y;
+						uint8_t z;
+						uint8_t w;
+					};
+					uint32_t v;
 				};
 
-				inline operator XMVECTOR() const { return v; }
-				inline operator const float*() const { return f; }
-			} ALIGNED_N_END(16);
+                XMUBYTEN4 (void) = default;
+                explicit XMUBYTEN4 (const uint8_t * pArray) : x{pArray[0]}, y{pArray[1]}, z{pArray[2]}, w{pArray[3]} {}
+                explicit XMUBYTEN4 (const float *pArray);
+            };
 
-			inline XMVECTOR XMLoadFloat4 (const XMFLOAT4* pSource)
-			{
-				return vld1q_f32( reinterpret_cast<const float*>(pSource) );
-			}
-
-            namespace PackedVector {
-				struct XMUBYTEN4
-				{
-					union
-					{
-						struct
-						{
-							uint8_t x;
-							uint8_t y;
-							uint8_t z;
-							uint8_t w;
-						};
-						uint32_t v;
-					};
-
-                    XMUBYTEN4 (void) = default;
-                    explicit XMUBYTEN4 (const uint8_t * pArray) : x{pArray[0]}, y{pArray[1]}, z{pArray[2]}, w{pArray[3]} {}
-                    explicit XMUBYTEN4 (const float *pArray);
-                };
-
-                inline XMVECTOR XMLoadUByteN4 (const XMUBYTEN4* pSource)
-                {
-                    uint32x2_t vInt8 = vld1_dup_u32( reinterpret_cast<const uint32_t*>( pSource ) );
-                    uint16x8_t vInt16 = vmovl_u8( vreinterpret_u8_u32(vInt8) );
-                    uint32x4_t vInt = vmovl_u16( vget_low_u16(vInt16) );
-                    float32x4_t R = vcvtq_f32_u32(vInt);
-                    return vmulq_n_f32( R, 1.0f/255.0f );
-                }
+            inline XMVECTOR XMLoadUByteN4 (const XMUBYTEN4* pSource)
+            {
+                uint32x2_t vInt8 = vld1_dup_u32( reinterpret_cast<const uint32_t*>( pSource ) );
+                uint16x8_t vInt16 = vmovl_u8( vreinterpret_u8_u32(vInt8) );
+                uint32x4_t vInt = vmovl_u16( vget_low_u16(vInt16) );
+                float32x4_t R = vcvtq_f32_u32(vInt);
+                return vmulq_n_f32( R, 1.0f/255.0f );
+            }
                 
-                inline void XMStoreUByteN4 (XMUBYTEN4* pDestination, FXMVECTOR V)
-                {
-                    float32x4_t R = vmaxq_f32(V, vdupq_n_f32(0) );
-                    R = vminq_f32(R, vdupq_n_f32(1.0f));
-                    R = vmulq_n_f32( R, 255.0f );
-                    uint32x4_t vInt32 = vcvtq_u32_f32(R);
-                    uint16x4_t vInt16 = vqmovn_u32( vInt32 );
-                    uint8x8_t vInt8 = vqmovn_u16( vcombine_u16(vInt16,vInt16) );
-                    vst1_lane_u32( &pDestination->v, vreinterpret_u32_u8(vInt8), 0 );
-                }
+            inline void XMStoreUByteN4 (XMUBYTEN4* pDestination, FXMVECTOR V)
+            {
+                float32x4_t R = vmaxq_f32(V, vdupq_n_f32(0) );
+                R = vminq_f32(R, vdupq_n_f32(1.0f));
+                R = vmulq_n_f32( R, 255.0f );
+                uint32x4_t vInt32 = vcvtq_u32_f32(R);
+                uint16x4_t vInt16 = vqmovn_u32( vInt32 );
+                uint8x8_t vInt8 = vqmovn_u16( vcombine_u16(vInt16,vInt16) );
+                vst1_lane_u32( &pDestination->v, vreinterpret_u32_u8(vInt8), 0 );
+            }
                 
-                XMUBYTEN4::XMUBYTEN4 (const float * pArray)
-                {
-                    XMStoreUByteN4(this, XMLoadFloat4(reinterpret_cast<const XMFLOAT4*>(pArray)));
-                }
-			}
+            XMUBYTEN4::XMUBYTEN4 (const float * pArray)
+            {
+                XMStoreUByteN4(this, XMLoadFloat4(reinterpret_cast<const XMFLOAT4*>(pArray)));
+            }
 		}
+	}
 
-		namespace ns_f2u8 = Neon;
-        namespace ns_pv = Neon::PackedVector;
+    namespace ns_pv = ns_f2u8::PackedVector;
 #elif defined(_WIN32)
 	namespace ns_f2u8 = DirectX;
-    namespace ns_pv = DirectX::PackedVector;
+	namespace ns_pv = DirectX::PackedVector;
 #else
-    namespace ns_f2u8 = XMath;
-    namespace  ns_pv = ns_f2u8;
+	namespace ns_f2u8 = XMath;
+	namespace  ns_pv = ns_f2u8;
 #endif
 
 #ifdef HAS_ACCELERATE

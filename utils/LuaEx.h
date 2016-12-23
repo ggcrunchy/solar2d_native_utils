@@ -553,7 +553,7 @@ namespace LuaXS {
     
     template<> inline void PushArg<Nil> (lua_State * L, Nil) { lua_pushnil(L); }
     template<> inline void PushArg<bool> (lua_State * L, bool b) { lua_pushboolean(L, b ? 1 : 0); }
-    template<> inline void PushArg<const std::string &> (lua_State * L, const std::string & s) { lua_pushlstring(L, s.data(), s.length()); }
+    template<> inline void PushArg<std::string> (lua_State * L, std::string s) { lua_pushlstring(L, s.data(), s.length()); }
     template<> inline void PushArg<lua_CFunction> (lua_State * L, lua_CFunction f) { lua_pushcfunction(L, f); }
     template<> inline void PushArg<StackIndex> (lua_State * L, StackIndex si) { lua_pushvalue(L, si); }
     
