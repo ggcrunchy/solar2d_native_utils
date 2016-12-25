@@ -45,7 +45,7 @@ namespace PlatformXS {
 
 		#if TARGET_OS_IOS
 			const bool is_ios = true;
-		#elif TARGET_OS_TVOS
+		#elif TARGET_OS_TV
 			const bool is_ios = false;
 		#else
 			#error "Unsupported iPhone target"
@@ -71,13 +71,13 @@ namespace PlatformXS {
 		const bool is_win32 = false;
 	#endif
 
-	const bool has_accelerate = is_apple && !is_ios && !is_iphone_simulator;
+    const bool has_accelerate = is_apple && !is_ios;
 	const bool has_neon = is_iphone && !is_iphone_simulator;
 	const bool might_have_neon = is_android || has_neon;
 }
 
 //
-#if defined(__APPLE__) && !TARGET_OS_IOS && !(TARGET_OS_IPHONE && TARGET_OS_SIMULATOR)
+#if defined(__APPLE__) && !TARGET_OS_IOS
     static_assert(PlatformXS::has_accelerate, "Broken Accelerate test");
 
     #include <Accelerate/Accelerate.h>
