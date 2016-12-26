@@ -235,23 +235,6 @@ namespace LuaXS {
 		AttachGC(L, type, TypedGC<T>);
 	}
 
-	template<typename T> int LenTyped (lua_State * L)
-	{
-		return PushArgAndReturn(L, ArrayN<T>(L));	// arr, n
-	}
-
-	template<typename T> void AttachTypedLen (lua_State * L)
-	{
-		luaL_Reg len_methods[] = {
-			{
-				"__len", LenTyped<T>
-			},
-			{ nullptr, nullptr }
-		};
-
-		luaL_register(L, nullptr, len_methods);
-	}
-
 	template<typename T> T * NewArray (lua_State * L, size_t n)
 	{
         static_assert(CompatXS::NoThrowTraits<T>::is_default_constructible::value, "NewArray() type must be nothrow default-constructible");
@@ -596,8 +579,25 @@ namespace LuaXS {
 
 		return 2;
 	}
+    
+    template<typename T> int LenTyped (lua_State * L)
+    {
+        return PushArgAndReturn(L, ArrayN<T>(L));	// arr, n
+    }
+    
+    template<typename T> void AttachTypedLen (lua_State * L)
+    {
+        luaL_Reg len_methods[] = {
+            {
+                "__len", LenTyped<T>
+            },
+            { nullptr, nullptr }
+        };
+        
+        luaL_register(L, nullptr, len_methods);
+    }
 
-	bool PCallWithStack (lua_State * L, lua_CFunction func, int nresults = 0);
+    bool PCallWithStack (lua_State * L, lua_CFunction func, int nresults = 0);
 	bool PCallWithStackAndUpvalues (lua_State * L, lua_CFunction func, int nupvalues, int nresults = 0);
 
 	template<typename ... Args> bool PCall (lua_State * L, lua_CFunction func, Args && ... args)
