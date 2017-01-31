@@ -1,4 +1,27 @@
-#include "../stdafx.h"
+/*
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*
+* [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
+*/
+
+#include "CoronaLua.h"
 
 // This and much of the code that follows come from the Pluto project, which is licensed
 // under MIT in the Lua-derived parts and public domain otherwise
@@ -46,9 +69,11 @@ static void pushclosure (lua_State *L, Closure *closure)
 	LIF(A,pushobject)(L, &o);
 }
 
-extern "C" void GetUpvalue (lua_State * L, int arg, int upvalue)
+extern "C" int GetUpvalue (lua_State * L, int arg, int upvalue)
 {
 	Closure * cl = clvalue(getobject(L, arg));
+
+	if (upvalue >= cl->l.nupvalues) return 0;
 
 	pushupval(L, cl->l.upvals[upvalue - 1]);
 
@@ -62,6 +87,8 @@ extern "C" void GetUpvalue (lua_State * L, int arg, int upvalue)
 	lua_pop(L, 1);
 					/* perms reftbl ... */
 	LIF(A,pushobject)(L, uv->v);
+
+	return 1;
 }
 
 static UpVal *makeupval (lua_State *L, int stackpos)
@@ -138,9 +165,12 @@ static void unboxupval (lua_State *L)
 					/* ... upval */
 }
 
-extern "C" void SetUpvalue (lua_State * L, int arg, int upvalue)
+extern "C" int SetUpvalue (lua_State * L, int arg, int upvalue)
 {
 	LClosure * lcl = (LClosure*)clvalue(getobject(L, arg));
+
+	if (upvalue >= lcl->nupvalues) return 0;
+
 	int v = CoronaLuaNormalize(L, -1);
 
 	lua_checkstack(L, 2);
@@ -157,6 +187,7 @@ extern "C" void SetUpvalue (lua_State * L, int arg, int upvalue)
 					/* perms reftbl ... func upval */
 	lcl->upvals[upvalue - 1] = toupval(L, -1);
 
-	lua_pop(L, 1);
-	lua_pop(L, 1);
+	lua_pop(L, 2); // one from Pluto, one for object
+
+	return 1;
 }
