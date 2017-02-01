@@ -73,7 +73,7 @@ extern "C" int GetUpvalue (lua_State * L, int arg, int upvalue)
 {
 	Closure * cl = clvalue(getobject(L, arg));
 
-	if (upvalue >= cl->l.nupvalues) return 0;
+	if (upvalue > cl->l.nupvalues) return 0;
 
 	pushupval(L, cl->l.upvals[upvalue - 1]);
 
@@ -169,7 +169,7 @@ extern "C" int SetUpvalue (lua_State * L, int arg, int upvalue)
 {
 	LClosure * lcl = (LClosure*)clvalue(getobject(L, arg));
 
-	if (upvalue >= lcl->nupvalues) return 0;
+	if (upvalue > lcl->nupvalues) return 0;
 
 	int v = CoronaLuaNormalize(L, -1);
 
