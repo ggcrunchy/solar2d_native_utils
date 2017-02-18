@@ -21,7 +21,7 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "CoronaLua.h"
+#include "UpVals.h"
 
 // This and much of the code that follows come from the Pluto project, which is licensed
 // under MIT in the Lua-derived parts and public domain otherwise
@@ -69,12 +69,40 @@ static void pushclosure (lua_State *L, Closure *closure)
 	LIF(A,pushobject)(L, &o);
 }
 
+extern "C" void AssignDummyUpvalues (lua_State * L, int arg, int nups)
+{
+	arg = CoronaLuaNormalize(L, arg);
+
+	Closure * cl = clvalue(getobject(L, arg));
+	Proto * p = cl->l.p;
+
+	if (p->sizeupvalues == 0)
+	{
+		p->sizeupvalues = nups;
+
+		LIF(M,reallocvector)(L, p->upvalues, 0, p->sizeupvalues, TString *);
+
+		lua_pushliteral(L, "");	// ..., ""
+
+		for (int i = 0; i < nups; ++i) p->upvalues[i] = pdep_newlstr(L, "", 0);
+
+		lua_pop(L, 1);	// ...
+	}
+}
+
+extern "C" int CountUpvalues (lua_State * L, int arg)
+{
+	Closure * cl = clvalue(getobject(L, arg));
+
+	return (int)cl->l.nupvalues;
+}
+
 extern "C" int GetUpvalue (lua_State * L, int arg, int upvalue)
 {
 	Closure * cl = clvalue(getobject(L, arg));
 
 	if (upvalue > cl->l.nupvalues) return 0;
-
+#if 0
 	pushupval(L, cl->l.upvals[upvalue - 1]);
 
 	UpVal * uv = toupval(L, -1);
@@ -86,7 +114,8 @@ extern "C" int GetUpvalue (lua_State * L, int arg, int upvalue)
 
 	lua_pop(L, 1);
 					/* perms reftbl ... */
-	LIF(A,pushobject)(L, uv->v);
+#endif
+	LIF(A,pushobject)(L, cl->l.upvals[upvalue - 1]->v);//uv->v);
 
 	return 1;
 }

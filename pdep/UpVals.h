@@ -28,6 +28,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+	void AssignDummyUpvalues (lua_State * L, int arg, int nups);
+	int CountUpvalues (lua_State * L, int arg);
 	int GetUpvalue (lua_State * L, int arg, int upvalue);
 	int SetUpvalue (lua_State * L, int arg, int upvalue);
 #ifdef __cplusplus
