@@ -94,7 +94,7 @@ int MemoryXS::LuaMemory::Begin (void)
 
 	else
 	{
-		lua_rawgeti(mL, LUA_REGISTRYINDEX, mRegistrySlot);	// ..., t
+		lua_getref(mL, mRegistrySlot);	// ..., t
 			
 		return lua_gettop(mL);
 	}
@@ -107,7 +107,7 @@ void MemoryXS::LuaMemory::End (void)
 
 void MemoryXS::LuaMemory::LoadTable (void)
 {
-	lua_rawgeti(mL, LUA_REGISTRYINDEX, mStoreSlot);	// ..., t?
+	lua_getref(mL, mStoreSlot);	// ..., t?
 
 	if (!lua_istable(mL, -1))
 	{
@@ -162,7 +162,7 @@ void MemoryXS::LuaMemory::Remove (int slot, void * ptr)
 
 void MemoryXS::LuaMemory::UnloadTable (void)
 {
-	lua_rawgeti(mL, LUA_REGISTRYINDEX, mRegistrySlot);	// ..., t?
+	lua_getref(mL, mRegistrySlot);	// ..., t?
 	lua_rawseti(mL, LUA_REGISTRYINDEX, mStoreSlot);	// ...
 	lua_pushboolean(mL, 0);	// ..., false
 	lua_rawseti(mL, LUA_REGISTRYINDEX, mRegistrySlot);	// ...

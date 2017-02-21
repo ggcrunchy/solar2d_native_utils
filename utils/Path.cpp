@@ -53,7 +53,7 @@ namespace PathXS {
 	const char * Directories::Canonicalize (lua_State * L, bool bRead)
 	{
 		luaL_checkstring(L, 1);
-		lua_rawgeti(L, LUA_REGISTRYINDEX, mPathForFile);// str[, dir], ..., pathForFile
+		lua_getref(L, mPathForFile);// str[, dir], ..., pathForFile
 		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
 
 		bool has_userdata = lua_isuserdata(L, 2) != 0;
@@ -64,7 +64,7 @@ namespace PathXS {
 			lua_remove(L, 2);	// str, ..., pathForFile, str, dir
 		}
 
-		else lua_rawgeti(L, LUA_REGISTRYINDEX, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
+		else lua_getref(L, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
 
 		lua_call(L, 2, 1);	// str, ..., file
 		lua_replace(L, 1);	// file, ...
