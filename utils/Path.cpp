@@ -32,7 +32,7 @@ namespace PathXS {
 
 		lua_getfield(L, -1, name);	// system, system[name]
 
-		return luaL_ref(L, LUA_REGISTRYINDEX);	// system
+		return lua_ref(L, 1);	// system
 	}
 
 	Directories * Directories::Instantiate (lua_State * L)
@@ -56,9 +56,7 @@ namespace PathXS {
 		lua_getref(L, mPathForFile);// str[, dir], ..., pathForFile
 		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
 
-		bool has_userdata = lua_isuserdata(L, 2) != 0;
-
-		if (has_userdata)
+		if (lua_isuserdata(L, 2))
 		{
 			lua_pushvalue(L, 2);// str, dir, ..., pathForFile, str, dir
 			lua_remove(L, 2);	// str, ..., pathForFile, str, dir
@@ -97,12 +95,15 @@ namespace PathXS {
 	#endif
 	}
 
-	WriteAux::WriteAux (lua_State * L, int w, int h, Directories * dirs) : mW{w}, mH{h}
+	WriteAux::WriteAux (lua_State * L, int dim, Directories * dirs)
 	{
-		if (dirs) mFilename = dirs->Canonicalize(L, false);
+		if (dirs) mFilename = dirs->Canonicalize(L, false); // n.b. might remove dir
+
+		mW = luaL_checkint(L, dim);
+		mH = luaL_checkint(L, dim + 1);
 	}
 
-	WriteAuxReader::WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs) : WriteAux{L, w, h, dirs}, mReader{L, barg}
+	WriteAuxReader::WriteAuxReader (lua_State * L, int dim, int barg, Directories * dirs) : WriteAux{L, dim, dirs}, mReader{L, barg}
 	{
 		if (!mReader.mBytes) lua_error(L);
 	}

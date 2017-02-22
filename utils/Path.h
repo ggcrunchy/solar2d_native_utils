@@ -81,7 +81,7 @@ namespace PathXS {
 		const char * mFilename{nullptr};
 		int mW, mH;
 
-		WriteAux (lua_State * L, int w, int h, Directories * dirs);
+		WriteAux (lua_State * L, int dim, Directories * dirs);
 
 		template<typename T = unsigned char> const T * GetBytes (lua_State * L, const ByteReader & reader, size_t w) const
 		{
@@ -92,7 +92,7 @@ namespace PathXS {
 	struct WriteAuxReader : WriteAux {
 		ByteReader mReader;
 
-		WriteAuxReader (lua_State * L, int w, int h, int barg, Directories * dirs = nullptr);
+		WriteAuxReader (lua_State * L, int dim, int barg, Directories * dirs = nullptr);
 
 		template<typename T = unsigned char> const T * GetBytes (lua_State * L, size_t w)
 		{
@@ -108,14 +108,13 @@ namespace PathXS {
 
 		WriteData (lua_State * L, Directories * dirs = nullptr, bool bHasStride = false) : mData{nullptr}, mStride{0}, mAsUserdata{false}
 		{
-			mW = luaL_checkint(L, 2);
-			mH = luaL_checkint(L, 3);
-
 			//
-			WriteAuxReader waux{L, mW, mH, 5, dirs};
+			WriteAuxReader waux{L, 2, 5, dirs};
 
 			mFilename = waux.mFilename;
 			mComp = luaL_checkint(L, 4);
+			mW = waux.mW;
+			mH = waux.mH;
 
 			LuaXS::Options opts{L, 6};
 			
