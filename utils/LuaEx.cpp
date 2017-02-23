@@ -222,9 +222,9 @@ namespace LuaXS {
 	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable)
 	{
 		lua_pushcfunction(L, get_props);// ..., meta, get_props
-		lua_getfield(L, -1, "__index");	// ..., meta, get_props, index
+		lua_getfield(L, -2, "__index");	// ..., meta, get_props, index
 
-		// Build up a list of entries that may be null, since otherwise these would be
+		// Build up a list of entries that may be null, since these would otherwise be
 		// interpreted as missing properties when nil.
 		if (nullable)
 		{
@@ -258,8 +258,11 @@ namespace LuaXS {
 			// Finally, go to the next getter in the chain.
 			lua_pop(L, 2);	// ud, key
 			lua_pushvalue(L, lua_upvalueindex(2));	// ud, key, index
-			lua_insert(L, 1);	// index, ud, key
-			lua_call(L, 2, 1);	// value?
+			lua_insert(L, 2);	// ud, index, key
+
+			if (lua_istable(L, -2)) lua_rawget(L, -2);	// ud, index, value?
+
+			else lua_call(L, 1, 1);	// ud, value?
 
 			return 1;
 		}, 3);	// ... meta, Index
