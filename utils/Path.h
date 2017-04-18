@@ -103,10 +103,12 @@ namespace PathXS {
 	template<typename T = unsigned char> struct WriteData {
 		const T * mData;
 		const char * mFilename;
-		int mW, mH, mComp, mStride;
+		int mW, mH, mComp, mExtra;
 		bool mAsUserdata;
 
-		WriteData (lua_State * L, Directories * dirs = nullptr, bool bHasStride = false) : mData{nullptr}, mStride{0}, mAsUserdata{false}
+		enum Extra { None, Quality, Stride };
+
+		WriteData (lua_State * L, Directories * dirs = nullptr, Extra extra = None) : mData{nullptr}, mExtra{0}, mAsUserdata{false}
 		{
 			//
 			WriteAuxReader waux{L, 2, 5, dirs};
@@ -120,12 +122,14 @@ namespace PathXS {
 			
 			opts.Add("as_userdata", mAsUserdata);
 
-			if (bHasStride) opts.Add("stride", mStride);
+			if (extra == Stride) opts.Add("stride", mExtra);
+			else if (extra == Quality) opts.Add("quality", mExtra);
 
 			//
 			size_t w = mW * mComp;
 
-			if (mStride != 0) w = mStride;
+			if (extra == Stride && mExtra != 0) w = mExtra;
+			else if (extra == Quality && mExtra == 0) mExtra = 90;
 
 			mData = waux.GetBytes<T>(L, w);
 		}
