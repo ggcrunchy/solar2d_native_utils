@@ -30,6 +30,7 @@
 
 //
 namespace MemoryXS {
+	//
 	struct LuaMemory {
 		lua_State * mL{nullptr};// Main Lua state for this 
 		int mIndex{0};	// Index of memory
@@ -127,4 +128,51 @@ namespace MemoryXS {
 			default: return cps_alloca_dynamic<T>(n, f);
 		}; // mpl::for_each / array / index pack / recursive bsearch / etc variacion
 	}
+
+	//
+	struct ScopedSystem;
+
+	//
+	struct Scoped {
+		struct Item {
+			void * mPtr;// Pointer to allocated item
+			size_t mSize;	// Allocation size
+		};
+
+		bool InStack (void * ptr) const;
+		void * AddToStack (size_t size);
+		unsigned char * PointPast (void * ptr, size_t size);
+		std::vector<Item>::iterator Find (void * ptr);
+		void EnsureCapacity (void);
+		void TryToRewind (const Item & item);
+
+		enum { eStackSize = 8192 };
+
+		ScopedSystem & mSystem;	// System that owns this
+		Scoped * mPrev{nullptr};// Previous entry, if any
+		unsigned char mStack[eStackSize], * mPos;	// Stack for small allocators; next position in stack
+		std::vector<Item> mAllocs;	// Allocations and their info
+
+		Scoped (ScopedSystem & system);
+		~Scoped (void);
+	};
+
+	//
+	struct ScopedSystem {
+		lua_State * mL{nullptr};// Main Lua state for this
+		Scoped * mCurrent{nullptr};	// Entry currently on stack
+
+		static ScopedSystem * New (lua_State * L);
+
+		Scoped Bookmark (void) { return Scoped{*this}; }
+
+		// Interface
+		void FailAssert (const char * what);
+		void * Malloc (size_t size);
+		void * Calloc (size_t num, size_t size);
+		void * Realloc (void * ptr, size_t size);
+		void Free (void * ptr);
+		size_t GetSize (void * ptr);
+		void Push (void * ptr, bool bRemove = true);
+	};
 }

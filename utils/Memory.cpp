@@ -30,6 +30,8 @@
     #include <memory>
 #endif
 
+#include <algorithm>
+
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
 	BookmarkDualTables bm;
@@ -300,4 +302,198 @@ void * MemoryXS::Align (size_t bound, size_t size, void *& ptr, size_t * space)
     #else
         return std::align(bound, size, ptr, space_ref);
     #endif
+}
+
+MemoryXS::ScopedSystem * MemoryXS::ScopedSystem::New (lua_State * L)
+{
+	ScopedSystem * system = LuaXS::NewTyped<ScopedSystem>(L);	// ..., system
+
+	system->mL = L;
+
+	lua_pushlightuserdata(L, system);	// ..., system, system_ptr
+	lua_insert(L, -2);	// ..., system_ptr, system
+	lua_rawset(L, LUA_REGISTRYINDEX);	// ...; registry = { ..., [system_ptr] = system }
+
+	return system;
+}
+
+void MemoryXS::ScopedSystem::FailAssert (const char * what)
+{
+	luaL_error(mL, what);
+}
+
+void * MemoryXS::ScopedSystem::Malloc (size_t size)
+{
+	mCurrent->EnsureCapacity();
+
+	void * mem = mCurrent->AddToStack(size);
+
+	if (!mem) mem = malloc(size);
+	if (!mem) luaL_error(mL, "Out of memory");
+
+	mCurrent->mAllocs.emplace_back(MemoryXS::Scoped::Item{mem, size});
+
+	return mem;
+}
+
+void * MemoryXS::ScopedSystem::Calloc (size_t num, size_t size)
+{
+	mCurrent->EnsureCapacity();
+
+	void * mem = mCurrent->AddToStack(num * size);
+
+	if (mem) memset(mem, 0, num * size);
+
+	else mem = calloc(num, size);
+
+	if (!mem) luaL_error(mL, "Out of memory");
+
+	mCurrent->mAllocs.emplace_back(MemoryXS::Scoped::Item{mem, num * size});
+
+	return mem;
+}
+
+void * MemoryXS::ScopedSystem::Realloc (void * ptr, size_t size)
+{
+	//
+	if (size == 0U)
+	{
+		Free(ptr);
+
+		return nullptr;
+	}
+
+	else
+	{
+		auto iter = mCurrent->Find(ptr);
+
+		//
+		if (iter != mCurrent->mAllocs.end())
+		{
+			if (size <= iter->mSize) return ptr;
+
+			// 
+			bool bWasInStack = mCurrent->InStack(ptr);
+
+			if (bWasInStack && mCurrent->mPos == mCurrent->PointPast(ptr, iter->mSize))
+			{
+				auto pos = mCurrent->mPos;
+
+				mCurrent->mPos = static_cast<unsigned char *>(iter->mPtr);
+
+				if (mCurrent->AddToStack(size))
+				{
+					iter->mSize = size;
+
+					return ptr;
+				}
+
+				else mCurrent->mPos = pos;
+			}
+
+			//
+			void * mem = mCurrent->AddToStack(size);
+
+			if (!mem) mem = realloc(!bWasInStack ? ptr : nullptr, size);
+
+			if (bWasInStack) memcpy(mem, ptr, iter->mSize);
+
+			if (!mem) luaL_error(mL, "Out of memory");
+
+			// Replace the allocation entry. (Old stack space will be tombstoned.)
+			iter->mPtr = mem;
+			iter->mSize = size;
+
+			return mem;
+		}
+
+		//
+		else return Malloc(size);
+	}
+}
+
+void MemoryXS::ScopedSystem::Free (void * ptr)
+{
+	auto iter = mCurrent->Find(ptr);
+
+	if (iter != mCurrent->mAllocs.end())
+	{
+		if (mCurrent->InStack(iter->mPtr)) mCurrent->TryToRewind(*iter);
+		
+		else free(iter->mPtr);
+
+		mCurrent->mAllocs.erase(iter);
+	}
+}
+
+size_t MemoryXS::ScopedSystem::GetSize (void * ptr)
+{
+	auto iter = mCurrent->Find(ptr);
+
+	if (iter != mCurrent->mAllocs.end()) return iter->mSize;
+
+	return 0U;
+}
+
+void MemoryXS::ScopedSystem::Push (void * ptr, bool bRemove)
+{
+	lua_pushlstring(mL, static_cast<const char *>(ptr), GetSize(ptr));	// ..., bytes
+
+	if (bRemove) Free(ptr);
+}
+
+bool MemoryXS::Scoped::InStack (void * ptr) const
+{
+	unsigned char * uc = static_cast<unsigned char *>(ptr);
+	
+	return uc >= mStack && uc < mStack + eStackSize;
+}
+
+void * MemoryXS::Scoped::AddToStack (size_t size)
+{
+	if (size > eStackSize / 2) return nullptr;
+
+	size_t space = size_t(mStack + eStackSize - mPos);
+	void * ptr = mPos, * aligned = Align(16U, size, ptr, &space);
+
+	if (aligned) mPos = PointPast(ptr, size);
+
+	return aligned;
+}
+
+unsigned char * MemoryXS::Scoped::PointPast (void * ptr, size_t size)
+{
+	return static_cast<unsigned char *>(ptr) + size;
+}
+
+std::vector<MemoryXS::Scoped::Item>::iterator MemoryXS::Scoped::Find (void * ptr)
+{
+	if (!ptr) return mAllocs.end();
+
+	return std::find_if(mAllocs.begin(), mAllocs.end(), [ptr](const Item & item) { return item.mPtr == ptr; });
+}
+
+void MemoryXS::Scoped::EnsureCapacity (void)
+{
+	if (mAllocs.capacity() == mAllocs.size()) mAllocs.reserve(mAllocs.size() + 20U);
+}
+
+void MemoryXS::Scoped::TryToRewind (const MemoryXS::Scoped::Item & item)
+{
+	if (mPos == PointPast(item.mPtr, item.mSize)) mPos = static_cast<unsigned char *>(item.mPtr);
+}
+
+MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mPos{mStack}, mAllocs{}
+{
+	system.mCurrent = this;
+}
+
+MemoryXS::Scoped::~Scoped (void)
+{
+	for (auto iter : mAllocs)
+	{
+		if (!InStack(iter.mPtr)) free(iter.mPtr);
+	}
+
+	mSystem.mCurrent = mPrev;
 }
