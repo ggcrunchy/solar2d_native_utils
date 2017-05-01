@@ -451,10 +451,8 @@ bool MemoryXS::Scoped::InStack (void * ptr) const
 
 void * MemoryXS::Scoped::AddToStack (size_t size)
 {
-	if (size > eStackSize / 2) return nullptr;
-
 	size_t space = size_t(mStack + eStackSize - mPos);
-	void * ptr = mPos, * aligned = Align(16U, size, ptr, &space);
+	void * ptr = mPos, * aligned = Align(8U, size, ptr, &space);
 
 	if (aligned) mPos = PointPast(ptr, size);
 
