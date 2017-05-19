@@ -219,20 +219,20 @@ namespace LuaXS {
 		lua_setmetatable(L, -2);// ..., ud
 	}
 
-	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable)
+	void AttachProperties (lua_State * L, lua_CFunction get_props, const AttachPropertyParams & params)
 	{
-		lua_pushcfunction(L, get_props);// ..., meta, get_props
+		lua_pushcclosure(L, get_props, params.mUpvalueCount);	// ..., meta, get_props
 		lua_getfield(L, -2, "__index");	// ..., meta, get_props, index
 
 		// Build up a list of entries that may be null, since these would otherwise be
 		// interpreted as missing properties when nil.
-		if (nullable)
+		if (params.mNullable)
 		{
 			lua_newtable(L);// ..., meta, index, nullable
 
-			for (int i = 0; nullable[i]; ++i)
+			for (int i = 0; params.mNullable[i]; ++i)
 			{
-				lua_pushstring(L, nullable[i]);	// ..., meta, get_props, index, nullable, entry
+				lua_pushstring(L, params.mNullable[i]);	// ..., meta, get_props, index, nullable, entry
 				lua_rawseti(L, -2, i + 1);	// ..., meta, get_props, index, nullable = { ..., entry }
 			}
 		}

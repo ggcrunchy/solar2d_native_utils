@@ -47,6 +47,12 @@ namespace LuaXS {
 		}
 	};
 
+	//
+	struct AttachPropertyParams {
+		int mUpvalueCount{0};
+		const char ** mNullable{nullptr};
+	};
+
 	bool IsMainState (lua_State * L);
 	bool IsType (lua_State * L, const char * name, int index = -1);
 	bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
@@ -58,7 +64,7 @@ namespace LuaXS {
 	void AttachGC (lua_State * L, lua_CFunction gc);
 	void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
-	void AttachProperties (lua_State * L, lua_CFunction get_props, const char ** nullable = nullptr);
+	void AttachProperties (lua_State * L, lua_CFunction get_props, const AttachPropertyParams & params = AttachPropertyParams{});
 	void CallInMainState (lua_State * L, lua_CFunction func);
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams{});
