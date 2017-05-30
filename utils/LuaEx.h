@@ -27,6 +27,7 @@
 #include "CoronaGraphics.h"
 #include "utils/Compat.h"
 #include <stdint.h>
+#include <functional>
 #include <limits>
 #include <string>
 #include <vector>
@@ -680,5 +681,74 @@ namespace LuaXS {
 		}, nupvalues, LUA_MULTRET)) return lua_gettop(L);
 	
 		else return LuaXS::ErrorAfter(L, falsy);// false, falsy, err
+	}
+
+	// Hooks up method lookup properties in the metatable being populated. If a method with
+	// the supplied name exists in another type's metatable, the object doing the lookup is
+	// copied into a temporary of that other type. The temporary and method are packaged up
+	// into the thunk returned by the property. We can call this like any method, but the
+	// thunk will substitute the temporary for the method's self. This allows lightweight
+	// interface reuse, albeit with some overhead. A small ring buffer is used to allow a
+	// small number of methods at once, unfortunately at the expense of some needless copies.
+	// TODO: this will break down if multiple objects of the same type call methods
+	template<typename NT, typename PT, int RingN = 4> void MethodThunksProperty (lua_State * L, NT && new_temp, PT && populate_temp)
+	{
+		new_temp(L);// ..., meta, temp
+
+		lua_createtable(L, RingN, 1);	// ..., meta, temp, wrappers
+
+		for (int i = 1; i <= RingN; ++i)
+		{
+			lua_pushvalue(L, -2);	// ..., meta, temp, wrappers, temp
+			lua_pushnil(L);	// ..., meta, temp, wrappers, temp, nil
+			lua_pushcclosure(L, [](lua_State * L) {
+				lua_pushvalue(L, lua_upvalueindex(2));	// obj, ... (args), method
+				lua_insert(L, 1);	// method, obj, ...
+				lua_pushvalue(L, lua_upvalueindex(1));	// method, obj, ..., temp
+				lua_replace(L, 2);	// method, temp, ...
+				lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);// ... (results)
+				lua_pushnil(L);	// ..., nil
+				lua_rawset(L, lua_upvalueindex(2));	// ...; upvalue[2] = nil
+
+				return lua_gettop(L);
+			}, 2);	// ..., meta, temp, wrappers, wrapper
+			lua_rawseti(L, -2, i);	// ..., meta, temp, wrappers = { ..., wrapper }
+		}
+
+		lua_pushinteger(L, 1);	// ..., meta, temp, wrappers, 1
+		lua_setfield(L, -2, "pos");	// ..., meta, temp, wrappers = { ..., pos = 1 }
+
+		NewTyped<std::function<void (lua_State *, const int)>>(L, populate_temp);	// ..., meta, temp, wrappers, populate
+		AttachGC(L, TypedGC<std::function<void (lua_State *, const int)>>);
+
+		AttachPropertyParams app;
+
+		app.mUpvalueCount = 3;
+
+		AttachProperties(L, [](lua_State * L) {
+			auto pop_func = *UD<std::function<void (lua_State *, const int)>>(L, lua_upvalueindex(3));
+			
+			pop_func(L, lua_upvalueindex(1));
+
+			luaL_getmetafield(L, lua_upvalueindex(1), "__index");	// obj, k, __index
+			lua_replace(L, 1);	// __index, k
+			lua_rawget(L, 1);	// __index, v?
+
+			if (lua_isfunction(L, 2))
+			{
+				lua_getfield(L, lua_upvalueindex(2), "pos");// __index, method, ring_pos
+
+				int pos = Int(L, -1);
+
+				lua_pop(L, 1);	// __index, method
+				lua_rawgeti(L, lua_upvalueindex(2), pos);	// __index, method, wrapper
+				lua_insert(L, 2);	// __index, wrapper, method
+				lua_setupvalue(L, 2, 2);// __index, wrapper; wrapper.upval[2] = method
+				lua_pushinteger(L, pos % RingN + 1);// __index, method, new_ring_pos
+				lua_setfield(L, lua_upvalueindex(2), "pos");// __index, method; wrapper = { ..., pos = new_ring_pos }
+			}
+
+			return 1;
+		}, app);// ..., meta
 	}
 };
