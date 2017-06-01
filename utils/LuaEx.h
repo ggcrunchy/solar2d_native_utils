@@ -726,6 +726,15 @@ namespace LuaXS {
 		app.mUpvalueCount = 3;
 
 		AttachProperties(L, [](lua_State * L) {
+			lua_getmetatable(L, 1);	// obj, k, meta
+			lua_pushvalue(L, 2);// obj, k, meta, k
+			lua_rawget(L, 3);	// obj, k, meta, v?
+			lua_remove(L, 3);	// obj, k, v?
+
+			if (!lua_isnil(L, 4)) return 1;
+
+			lua_pop(L, 1);	// obj, k
+
 			auto pop_func = *UD<std::function<void (lua_State *, const int)>>(L, lua_upvalueindex(3));
 			
 			pop_func(L, lua_upvalueindex(1));
