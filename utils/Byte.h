@@ -105,7 +105,7 @@ namespace ByteXS {
 
 		if (!stride) stride = wlen;
 
-		else if (stride < wlen) luaL_error(L, "Stride too short: %i vs. w * nchannels * size = %i\n", stride, wlen);
+		else if (stride < wlen) luaL_error(L, "Stride too short: %d vs. w * nchannels * size = %d\n", stride, wlen);
 
 		return size_t(stride * h);
 	}

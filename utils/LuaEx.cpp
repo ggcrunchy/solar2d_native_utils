@@ -115,7 +115,7 @@ namespace LuaXS {
 	{
 		int top = lua_gettop(L);
 
-		if (n <= 0) luaL_error(L, "%i upvalues supplied to closures", n);
+		if (n <= 0) luaL_error(L, "%d upvalues supplied to closures", n);
 
 		//
 		if (params.mFirstPos == 0) first = top - n + 1;
