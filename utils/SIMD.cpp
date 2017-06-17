@@ -37,7 +37,7 @@
         #define _XM_SSE_INTRINSICS_
     #endif
 
-    #include "XMath/Inc/Xmath.h"
+    #include "XMath/Inc/XMath.h"
     #include "XMath/Inc/XPackedVector.h"
 #endif
 
