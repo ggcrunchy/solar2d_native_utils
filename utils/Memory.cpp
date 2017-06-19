@@ -31,6 +31,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
