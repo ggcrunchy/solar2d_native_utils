@@ -21,7 +21,6 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "utils/Compat.h"
 #include "utils/Thread.h"
 #include <pthread.h>
 #include <map>
@@ -52,7 +51,7 @@ namespace ThreadXS {
 		} sKeyLifetime;
 
 		//
-		static CEU::atomic<size_t> sID{0U};
+		static std::atomic<size_t> sID{0U};
 
 		mIndex = sID++;
 	}

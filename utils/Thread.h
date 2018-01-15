@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "utils/Compat.h"
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -40,8 +39,6 @@
 #else
 	#error "Unsupported target"
 #endif
-
-namespace CEU = CompatXS::ns_compat;
 
 namespace ThreadXS {
 	// Macro to declare type with thread-local duration, preferring compiler support when available.
@@ -77,7 +74,7 @@ namespace ThreadXS {
 	template<typename T> class TLS {
 		Slot mSlot;
 
-		static_assert(CompatXS::TrivialTraits<T>::is_copyable::value && CompatXS::TrivialTraits<T>::is_destructible::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
+		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value, "ThreadXS::TLS only supports types that are trivally copyable and destructible");
 
 	public:
 		TLS (void) : mSlot{sizeof(T)}
@@ -97,7 +94,7 @@ namespace ThreadXS {
 
 		operator T ()
 		{
-            CEU::aligned_storage<sizeof(T), CEU::alignment_of<T>::value> value;  // Use POD data so that T need not be trivially constructible
+            std::aligned_storage<sizeof(T), std::alignment_of<T>::value> value;  // Use POD data so that T need not be trivially constructible
 
 			mSlot.GetVar(&value);
 
@@ -105,14 +102,12 @@ namespace ThreadXS {
 		}
 
 	#if defined(_WIN32) // workaround for MSVC 2013, which throws internal compiler errors with enable_if
-		template<bool is_pointer = CEU::is_pointer<T>::value> typename CEU::conditional<is_pointer, T, void>::type operator -> (void);
+		template<bool is_pointer = std::is_pointer<T>::value> typename std::conditional<is_pointer, T, void>::type operator -> (void);
 
 		template<> inline T operator -> <true> (void) { return T{*this}; }
 		template<> inline void operator -> <false> (void) {} // T is not a pointer, so cut off this operator
-    #elif !TARGET_OS_IOS
-        template<typename U = T, typename CEU::enable_if<CEU::is_pointer<U>::value, int>::type = 0> U operator -> () { return U{*this}; }
     #else
-        template<typename U = T, typename CEU::enable_if<CEU::is_pointer<U>, int>::type = 0> U operator -> () { return U{*this}; }
+        template<typename U = T, typename std::enable_if<std::is_pointer<U>::value, int>::type = 0> U operator -> () { return U{*this}; }
 	#endif
 	};
 
@@ -151,7 +146,7 @@ namespace ThreadXS {
 
 	template<typename I1, typename I2, typename F> inline void parallel_for (I1 a, I2 b, F && f, bool bParallel)
 	{
-		if (bParallel) parallel_for(a, b, CEU::forward<F>(f));
+		if (bParallel) parallel_for(a, b, std::forward<F>(f));
 
 		else while (a != b) f(a++);
 	}
@@ -165,7 +160,7 @@ namespace ThreadXS {
 		using data_t = std::pair<It, F>;
 
 		size_t count = std::distance(a, b);
-		data_t helper = data_t{a, CEU::forward<F>(f)};
+		data_t helper = data_t{a, std::forward<F>(f)};
 
 		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
 		{
@@ -183,9 +178,9 @@ namespace ThreadXS {
 
 	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
 	{
-        if (bParallel) parallel_for_each(CEU::forward<It>(a), CEU::forward<It>(b), CEU::forward<F>(f));
+        if (bParallel) parallel_for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
 
-		else std::for_each(CEU::forward<It>(a), CEU::forward<It>(b), CEU::forward<F>(f));
+		else std::for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
 	}
 
 	// parallel_reduce: http://www.idryman.org/blog/2012/08/05/grand-central-dispatch-vs-openmp/ and https://gist.github.com/m0wfo/1101546

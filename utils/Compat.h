@@ -29,7 +29,7 @@
     #include "TargetConditionals.h"
 #endif
 
-#if !TARGET_OS_IOS
+#if 1//!TARGET_OS_IOS
     #include <array>
 	#include <atomic>
     #include <functional>
@@ -73,7 +73,7 @@
 namespace CompatXS {
 
 // On most targets we have a fairly full-featured C++11 implementation...
-#if !TARGET_OS_IOS
+#if 1//!TARGET_OS_IOS
 	// Bring these into the namespace...
     using std::max_align_t;
 
