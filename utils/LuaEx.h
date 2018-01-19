@@ -59,10 +59,10 @@ namespace LuaXS {
 	bool IsType (lua_State * L, const char * name, const char * alt, int index = -1);
 
 	void AddClosures (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
-	void AddCloseLogic (lua_State * L, lua_CFunction func);
+	void AddCloseLogic (lua_State * L, lua_CFunction func, int nupvalues = 0);
 	void AddRuntimeListener (lua_State * L, const char * name);
 	void AddRuntimeListener (lua_State * L, const char * name, lua_CFunction func, int nupvalues = 0);
-	void AttachGC (lua_State * L, lua_CFunction gc);
+	void AttachGC (lua_State * L, lua_CFunction gc, int nupvalues = 0);
 	void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 	void AttachProperties (lua_State * L, lua_CFunction get_props, const AttachPropertyParams & params = AttachPropertyParams{});
@@ -77,7 +77,23 @@ namespace LuaXS {
 	int NoOp (lua_State * L);
 
     size_t Find (lua_State * L, int t, int item);
-    
+   
+	struct LibEntry {
+		LibEntry (void) : mPath{nullptr}, mLib{nullptr}
+		{
+		}
+
+		const char * mPath;
+		void ** mLib;
+
+		void MoveIntoArray (lua_State * L, int arr = -1);
+		void TransferAndPush (lua_State * L);
+	};
+
+	LibEntry FindLib (lua_State * L, const char * name, size_t len);
+	void CleanUpArrayOfLibs (lua_State * L, int arr =  -1);
+	void CleanUpLib (lua_State * L, int pos);
+
     struct Range {
         lua_State * mL;
         int mArg, mTop;

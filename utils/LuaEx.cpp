@@ -148,11 +148,12 @@ namespace LuaXS {
 		if (params.mLeaveTableAtTop) lua_settop(L, tpos);	// ..., t
 	}
 
-	void AddCloseLogic (lua_State * L, lua_CFunction func)
+	void AddCloseLogic (lua_State * L, lua_CFunction func, int nupvalues)
 	{
-		lua_newuserdata(L, 0U);	// ..., dummy
+		lua_newuserdata(L, 0U);	// ..., (upvalues), dummy
+		lua_insert(L, -(nupvalues + 1));// ..., dummy, (upvalues)
 
-		LuaXS::AttachGC(L, func);
+		LuaXS::AttachGC(L, func, nupvalues);// ..., dummy
 
 		lua_pushboolean(L, 1);	// ..., dummy, true
 		lua_rawset(L, LUA_REGISTRYINDEX);	// ...; registry = { [dummy] = true }
@@ -177,10 +178,11 @@ namespace LuaXS {
 		AddRuntimeListener(L, name);// ...
 	}
 
-	void AttachGC (lua_State * L, lua_CFunction gc)
+	void AttachGC (lua_State * L, lua_CFunction gc, int nupvalues)
 	{
-		lua_newtable(L);// ..., ud, mt
-		lua_pushcfunction(L, gc);	// ..., ud, mt, gc
+		lua_pushcclosure(L, gc, nupvalues);	// ... ud, gc
+		lua_newtable(L);// ..., ud, gc, mt
+		lua_insert(L, -2);	// ..., ud, mt, gc
 		lua_setfield(L, -2, "__gc");// ..., ud, mt = { __gc = gc }
 		lua_setmetatable(L, -2);// ..., ud
 	}
@@ -373,6 +375,118 @@ namespace LuaXS {
 		return index;
 	}
 
+	void LibEntry::MoveIntoArray (lua_State * L, int arr)
+	{
+		arr = CoronaLuaNormalize(L, arr);
+
+		TransferAndPush(L);	// ..., t, ... ud / nil
+
+		lua_rawseti(L, arr, lua_objlen(L, arr) + 1);// ..., t = { ..., ud }, ...
+	}
+
+	void LibEntry::TransferAndPush (lua_State * L)
+	{
+		if (*mLib)
+		{
+			void ** ud = (void **)lua_newuserdata(L, sizeof(const void *));	// ..., ud
+
+			*ud = *mLib;
+			*mLib = nullptr;
+		}
+
+		else lua_pushnil(L);// ..., nil
+	}
+
+	LibEntry FindLib (lua_State * L, const char * name, size_t len)
+	{
+		for (lua_pushnil(L); lua_next(L, LUA_REGISTRYINDEX); lua_pop(L, 1))
+		{
+			if (lua_type(L, -2) == LUA_TSTRING && lua_type(L, -1) == LUA_TUSERDATA)
+			{
+				const char * key = lua_tostring(L, -2);
+
+				if (strncmp(key, "LOADLIB: ", sizeof("LOADLIB: ") - 1) == 0)
+				{
+					const char * pre_ext = strrchr(key, '.'), * sep = pre_ext;
+
+					if (!sep) continue;
+
+					do {
+						--sep;
+					} while (sep != key && *sep != '\\' && *sep != '/' && *sep != '_');
+
+					if (sep == key || pre_ext - (sep + 1) != len) continue;
+
+                    #ifdef __ANDROID__
+                        #define PLUGIN_PREFIX "libplugin"
+                    #else
+                        #define PLUGIN_PREFIX "plugin"
+                    #endif
+                    
+                    
+					if (strncmp(sep - sizeof(PLUGIN_PREFIX) + 1, PLUGIN_PREFIX, sizeof(PLUGIN_PREFIX) - 1) == 0 && strncmp(sep + 1, name, len) == 0)
+					{
+						LibEntry entry;
+
+						entry.mPath = key + sizeof("LOADLIB: ") - 1;
+						entry.mLib = (void **)lua_touserdata(L, -1);
+
+						return entry;
+					}
+                    
+                    #undef PLUGIN_PREFIX
+				}
+			}
+		}
+
+		return LibEntry{};
+	}
+
+	static void GetLibGC (lua_State * L)
+	{
+		luaL_getmetatable(L, "_LOADLIB");	// ..., mt
+		lua_getfield(L, -1, "__gc");// ..., mt, gc
+	}
+
+	void CleanUpArrayOfLibs (lua_State * L, int arr)
+	{
+		arr = CoronaLuaNormalize(L, arr);
+
+		GetLibGC(L);// ..., mt, gc
+
+		lua_getref(L, arr);// ..., mt, gc, arr
+
+		for (int i = 1, n = lua_objlen(L, -1); i <= n; ++i, lua_pop(L, 1))
+		{
+			lua_rawgeti(L, -1, i);	// ..., mt, gc, arr, lib
+			lua_pushvalue(L, -4);	// ..., mt, gc, arr, lib, mt
+			lua_setmetatable(L, -2);// ..., mt, gc, arr, lib
+		}
+		// ^^^ TODO: did this serve any purpose?
+
+		for (int i = 1, n = lua_objlen(L, -1); i <= n; ++i, lua_pop(L, 1))
+		{
+			lua_rawgeti(L, -1, i);	// ..., mt, gc, arr, lib
+			lua_pushvalue(L, -3);	// ..., mt, gc, arr, lib, gc
+			lua_pushvalue(L, -2);	// ..., mt, gc, arr, lib, gc, lib
+			lua_pcall(L, 1, 0, 0);	// ..., mt, gc, arr, lib
+			lua_pushnil(L);	// ..., mt, gc, arr, lib, nil
+			lua_setmetatable(L, -2);// ..., mt, gc, arr, lib
+		}
+
+		lua_pop(L, 3);	// ...
+	}
+
+	void CleanUpLib (lua_State * L, int pos)
+	{
+		if (lua_isnoneornil(L, pos)) return;
+
+		GetLibGC(L);// ..., mt, gc
+
+		lua_pushvalue(L, pos);	// ..., mt, gc, lib
+		lua_pcall(L, 1, 0, 0);	// ..., mt
+		lua_pop(L, 1);	// ...
+	}
 
 	Range::Iter & Range::Iter::operator ++ (void)
 	{
