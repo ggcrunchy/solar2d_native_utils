@@ -32,6 +32,10 @@ extern "C" {
 	int CountUpvalues (lua_State * L, int arg);
 	int GetUpvalue (lua_State * L, int arg, int upvalue);
 	int SetUpvalue (lua_State * L, int arg, int upvalue);
+
+	// Hacks since debug stripping messes up original functions :/
+	const char * GetUpvalueOK (lua_State * L, int funcindex, int n);
+	const char * SetUpvalueOK (lua_State * L, int funcindex, int n);
 #ifdef __cplusplus
 }
 #endif

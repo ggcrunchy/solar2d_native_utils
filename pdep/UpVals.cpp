@@ -220,3 +220,199 @@ extern "C" int SetUpvalue (lua_State * L, int arg, int upvalue)
 
 	return 1;
 }
+
+// https://www.lua.org/source/5.1/lobject.h.html
+#define iscollectable(o)        (ttype(o) >= LUA_TSTRING)
+
+// https://www.lua.org/source/5.1/lstate.h.html
+/* macro to convert any Lua object into a GCObject */
+#define obj2gco(v)      (cast(GCObject *, (v)))
+
+// https://www.lua.org/source/5.1/lgc.h.html
+
+#define maskmarks       cast_byte(~(bitmask(BLACKBIT)|WHITEBITS))
+
+#define makewhite(g,x)  \
+   ((x)->gch.marked = cast_byte(((x)->gch.marked & maskmarks) | luaC_white(g)))
+
+#define iswhite(x)      test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+#define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
+#define isgray(x)       (!isblack(x) && !iswhite(x))
+
+#define otherwhite(g)   (g->currentwhite ^ WHITEBITS)
+#define isdead(g,v)     ((v)->gch.marked & otherwhite(g) & WHITEBITS)
+
+#define changewhite(x)  ((x)->gch.marked ^= WHITEBITS)
+#define gray2black(x)   l_setbit((x)->gch.marked, BLACKBIT)
+
+#define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
+
+#define luaC_white(g)   cast(lu_byte, (g)->currentwhite & WHITEBITS)
+
+#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
+        luaC_barrierf(L,obj2gco(p),gcvalue(v)); }
+
+// https://www.lua.org/source/5.1/lgc.c.html
+
+#define white2gray(x)   reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+
+#define markvalue(g,o) { checkconsistency(o); \
+  if (iscollectable(o) && iswhite(gcvalue(o))) reallymarkobject(g,gcvalue(o)); }
+
+#define markobject(g,t) { if (iswhite(obj2gco(t))) \
+                reallymarkobject(g, obj2gco(t)); }
+
+
+#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpause)
+
+
+static void reallymarkobject (global_State *g, GCObject *o) {
+  lua_assert(iswhite(o) && !isdead(g, o));
+  white2gray(o);
+  switch (o->gch.tt) {
+    case LUA_TSTRING: {
+      return;
+    }
+    case LUA_TUSERDATA: {
+      Table *mt = gco2u(o)->metatable;
+      gray2black(o);  /* udata are never gray */
+      if (mt) markobject(g, mt);
+      markobject(g, gco2u(o)->env);
+      return;
+    }
+    case LUA_TUPVAL: {
+      UpVal *uv = gco2uv(o);
+      markvalue(g, uv->v);
+      if (uv->v == &uv->u.value)  /* closed? */
+        gray2black(o);  /* open upvalues are never black */
+      return;
+    }
+    case LUA_TFUNCTION: {
+      gco2cl(o)->c.gclist = g->gray;
+      g->gray = o;
+      break;
+    }
+    case LUA_TTABLE: {
+      gco2h(o)->gclist = g->gray;
+      g->gray = o;
+      break;
+    }
+    case LUA_TTHREAD: {
+      gco2th(o)->gclist = g->gray;
+      g->gray = o;
+      break;
+    }
+    case LUA_TPROTO: {
+      gco2p(o)->gclist = g->gray;
+      g->gray = o;
+      break;
+    }
+    default: lua_assert(0);
+  }
+}
+
+static void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
+  global_State *g = G(L);
+  lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
+  lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
+  lua_assert(ttype(&o->gch) != LUA_TTABLE);
+  /* must keep invariant? */
+  if (g->gcstate == GCSpropagate)
+    reallymarkobject(g, v);  /* restore invariant */
+  else  /* don't mind */
+    makewhite(g, o);  /* mark as white just to avoid other barriers */
+}
+
+// https://www.lua.org/source/5.1/lapi.c.html
+
+#define api_checknelems(L, n)   api_check(L, (n) <= (L->top - L->base))
+
+//#define api_checkvalidindex(L, i)       api_check(L, (i) != luaO_nilobject)
+
+#define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
+
+
+
+static TValue *index2adr (lua_State *L, int idx) {
+  if (idx > 0) {
+    TValue *o = L->base + (idx - 1);
+    api_check(L, idx <= L->ci->top - L->base);
+// STEVE CHANGE
+/*  if (o >= L->top) return cast(TValue *, luaO_nilobject);
+    else */return o;
+// /STEVE CHANGE
+  }
+  else if (idx > LUA_REGISTRYINDEX) {
+    api_check(L, idx != 0 && -idx <= L->top - L->base);
+    return L->top + idx;
+  }
+  else switch (idx) {  /* pseudo-indices */
+    case LUA_REGISTRYINDEX: return registry(L);
+    case LUA_ENVIRONINDEX: {
+      Closure *func = curr_func(L);
+      sethvalue(L, &L->env, func->c.env);
+      return &L->env;
+    }
+    case LUA_GLOBALSINDEX: return gt(L);
+    default: {
+      Closure *func = curr_func(L);
+      idx = LUA_GLOBALSINDEX - idx;
+      return (idx <= func->c.nupvalues)
+                ? &func->c.upvalue[idx-1]
+                : cast(TValue *, 0xDEADBEEF);//luaO_nilobject); <- STEVE CHANGE
+    }
+  }
+}
+
+static const char *aux_upvalue (StkId fi, int n, TValue **val) {
+  Closure *f;
+  if (!ttisfunction(fi)) return NULL;
+  f = clvalue(fi);
+  if (f->c.isC) {
+    if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
+    *val = &f->c.upvalue[n-1];
+    return "";
+  }
+  else {
+    Proto *p = f->l.p;
+	const char * str; // <- STEVE CHANGE
+    if (!(1 <= n && n <= /*p->*sizeupvalues*/f->l.nupvalues)) return NULL; // <- STEVE CHANGE
+    *val = f->l.upvals[n-1]->v;
+    str = p->sizeupvalues ? getstr(p->upvalues[n-1]) : NULL; // <- STEVE CHANGE
+	return str ? str : ""; // <- STEVE CHANGE
+  }
+}
+
+extern "C" const char * GetUpvalueOK (lua_State * L, int funcindex, int n)
+{
+  const char *name;
+  TValue *val;
+  if (funcindex > lua_gettop(L)) return NULL; // <- STEVE CHANGE
+  lua_lock(L);
+  name = aux_upvalue(index2adr(L, funcindex), n, &val);
+  if (name) {
+    setobj2s(L, L->top, val);
+    api_incr_top(L);
+  }
+  lua_unlock(L);
+  return name;
+}
+
+extern "C" const char * SetUpvalueOK (lua_State * L, int funcindex, int n)
+{
+  const char *name;
+  TValue *val;
+  StkId fi;
+  if (funcindex > lua_gettop(L)) return NULL; // <- STEVE CHANGE
+  lua_lock(L);
+  fi = index2adr(L, funcindex);
+  api_checknelems(L, 1);
+  name = aux_upvalue(fi, n, &val);
+  if (name) {
+    L->top--;
+    setobj(L, val, L->top);
+    luaC_barrier(L, clvalue(fi), L->top);
+  }
+  lua_unlock(L);
+  return name;
+}
