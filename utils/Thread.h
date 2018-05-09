@@ -33,6 +33,7 @@
 	#include <dispatch/dispatch.h>
 	#include "TargetConditionals.h"
 #elif __ANDROID__
+    #include <atomic>
 	#include <thread>
 	#include <numeric>
 	#include <parallel/algorithm>
