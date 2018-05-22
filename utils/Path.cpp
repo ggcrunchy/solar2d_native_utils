@@ -50,24 +50,26 @@ namespace PathXS {
 		return dirs;
 	}
 
-	const char * Directories::Canonicalize (lua_State * L, bool bRead)
+	const char * Directories::Canonicalize (lua_State * L, bool bRead, int arg)
 	{
-		luaL_checkstring(L, 1);
-		lua_getref(L, mPathForFile);// str[, dir], ..., pathForFile
-		lua_pushvalue(L, 1);// str[, dir], ..., pathForFile, str
+		arg = CoronaLuaNormalize(L, arg);
 
-		if (lua_isuserdata(L, 2))
+		luaL_checkstring(L, arg);
+		lua_getref(L, mPathForFile);// ..., str[, dir], ..., pathForFile
+		lua_pushvalue(L, arg);	// ..., str[, dir], ..., pathForFile, str
+
+		if (lua_isuserdata(L, arg + 1))
 		{
-			lua_pushvalue(L, 2);// str, dir, ..., pathForFile, str, dir
-			lua_remove(L, 2);	// str, ..., pathForFile, str, dir
+			lua_pushvalue(L, arg + 1);	// ..., str, dir, ..., pathForFile, str, dir
+			lua_remove(L, arg + 1);	// ..., str, ..., pathForFile, str, dir
 		}
 
-		else lua_getref(L, bRead ? mResourceDir : mDocumentsDir);	// str, ..., pathForFile, str, def_dir
+		else lua_getref(L, bRead ? mResourceDir : mDocumentsDir);	// ..., str, ..., pathForFile, str, def_dir
 
-		lua_call(L, 2, 1);	// str, ..., file
-		lua_replace(L, 1);	// file, ...
+		lua_call(L, 2, 1);	// ..., str, ..., file
+		lua_replace(L, arg);// ..., file, ...
 
-		return lua_tostring(L, 1);
+		return lua_tostring(L, arg);
 	}
 
 	void LibLoader::Close (void)

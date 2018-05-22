@@ -42,7 +42,7 @@ namespace PathXS {
 
 		static Directories * Instantiate (lua_State * L);
 
-		const char * Canonicalize (lua_State * L, bool bRead);
+		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
 	};
 
 	struct LibLoader {

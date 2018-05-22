@@ -31,11 +31,11 @@ namespace ByteXS {
 	//
 	template<typename F> float * LoadFloats (lua_State * L, int arg, F func, size_t n, size_t size)
 	{
-		float * pfloats = LuaXS::NewArray<float>(L, n);	// ..., float_bytes, ..., floats
+		float * pfloats = LuaXS::NewArray<float>(L, (std::max)(n, size));	// ..., float_bytes, ..., floats
 
 		for (size_t i = 0; i < n; ++i) func(pfloats, n);
 
-		memset(&pfloats[n], 0, (size - n) * sizeof(float));
+		if (size > n) memset(&pfloats[n], 0, (size - n) * sizeof(float));
 
 		lua_replace(L, arg);// ..., floats, ...
 
