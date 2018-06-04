@@ -25,12 +25,9 @@
 
 #include "CoronaLua.h"
 #include "ByteReader.h"
-#include "utils/Compat.h"
 #include "utils/LuaEx.h"
 #include "external/aligned_allocator.h"
 #include <vector>
-
-namespace CEU = CompatXS::ns_compat;
 
 namespace ByteXS {
     //
@@ -129,7 +126,7 @@ namespace ByteXS {
 	//
 	template<int kPos = 1, typename F, typename T> int WithByteReader (lua_State * L, F func, T falsy)
 	{
-		CEU::function<int (lua_State *)> wrapped = [func](lua_State * L) {
+		std::function<int (lua_State *)> wrapped = [func](lua_State * L) {
 			ByteReader reader{L, kPos};
 
 			if (!reader.mBytes) lua_error(L);

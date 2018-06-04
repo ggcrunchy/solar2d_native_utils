@@ -25,7 +25,6 @@
 
 #include "CoronaLua.h"
 #include "external/aligned_allocator.h"
-#include "utils/Compat.h"
 #include <vector>
 
 //

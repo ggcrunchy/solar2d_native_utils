@@ -21,17 +21,13 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "utils/Compat.h"
 #include "utils/Memory.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 
-#if !TARGET_OS_IOS
-    #include <memory>
-#endif
-
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
