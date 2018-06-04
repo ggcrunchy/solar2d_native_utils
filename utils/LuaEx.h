@@ -208,7 +208,7 @@ namespace LuaXS {
 
 	template<typename ... Args> int WithError (lua_State * L, const char * format, Args && ... args)
 	{
-		lua_pushfstring(L, format, CEU::forward<Args>(args)...);	// nil / false, err
+		lua_pushfstring(L, format, std::forward<Args>(args)...);	// nil / false, err
 
 		return 2;
 	}
@@ -282,7 +282,7 @@ namespace LuaXS {
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
 
-		new (instance) T(CEU::forward<Args>(args)...);
+		new (instance) T(std::forward<Args>(args)...);
 
 		return instance;
 	}
@@ -636,7 +636,7 @@ namespace LuaXS {
 
 	template<typename A1> inline bool CheckFuncArg (lua_State * L, A1 && arg1)
 	{
-		PushArg(L, CEU::forward<A1>(arg1));// ..., func
+		PushArg(L, std::forward<A1>(arg1));// ..., func
 
 		if (lua_isfunction(L, -1)) return true;
 
