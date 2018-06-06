@@ -49,7 +49,7 @@ namespace ByteXS {
 	{
 		int top = lua_gettop(L);
 
-		ByteReader reader(L, arg, false); // ..., reader args
+		ByteReader reader{L, arg, false}; // ..., reader args
 
 		lua_settop(L, top);	// ...
 
@@ -71,7 +71,7 @@ namespace ByteXS {
 		if (n > len)
 		{
 			{
-				ByteWriter writer(L);
+				ByteWriter writer{L};
 
 				writer.AddBytes(data, len * size);
 				writer.ZeroPad((n - len) * size);
