@@ -28,21 +28,31 @@
 
 namespace ByteXS {
 	//
-	template<typename F> float * LoadFloats (lua_State * L, int arg, F func, size_t n, size_t size)
+	template<typename F> float * LoadFloats (lua_State * L, int arg, F func, size_t n, size_t size, float * afloats, size_t na)
 	{
-		float * pfloats = LuaXS::NewArray<float>(L, (std::max)(n, size));	// ..., float_bytes, ..., floats
+		float * pfloats;
+
+		size_t count = (std::max)(n, size);
+
+		if (afloats && na >= count) pfloats = afloats;
+		else pfloats = LuaXS::NewArray<float>(L, count);// ..., float_bytes, ..., floats
 
 		for (size_t i = 0; i < n; ++i) func(pfloats, n);
 
 		if (size > n) memset(&pfloats[n], 0, (size - n) * sizeof(float));
 
-		lua_replace(L, arg);// ..., floats, ...
+		if (!afloats || na < count) lua_replace(L, arg);// ..., floats, ...
 
 		return pfloats;
 	}
 
 	//
 	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, bool as_bytes)
+	{
+		return EnsureFloatsN(L, arg, nfloats, nullptr, 0U, as_bytes);
+	}
+
+	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, float * afloats, size_t na, bool as_bytes)
 	{
 		if (!lua_istable(L, arg))
 		{
@@ -52,7 +62,7 @@ namespace ByteXS {
 
 			if (as_bytes) return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
 				SimdXS::Unorm8sToFloats(static_cast<const unsigned char *>(reader.mBytes), pfloats, n);
-			}, reader.mCount, nfloats);
+			}, reader.mCount, nfloats, afloats, na);
 
 			else return EnsureN<float>(L, reader, nfloats);
 		}
@@ -62,7 +72,7 @@ namespace ByteXS {
 			{
 				pfloats[i - 1] = LuaXS::Float(L, -1);
 			});
-		}, lua_objlen(L, arg), nfloats);
+		}, lua_objlen(L, arg), nfloats, afloats, na);
 	}
 
 	ByteWriter::ByteWriter (lua_State * L, unsigned char * out, size_t stride) : mLine{out}, mStride{stride}

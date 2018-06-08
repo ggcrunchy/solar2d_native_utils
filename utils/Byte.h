@@ -88,6 +88,7 @@ namespace ByteXS {
 	}
 
 	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, bool as_bytes);
+	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, float * afloats, size_t na, bool as_bytes);
 
 	struct BytesMetatableOpts {
 		const char * mMetatableName{nullptr};
