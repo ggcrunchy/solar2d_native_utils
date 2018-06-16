@@ -67,7 +67,14 @@ namespace PathXS {
 		else lua_getref(L, bRead ? mResourceDir : mDocumentsDir);	// ..., str, ..., pathForFile, str, def_dir
 
 		lua_call(L, 2, 1);	// ..., str, ..., file
-		lua_replace(L, arg);// ..., file, ...
+
+		if (lua_isnil(L, -1))
+		{
+			lua_pop(L, 1);	// ..., str, ...
+			lua_pushliteral(L, "");	// ..., str, ..., ""
+		}
+
+		lua_replace(L, arg);// ..., file / "", ...
 
 		return lua_tostring(L, arg);
 	}
