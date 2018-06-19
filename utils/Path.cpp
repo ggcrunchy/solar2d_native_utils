@@ -79,6 +79,50 @@ namespace PathXS {
 		return lua_tostring(L, arg);
 	}
 
+    void Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
+    {
+        arg = CoronaLuaNormalize(L, arg);
+
+        contents.clear();
+
+    #ifdef __ANDROID__
+        const char * filename = luaL_checkstring(L, arg);
+        int bInResourcesDir = true, bHasDir = lua_isuserdata(L, arg + 1);
+
+        if (bHasDir)
+        {
+            lua_getref(L, mResourceDir);// ..., str, dir, ..., ResourceDirectory
+
+            bInResourcesDir = lua_equal(L, arg + 1, -1);
+
+            lua_pop(L, 1);  // ..., str, dir, ...
+        }
+
+        if (bInResourcesDir)
+        {
+            AAsset * file = AAssetManager_open(mAssets, filename, AASSET_MODE_BUFFER);
+            
+            if (file)
+            {
+                size_t len = AAsset_getLength(file);
+                
+                contents.resize(len);
+                
+                AAsset_read(file, contents.data(), len);
+                AAsset_close(file);
+                
+                if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
+
+                return;
+            }
+        }
+    #endif
+        
+        filename = Canonicalize(L, true, arg);
+
+        //
+    }
+
 	void LibLoader::Close (void)
 	{
 		if (IsLoaded())
