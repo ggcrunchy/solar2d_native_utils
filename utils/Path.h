@@ -36,6 +36,7 @@
 
 #ifdef __ANDROID__
     #include <jni.h>
+    #include <android/asset_manager.h>
 #endif
 
 namespace PathXS {
@@ -46,7 +47,9 @@ namespace PathXS {
 		int mResourceDir;	// Reference to resource directory
 
         #ifdef __ANDROID__
-            JavaVM * mVM{nullptr};	// Global VM
+            JavaVM * mVM{nullptr};
+            AAssetManager * mAssets{nullptr};
+            jclass mAssetsRef{0};
         #endif
         
 		static Directories * Instantiate (lua_State * L);

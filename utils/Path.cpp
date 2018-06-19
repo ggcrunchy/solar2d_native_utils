@@ -26,7 +26,7 @@
 #include "utils/Path.h"
 
 #ifdef __ANDROID__
-    #include <android/asset_manager.h>
+    #include <android/asset_manager_jni.h>
 	#include <assert.h>
 #endif
 
@@ -92,9 +92,9 @@ namespace PathXS {
 	}
 
 #ifdef __ANDROID__
-	static bool InResourceDir (lua_State * L, int darg)
+	static bool InResourceDir (Directories * dirs, lua_State * L, int darg)
 	{
-        lua_getref(L, mResourceDir);// ..., dir, ..., ResourceDirectory
+        lua_getref(L, dirs->mResourceDir);  // ..., dir, ..., ResourceDirectory
 
         bool bIn = lua_equal(L, darg, -1);
 
@@ -103,41 +103,71 @@ namespace PathXS {
 		return bIn;
 	}
 
-	bool CheckAssets (lua_State * L, std::vector<unsigned char> & contents, int arg)
+    static AAssetManager * GetAssets (Directories * dirs, JNIEnv * env)
+    {
+        if (!dirs->mAssets)
+        {
+            // Adapted from code in:
+            // https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy
+            jclass cls = env->FindClass("com/ansca/corona/CoronaActivity");
+            jmethodID mid = env->GetStaticMethodID(cls, "getAssetManager", "()Landroid/content/res/AssetManager;");
+            
+            if (mid)
+            {
+                jobject amgr = (jobject)env->CallStaticObjectMethod(cls, mid);
+                
+                if (amgr)
+                {
+                    dirs->mAssets = AAssetManager_fromJava(env, amgr);
+                    
+                    if (dirs->mAssets) dirs->mAssetsRef = (jclass)env->NewGlobalRef(amgr);
+                    
+                    env->DeleteLocalRef(amgr);
+                }
+            }
+        }
+
+        return dirs->mAssets;
+    }
+    
+	static bool CheckAssets (Directories * dirs, lua_State * L, std::vector<unsigned char> & contents, int arg)
 	{
         const char * filename = luaL_checkstring(L, arg);
 
         int bHasDir = lua_isuserdata(L, arg + 1);
 
-        if (!bHasDir || InResourceDir(L, arg + 1))
+        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {
 			void * env;
 
-			jint result = mVM->GetEnv(&env, JNI_VERSION_1_6);
+			jint result = dirs->mVM->GetEnv(&env, JNI_VERSION_1_6);
+            JNIEnv * jenv = static_cast<JNIEnv *>(env);
 
 			assert(result != JNI_EVERSION);
 
-			if (result == JNI_EDETACHED && mVM->AttachCurrentThread(&env, nullptr) < 0) return false;
+			if (result == JNI_EDETACHED && dirs->mVM->AttachCurrentThread(&jenv, nullptr) < 0) return false;
 
-			// TODO: https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy/project/src/android/AndroidFrame.cpp#L600-L617
+            AAssetManager * assets = GetAssets(dirs, jenv);
 
-            AAsset * file = AAssetManager_open(mAssets, filename, AASSET_MODE_BUFFER);
+            if (!assets) return false;
+
+            AAsset * asset = AAssetManager_open(assets, filename, AASSET_MODE_BUFFER);
             
-            if (file)
+            if (asset)
             {
-                size_t len = AAsset_getLength(file);
+                size_t len = AAsset_getLength(asset);
                 
                 contents.resize(len);
                 
-                AAsset_read(file, contents.data(), len);
-                AAsset_close(file);
+                AAsset_read(asset, contents.data(), len);
+                AAsset_close(asset);
                 
                 if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
             }
 
-			if (result == JNI_EDETACHED) mVM->DetachThread(&env);
+			if (result == JNI_EDETACHED) dirs->mVM->DetachCurrentThread();
 
-			return file != nullptr;
+			return asset != nullptr;
         }
 	}
 #endif
@@ -147,7 +177,7 @@ namespace PathXS {
         arg = CoronaLuaNormalize(L, arg);
 
     #ifdef __ANDROID__
-
+        if (CheckAssets(this, L, contents, arg)) return true;
 	#endif
 
 		const char * filename = Canonicalize(L, true, arg);	// ..., filename, ...
