@@ -35,23 +35,24 @@
 #endif
 
 #ifdef __ANDROID__
-    #include <android/asset_manager.h>
+    #include <jni.h>
 #endif
 
 namespace PathXS {
 	struct Directories {
 		int mDocumentsDir;	// Reference to documents directory
+		int mIO_Open;	// Reference to io.open
 		int mPathForFile;	// Reference to pathForFile
 		int mResourceDir;	// Reference to resource directory
 
         #ifdef __ANDROID__
-            AAssetManager * mAssets{nullptr};   // Android assets
+            JavaVM * mVM{nullptr};	// Global VM
         #endif
         
 		static Directories * Instantiate (lua_State * L);
 
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
-        void ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1);
+        bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1);
 	};
 
 	struct LibLoader {

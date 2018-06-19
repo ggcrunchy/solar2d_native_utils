@@ -25,6 +25,11 @@
 #include "utils/LuaEx.h"
 #include "utils/Path.h"
 
+#ifdef __ANDROID__
+    #include <android/asset_manager.h>
+	#include <assert.h>
+#endif
+
 namespace PathXS {
 	static int FromSystem (lua_State * L, const char * name)
 	{
@@ -45,7 +50,14 @@ namespace PathXS {
 		dirs->mDocumentsDir = FromSystem(L, "DocumentsDirectory");
 		dirs->mResourceDir = FromSystem(L, "ResourceDirectory");
 
-		lua_pop(L, 1);	// ..., dirs
+		lua_getglobal(L, "require");// ..., dirs, system, require; n.b. io might not be loaded, e.g. in luaproc process
+		lua_pushliteral(L, "io");	// ..., dirs, system, require, "io"
+		lua_call(L, 1, 1);	// ..., dirs, system, io
+		lua_getfield(L, -1, "open");// ..., dirs, system, io, io.open
+
+		dirs->mIO_Open = lua_ref(L, 1);	// ..., dirs, system, io
+
+		lua_pop(L, 2);	// ..., dirs
 
 		return dirs;
 	}
@@ -79,27 +91,36 @@ namespace PathXS {
 		return lua_tostring(L, arg);
 	}
 
-    void Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
-    {
-        arg = CoronaLuaNormalize(L, arg);
+#ifdef __ANDROID__
+	static bool InResourceDir (lua_State * L, int darg)
+	{
+        lua_getref(L, mResourceDir);// ..., dir, ..., ResourceDirectory
 
-        contents.clear();
+        bool bIn = lua_equal(L, darg, -1);
 
-    #ifdef __ANDROID__
+        lua_pop(L, 1);  // ..., dir, ...
+
+		return bIn;
+	}
+
+	bool CheckAssets (lua_State * L, std::vector<unsigned char> & contents, int arg)
+	{
         const char * filename = luaL_checkstring(L, arg);
-        int bInResourcesDir = true, bHasDir = lua_isuserdata(L, arg + 1);
 
-        if (bHasDir)
+        int bHasDir = lua_isuserdata(L, arg + 1);
+
+        if (!bHasDir || InResourceDir(L, arg + 1))
         {
-            lua_getref(L, mResourceDir);// ..., str, dir, ..., ResourceDirectory
+			void * env;
 
-            bInResourcesDir = lua_equal(L, arg + 1, -1);
+			jint result = mVM->GetEnv(&env, JNI_VERSION_1_6);
 
-            lua_pop(L, 1);  // ..., str, dir, ...
-        }
+			assert(result != JNI_EVERSION);
 
-        if (bInResourcesDir)
-        {
+			if (result == JNI_EDETACHED && mVM->AttachCurrentThread(&env, nullptr) < 0) return false;
+
+			// TODO: https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy/project/src/android/AndroidFrame.cpp#L600-L617
+
             AAsset * file = AAssetManager_open(mAssets, filename, AASSET_MODE_BUFFER);
             
             if (file)
@@ -112,15 +133,46 @@ namespace PathXS {
                 AAsset_close(file);
                 
                 if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
-
-                return;
             }
-        }
-    #endif
-        
-        filename = Canonicalize(L, true, arg);
 
-        //
+			if (result == JNI_EDETACHED) mVM->DetachThread(&env);
+
+			return file != nullptr;
+        }
+	}
+#endif
+
+    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
+    {
+        arg = CoronaLuaNormalize(L, arg);
+
+    #ifdef __ANDROID__
+
+	#endif
+
+		const char * filename = Canonicalize(L, true, arg);	// ..., filename, ...
+
+        lua_getref(L, mIO_Open);// ..., filename, ..., io.open
+		lua_pushvalue(L, arg);	// ..., filename, ..., io.open, filename
+		lua_call(L, 1, 1);	// ..., filename, ..., file / nil
+
+		bool bOpened = !lua_isnil(L, -1);
+
+		if (bOpened)
+		{
+			lua_getfield(L, -1, "read");// ..., filename, ..., file, file.read
+			lua_insert(L, -2);	// ..., filename, ..., file.read, file
+			lua_pushliteral(L, "*a");	// ..., filename, ..., file.read, file, "*a"
+			lua_call(L, 2, 1);	// ..., filename, ..., contents
+
+			const unsigned char * uc = reinterpret_cast<const unsigned char *>(lua_tostring(L, -1));
+
+			contents.assign(uc, uc + lua_objlen(L, -1));
+		}
+
+		lua_pop(L, 1);	// ..., filename, ...
+
+		return bOpened;
     }
 
 	void LibLoader::Close (void)
