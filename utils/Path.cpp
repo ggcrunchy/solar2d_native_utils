@@ -27,7 +27,6 @@
 
 #ifdef __ANDROID__
     #include <android/asset_manager_jni.h>
-	#include <assert.h>
 #endif
 
 namespace PathXS {
@@ -138,12 +137,9 @@ namespace PathXS {
 
         if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {
-			void * env;
+			JNIEnv * jenv;
 
-			jint result = dirs->mVM->GetEnv(&env, JNI_VERSION_1_6);
-            JNIEnv * jenv = static_cast<JNIEnv *>(env);
-
-			assert(result != JNI_EVERSION);
+			jint result = dirs->mVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
 
 			if (result == JNI_EDETACHED && dirs->mVM->AttachCurrentThread(&jenv, nullptr) < 0) return false;
 
