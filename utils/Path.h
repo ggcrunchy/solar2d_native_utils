@@ -46,16 +46,16 @@ namespace PathXS {
 		int mPathForFile;	// Reference to pathForFile
 		int mResourceDir;	// Reference to resource directory
 
-        #ifdef __ANDROID__
-            JavaVM * mVM{nullptr};
-            AAssetManager * mAssets{nullptr};
-            jclass mAssetsRef{0};
-        #endif
+	#ifdef __ANDROID__
+		JavaVM * mVM{nullptr};
+		AAssetManager * mAssets{nullptr};
+		jclass mAssetsRef{0};
+	#endif
         
 		static Directories * Instantiate (lua_State * L);
 
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
-        bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1);
+        bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1, bool bWantText = false);
 	};
 
 	struct LibLoader {

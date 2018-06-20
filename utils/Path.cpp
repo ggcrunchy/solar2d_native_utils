@@ -168,7 +168,7 @@ namespace PathXS {
 	}
 #endif
 
-    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
+    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg, bool bWantText)
     {
         arg = CoronaLuaNormalize(L, arg);
 
@@ -180,7 +180,8 @@ namespace PathXS {
 
         lua_getref(L, mIO_Open);// ..., filename, ..., io.open
 		lua_pushvalue(L, arg);	// ..., filename, ..., io.open, filename
-		lua_call(L, 1, 1);	// ..., filename, ..., file / nil
+		lua_pushstring(L, bWantText ? "r" : "rb");	// ..., filename, ..., io.open, filename, mode
+		lua_call(L, 2, 1);	// ..., filename, ..., file / nil
 
 		bool bOpened = !lua_isnil(L, -1);
 
