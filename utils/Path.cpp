@@ -50,6 +50,26 @@ namespace PathXS {
 		dirs->mDocumentsDir = FromSystem(L, "DocumentsDirectory");
 		dirs->mResourceDir = FromSystem(L, "ResourceDirectory");
 
+		lua_newtable(L);// ..., dirs, system, dlist
+
+		for (lua_pushnil(L); lua_next(L, -3) != 0; lua_pop(L, 1))
+		{
+			if (!lua_isstring(L, -2) || !lua_isuserdata(L, -1)) continue;
+
+			size_t nchars = lua_objlen(L, -2);
+
+			if (nchars <= sizeof("Directory")) continue;
+
+			if (strcmp(lua_tostring(L, -2) + nchars - sizeof("Directory"), "Directory") == 0)
+			{
+				lua_pushvalue(L, -1);	// ..., dirs, system, dlist, nonce, nonce
+				lua_pushboolean(L, 1);	// ..., dirs, system, dlist, nonce, nonce, true
+				lua_rawset(L, -4);	// ..., dirs, system, dlist = { ..., [nonce] = true }, nonce
+			}
+		}
+
+		dirs->mDirsList = lua_ref(L, 1);	// ..., dirs, system
+
 		lua_getglobal(L, "require");// ..., dirs, system, require; n.b. io might not be loaded, e.g. in luaproc process
 		lua_pushliteral(L, "io");	// ..., dirs, system, require, "io"
 		lua_call(L, 1, 1);	// ..., dirs, system, io
@@ -70,7 +90,7 @@ namespace PathXS {
 		lua_getref(L, mPathForFile);// ..., str[, dir], ..., pathForFile
 		lua_pushvalue(L, arg);	// ..., str[, dir], ..., pathForFile, str
 
-		if (lua_isuserdata(L, arg + 1))
+		if (IsDir(L, arg + 1))
 		{
 			lua_pushvalue(L, arg + 1);	// ..., str, dir, ..., pathForFile, str, dir
 			lua_remove(L, arg + 1);	// ..., str, ..., pathForFile, str, dir
@@ -89,6 +109,20 @@ namespace PathXS {
 		lua_replace(L, arg);// ..., file / "", ...
 
 		return lua_tostring(L, arg);
+	}
+
+	bool Directories::IsDir (lua_State * L, int arg)
+	{
+		lua_pushvalue(L, arg);	// ..., dir?, ..., dir?
+		lua_getref(L, mDirsList);	// ..., dir?, list
+		lua_insert(L, -2);	// ..., dir?, ..., list, dir?
+		lua_rawget(L, -2);	// ..., dir?, ..., list, is_dir
+
+		bool bIsDir = LuaXS::Bool(L);
+
+		lua_pop(L, 2);	// ..., dir?, ...
+
+		return bIsDir;
 	}
 
 #ifdef __ANDROID__
@@ -163,7 +197,7 @@ namespace PathXS {
 		if (!sAssets) return false;
 
         const char * filename = luaL_checkstring(L, arg);
-        int bHasDir = lua_isuserdata(L, arg + 1);
+        bool bHasDir = IsDir(L, arg + 1);
 
         if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {

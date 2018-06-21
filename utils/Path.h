@@ -40,6 +40,7 @@
 
 namespace PathXS {
 	struct Directories {
+		int mDirsList;	// List to compare arguments
 		int mDocumentsDir;	// Reference to documents directory
 		int mIO_Open;	// Reference to io.open
 		int mPathForFile;	// Reference to pathForFile
@@ -52,6 +53,7 @@ namespace PathXS {
 		static Directories * Instantiate (lua_State * L);
 
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
+		bool IsDir (lua_State * L, int arg);
         bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1, bool bWantText = false);
 	};
 
