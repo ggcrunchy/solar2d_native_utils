@@ -63,7 +63,7 @@ namespace LuaXS {
 	void AttachGC (lua_State * L, const char * type, lua_CFunction gc);
 	void AttachMethods (lua_State * L, const char * type, void (*populate)(lua_State *));
 	void AttachProperties (lua_State * L, lua_CFunction get_props, const AttachPropertyParams & params = AttachPropertyParams{});
-	void CallInMainState (lua_State * L, lua_CFunction func);
+	void CallInMainState (lua_State * L, lua_CFunction func, void * ud = nullptr);
 	void LoadClosureLibs (lua_State * L, luaL_Reg closures[], int n, const AddParams & params = AddParams{});
 	void LoadFunctionLibs (lua_State * L, luaL_Reg funcs[], const AddParams & params = AddParams{});
 	void NewWeakKeyedTable (lua_State * L);
@@ -281,6 +281,15 @@ namespace LuaXS {
 		if (size < sizeof(T)) luaL_error(L, "NewSizeTyped() called with insufficient size");
 
 		T * instance = static_cast<T *>(lua_newuserdata(L, size));	// ..., ud
+
+		new (instance) T(std::forward<Args>(args)...);
+
+		return instance;
+	}
+
+	template<typename T, typename ... Args> T * NewSizeTypedExtra (lua_State * L, size_t extra, Args && ... args)
+	{
+		T * instance = static_cast<T *>(lua_newuserdata(L, sizeof(T) + extra));	// ..., ud
 
 		new (instance) T(std::forward<Args>(args)...);
 

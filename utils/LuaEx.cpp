@@ -271,18 +271,22 @@ namespace LuaXS {
 		lua_setfield(L, -2, "__index");	// ..., meta = { ..., __index = Index }
 	}
 
-	void CallInMainState (lua_State * L, lua_CFunction func)
+	void CallInMainState (lua_State * L, lua_CFunction func, void * ud)
 	{
 		bool bOK;
 
-		if (IsMainState(L)) bOK = lua_cpcall(L, func, nullptr) == 0;// ...[, err]
+		if (IsMainState(L)) bOK = lua_cpcall(L, func, ud) == 0;	// ...[, err]
 
 		else
 		{
 			lua_getfield(L, LUA_REGISTRYINDEX, "LUAPROC_CALLER_FUNC");	// ..., caller?
 			luaL_checktype(L, -1, LUA_TFUNCTION);
 
-			*LuaXS::NewTyped<lua_CFunction>(L) = func;	// ..., caller, func
+			lua_CFunction * pfunc = LuaXS::NewSizeTypedExtra<lua_CFunction>(L, ud ? sizeof(void *) : 0U);	// ..., caller, func
+
+			*pfunc = func;
+
+			if (ud) *reinterpret_cast<void **>(&pfunc[1]) = ud;
 
 			bOK = lua_pcall(L, 1, 0, 0) == 0;	// ...[, err]
 		}

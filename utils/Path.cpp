@@ -26,6 +26,7 @@
 #include "utils/Path.h"
 
 #ifdef __ANDROID__
+    #include <android/asset_manager.h>
     #include <android/asset_manager_jni.h>
 #endif
 
@@ -91,80 +92,91 @@ namespace PathXS {
 	}
 
 #ifdef __ANDROID__
+	static AAssetManager * sAssets;
+	static jclass sAssetsRef;
+
+	void Directories::InitAssets (JavaVM * vm)
+	{
+		JNIEnv * env;
+
+		jint result = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+
+		if (result != JNI_OK) return;
+
+		// Adapted from code in:
+        // https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy
+        jclass cls = env->FindClass("com/ansca/corona/CoronaActivity");
+        jmethodID mid = env->GetStaticMethodID(cls, "getAssetManager", "()Landroid/content/res/AssetManager;");
+            
+        if (mid)
+        {
+            jobject amgr = (jobject)env->CallStaticObjectMethod(cls, mid);
+                
+            if (amgr)
+            {
+                sAssets = AAssetManager_fromJava(env, amgr);
+                    
+                if (sAssets) sAssetsRef = (jclass)env->NewGlobalRef(amgr);
+                    
+                env->DeleteLocalRef(amgr);
+            }
+        }
+	}
+
 	static bool InResourceDir (Directories * dirs, lua_State * L, int darg)
 	{
         lua_getref(L, dirs->mResourceDir);  // ..., dir, ..., ResourceDirectory
 
-        bool bIn = lua_equal(L, darg, -1);
+        bool bIn = lua_equal(L, darg, -1) != 0;
 
         lua_pop(L, 1);  // ..., dir, ...
 
 		return bIn;
 	}
+    
+	struct AssetRequest {
+		const char * mFilename;
+		std::vector<unsigned char> & mContents;
+		bool mOK{false};
+	};
 
-    static AAssetManager * GetAssets (Directories * dirs, JNIEnv * env)
-    {
-        if (!dirs->mAssets)
-        {
-            // Adapted from code in:
-            // https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy
-            jclass cls = env->FindClass("com/ansca/corona/CoronaActivity");
-            jmethodID mid = env->GetStaticMethodID(cls, "getAssetManager", "()Landroid/content/res/AssetManager;");
+	static int GetAsset (lua_State * L)
+	{
+		AssetRequest * ar = LuaXS::UD<AssetRequest>(L, 1);
+		AAsset * asset = AAssetManager_open(sAssets, ar->mFilename, AASSET_MODE_BUFFER);
             
-            if (mid)
-            {
-                jobject amgr = (jobject)env->CallStaticObjectMethod(cls, mid);
+        if (asset)
+        {
+            size_t len = AAsset_getLength(asset);
                 
-                if (amgr)
-                {
-                    dirs->mAssets = AAssetManager_fromJava(env, amgr);
-                    
-                    if (dirs->mAssets) dirs->mAssetsRef = (jclass)env->NewGlobalRef(amgr);
-                    
-                    env->DeleteLocalRef(amgr);
-                }
-            }
+            ar->mContents.resize(len);
+                
+            AAsset_read(asset, ar->mContents.data(), len);
+            AAsset_close(asset);
         }
 
-        return dirs->mAssets;
-    }
-    
+		return 0;
+	}
+
 	static bool CheckAssets (Directories * dirs, lua_State * L, std::vector<unsigned char> & contents, int arg)
 	{
-        const char * filename = luaL_checkstring(L, arg);
+		if (!sAssets) return false;
 
+        const char * filename = luaL_checkstring(L, arg);
         int bHasDir = lua_isuserdata(L, arg + 1);
 
         if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {
-			JNIEnv * jenv;
+			AssetRequest ar{filename, contents};
 
-			jint result = dirs->mVM->GetEnv(reinterpret_cast<void **>(&jenv), JNI_VERSION_1_6);
-
-			if (result == JNI_EDETACHED && dirs->mVM->AttachCurrentThread(&jenv, nullptr) < 0) return false;
-
-            AAssetManager * assets = GetAssets(dirs, jenv);
-
-            if (!assets) return false;
-
-            AAsset * asset = AAssetManager_open(assets, filename, AASSET_MODE_BUFFER);
-            
-            if (asset)
-            {
-                size_t len = AAsset_getLength(asset);
+			LuaXS::CallInMainState(L, GetAsset, &ar);
                 
-                contents.resize(len);
-                
-                AAsset_read(asset, contents.data(), len);
-                AAsset_close(asset);
-                
-                if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
-            }
+            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
 
-			if (result == JNI_EDETACHED) dirs->mVM->DetachCurrentThread();
-
-			return asset != nullptr;
+			return ar->mOK;
         }
+
+		return false;
 	}
 #endif
 
