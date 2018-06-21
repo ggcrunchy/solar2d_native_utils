@@ -52,7 +52,7 @@ namespace PathXS {
 
 		lua_newtable(L);// ..., dirs, system, dlist
 
-		for (lua_pushnil(L); lua_next(L, -3) != 0; lua_pop(L, 1))
+		for (lua_pushnil(L); lua_next(L, -3); lua_pop(L, 1))
 		{
 			if (!lua_isstring(L, -2) || !lua_isuserdata(L, -1)) continue;
 
@@ -60,11 +60,11 @@ namespace PathXS {
 
 			if (nchars <= sizeof("Directory")) continue;
 
-			if (strcmp(lua_tostring(L, -2) + nchars - sizeof("Directory"), "Directory") == 0)
+			if (strcmp(lua_tostring(L, -2) + nchars - sizeof("Directory") + 1, "Directory") == 0)
 			{
-				lua_pushvalue(L, -1);	// ..., dirs, system, dlist, nonce, nonce
-				lua_pushboolean(L, 1);	// ..., dirs, system, dlist, nonce, nonce, true
-				lua_rawset(L, -4);	// ..., dirs, system, dlist = { ..., [nonce] = true }, nonce
+				lua_pushvalue(L, -1);	// ..., dirs, system, dlist, name, nonce, nonce
+				lua_pushboolean(L, 1);	// ..., dirs, system, dlist, name, nonce, nonce, true
+				lua_rawset(L, -5);	// ..., dirs, system, dlist = { ..., [nonce] = true }, name, nonce
 			}
 		}
 
