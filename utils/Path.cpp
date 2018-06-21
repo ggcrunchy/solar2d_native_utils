@@ -139,7 +139,7 @@ namespace PathXS {
         {
 			JNIEnv * jenv;
 
-			jint result = dirs->mVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+			jint result = dirs->mVM->GetEnv(reinterpret_cast<void **>(&jenv), JNI_VERSION_1_6);
 
 			if (result == JNI_EDETACHED && dirs->mVM->AttachCurrentThread(&jenv, nullptr) < 0) return false;
 
