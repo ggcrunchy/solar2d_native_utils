@@ -28,6 +28,7 @@
 #ifdef __ANDROID__
     #include <android/asset_manager.h>
     #include <android/asset_manager_jni.h>
+    #include <android/log.h>
 #endif
 
 namespace PathXS {
@@ -131,28 +132,31 @@ namespace PathXS {
 
 	void Directories::InitAssets (JavaVM * vm)
 	{
-		JNIEnv * env;
+        JNIEnv * env;
 
-		jint result = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets JVM: %p", vm);		jint result = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets GetEnv(): %i", result);
 		if (result != JNI_OK) return;
 
 		// Adapted from code in:
         // https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy
         jclass cls = env->FindClass("com/ansca/corona/CoronaActivity");
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets FindClass(): %i", (int)cls);
         jmethodID mid = env->GetStaticMethodID(cls, "getAssetManager", "()Landroid/content/res/AssetManager;");
-            
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets getAssetManager(): %i", (int)mid);
         if (mid)
         {
             jobject amgr = (jobject)env->CallStaticObjectMethod(cls, mid);
-                
+
+            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets call it: %i", (int)amgr);
             if (amgr)
             {
                 sAssets = AAssetManager_fromJava(env, amgr);
-                    
+
+                __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets assets: %p", (int)sAssets);
                 if (sAssets) sAssetsRef = (jclass)env->NewGlobalRef(amgr);
-                    
-                env->DeleteLocalRef(amgr);
+                
+                __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets sAssetsRef: %i", (int)sAssetsRef);                env->DeleteLocalRef(amgr);
             }
         }
 	}
@@ -172,6 +176,10 @@ namespace PathXS {
 		const char * mFilename;
 		std::vector<unsigned char> & mContents;
 		bool mOK{false};
+
+        AssetRequest (const char * filename, std::vector<unsigned char> & contents) : mFilename{filename}, mContents(contents)
+        {
+        }
 	};
 
 	static int GetAsset (lua_State * L)
@@ -194,20 +202,22 @@ namespace PathXS {
 
 	static bool CheckAssets (Directories * dirs, lua_State * L, std::vector<unsigned char> & contents, int arg)
 	{
+
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "CheckAssets assets: %p", sAssets);
 		if (!sAssets) return false;
 
         const char * filename = luaL_checkstring(L, arg);
-        bool bHasDir = IsDir(L, arg + 1);
+        bool bHasDir = dirs->IsDir(L, arg + 1);
 
-        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
+        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets file: %s", filename);        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {
 			AssetRequest ar{filename, contents};
 
-			LuaXS::CallInMainState(L, GetAsset, &ar);
-                
-            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
+            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "Before request");			LuaXS::CallInMainState(L, GetAsset, &ar);
+            
+            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "After request");            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
 
-			return ar->mOK;
+			return ar.mOK;
         }
 
 		return false;
