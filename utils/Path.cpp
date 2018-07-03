@@ -119,84 +119,45 @@ namespace PathXS {
 
 		return bIsDir;
 	}
-
-#ifdef __ANDROID__
-	static AAssetManager * sAssets;
-
-    void Directories::SetAssets (AAssetManager * am)
-    {
-        sAssets = am;
-    }
-
-    static bool InResourceDir (Directories * dirs, lua_State * L, int darg)
-	{
-        lua_getref(L, dirs->mResourceDir);  // ..., dir, ..., ResourceDirectory
-
-        bool bIn = lua_equal(L, darg, -1) != 0;
-
-        lua_pop(L, 1);  // ..., dir, ...
-
-		return bIn;
-	}
     
-	struct AssetRequest {
-		const char * mFilename;
-		std::vector<unsigned char> & mContents;
-		bool mOK{false};
+    bool Directories::UsesResourceDir (lua_State * L, int arg)
+    {
+        if (!IsDir(L, arg)) return true;
 
-        AssetRequest (const char * filename, std::vector<unsigned char> & contents) : mFilename{filename}, mContents(contents)
-        {
-        }
-	};
-
-	static int GetAsset (lua_State * L)
+        lua_getref(L, mResourceDir);  // ..., dir, ..., ResourceDirectory
+        
+        bool bIsResDir = lua_equal(L, arg, -1) != 0;
+        
+        lua_pop(L, 1);  // ..., dir, ...
+        
+        return bIsResDir;
+    }
+    
+#ifdef __ANDROID__
+	static bool CheckAssets (Directories * dirs, lua_State * L, /*std::vector<unsigned char> & contents, */int arg)
 	{
-		AssetRequest * ar = LuaXS::UD<AssetRequest>(L, 1);
-		AAsset * asset = AAssetManager_open(sAssets, ar->mFilename, AASSET_MODE_BUFFER);
-            
-        if (asset)
+        if (dirs->UsesResourceDir(L, arg + 1))
         {
-            size_t len = AAsset_getLength(asset);
-                
-            ar->mContents.resize(len);
-                
-            AAsset_read(asset, ar->mContents.data(), len);
-            AAsset_close(asset);
-
-            ar->mOK = true;
-        }
-
-		return 0;
-	}
-
-	static bool CheckAssets (Directories * dirs, lua_State * L, std::vector<unsigned char> & contents, int arg)
-	{
-		if (!sAssets) return false;
-
-        const char * filename = luaL_checkstring(L, arg);
-        bool bHasDir = dirs->IsDir(L, arg + 1);
-
-        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
-        {
-			AssetRequest ar{filename, contents};
+            /*
+			AssetRequest ar{luaL_checkstring(L, arg), contents};
 
             LuaXS::CallInMainState(L, GetAsset, &ar);
             
-            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
+            if (IsDir(L, arg + 1)) lua_remove(L, arg + 1);  // ..., str, ...
 
-			return ar.mOK;
+			return ar.mOK;*/
         }
 
 		return false;
 	}
 #endif
 
-    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
+    void Directories::ReadFileContents (lua_State * L, int arg)
     {
         arg = CoronaLuaNormalize(L, arg);
 
     #ifdef __ANDROID__
-        if (CheckAssets(this, L, contents, arg)) return true;
+        if (CheckAssets(this, L, arg)) return;
 	#endif
 
         const char * filename;
@@ -209,23 +170,13 @@ namespace PathXS {
 		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename, ..., io.open, filename, mode
 		lua_call(L, 2, 1);	// ..., filename, ..., file / nil
 
-		bool bOpened = !lua_isnil(L, -1);
-
-		if (bOpened)
+		if (!lua_isnil(L, -1))
 		{
 			lua_getfield(L, -1, "read");// ..., filename, ..., file, file.read
 			lua_insert(L, -2);	// ..., filename, ..., file.read, file
 			lua_pushliteral(L, "*a");	// ..., filename, ..., file.read, file, "*a"
 			lua_call(L, 2, 1);	// ..., filename, ..., contents
-
-			const unsigned char * uc = reinterpret_cast<const unsigned char *>(lua_tostring(L, -1));
-
-			contents.assign(uc, uc + lua_objlen(L, -1));
 		}
-
-		lua_pop(L, 1);	// ..., filename, ...
-
-		return bOpened;
     }
 
 	void LibLoader::Close (void)
