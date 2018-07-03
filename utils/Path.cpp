@@ -25,12 +25,6 @@
 #include "utils/LuaEx.h"
 #include "utils/Path.h"
 
-#ifdef __ANDROID__
-    #include <android/asset_manager.h>
-    #include <android/asset_manager_jni.h>
-    #include <android/log.h>
-#endif
-
 namespace PathXS {
 	static int FromSystem (lua_State * L, const char * name)
 	{
@@ -128,40 +122,13 @@ namespace PathXS {
 
 #ifdef __ANDROID__
 	static AAssetManager * sAssets;
-	static jclass sAssetsRef;
 
-	void Directories::InitAssets (JavaVM * vm)
-	{
-        JNIEnv * env;
+    void Directories::SetAssets (AAssetManager * am)
+    {
+        sAssets = am;
+    }
 
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets JVM: %p", vm);		jint result = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets GetEnv(): %i", result);
-		if (result != JNI_OK) return;
-
-		// Adapted from code in:
-        // https://github.com/openfl/lime/blob/e511c0d2a5d616081a7826416d111aff1d428025/legacy
-        jclass cls = env->FindClass("com/ansca/corona/CoronaActivity");
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets FindClass(): %i", (int)cls);
-        jmethodID mid = env->GetStaticMethodID(cls, "getAssetManager", "()Landroid/content/res/AssetManager;");
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets getAssetManager(): %i", (int)mid);
-        if (mid)
-        {
-            jobject amgr = (jobject)env->CallStaticObjectMethod(cls, mid);
-
-            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets call it: %i", (int)amgr);
-            if (amgr)
-            {
-                sAssets = AAssetManager_fromJava(env, amgr);
-
-                __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets assets: %p", (int)sAssets);
-                if (sAssets) sAssetsRef = (jclass)env->NewGlobalRef(amgr);
-                
-                __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets sAssetsRef: %i", (int)sAssetsRef);                env->DeleteLocalRef(amgr);
-            }
-        }
-	}
-
-	static bool InResourceDir (Directories * dirs, lua_State * L, int darg)
+    static bool InResourceDir (Directories * dirs, lua_State * L, int darg)
 	{
         lua_getref(L, dirs->mResourceDir);  // ..., dir, ..., ResourceDirectory
 
@@ -195,6 +162,8 @@ namespace PathXS {
                 
             AAsset_read(asset, ar->mContents.data(), len);
             AAsset_close(asset);
+
+            ar->mOK = true;
         }
 
 		return 0;
@@ -202,20 +171,18 @@ namespace PathXS {
 
 	static bool CheckAssets (Directories * dirs, lua_State * L, std::vector<unsigned char> & contents, int arg)
 	{
-
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "CheckAssets assets: %p", sAssets);
 		if (!sAssets) return false;
 
         const char * filename = luaL_checkstring(L, arg);
         bool bHasDir = dirs->IsDir(L, arg + 1);
 
-        __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "InitAssets file: %s", filename);        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
+        if (!bHasDir || InResourceDir(dirs, L, arg + 1))
         {
 			AssetRequest ar{filename, contents};
 
-            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "Before request");			LuaXS::CallInMainState(L, GetAsset, &ar);
+            LuaXS::CallInMainState(L, GetAsset, &ar);
             
-            __android_log_print(ANDROID_LOG_VERBOSE, "BYTEMAP", "After request");            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
+            if (bHasDir) lua_remove(L, arg + 1);// ..., str, ...
 
 			return ar.mOK;
         }
@@ -224,7 +191,7 @@ namespace PathXS {
 	}
 #endif
 
-    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg, bool bWantText)
+    bool Directories::ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg)
     {
         arg = CoronaLuaNormalize(L, arg);
 
@@ -232,11 +199,14 @@ namespace PathXS {
         if (CheckAssets(this, L, contents, arg)) return true;
 	#endif
 
-		const char * filename = Canonicalize(L, true, arg);	// ..., filename, ...
+        const char * filename;
+
+        if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename, ...
+        else filename = luaL_checkstring(L, arg);
 
         lua_getref(L, mIO_Open);// ..., filename, ..., io.open
 		lua_pushvalue(L, arg);	// ..., filename, ..., io.open, filename
-		lua_pushstring(L, bWantText ? "r" : "rb");	// ..., filename, ..., io.open, filename, mode
+		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename, ..., io.open, filename, mode
 		lua_call(L, 2, 1);	// ..., filename, ..., file / nil
 
 		bool bOpened = !lua_isnil(L, -1);

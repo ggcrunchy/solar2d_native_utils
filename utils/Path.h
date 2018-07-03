@@ -35,7 +35,64 @@
 #endif
 
 #ifdef __ANDROID__
-    #include <jni.h>
+    #include <sys/types.h>
+    #include <android/asset_manager.h>
+    #include <android/asset_manager_jni.h>
+
+    #define ASSETS_JNI_BOILERPLATE(PLUGIN)  static jfieldID sLuaThreadID;               \
+                                                                                        \
+    /* Adapted from JNLua source: */                                                    \
+    static jclass referenceclass (JNIEnv * env, const char * name)                      \
+    {                                                                                   \
+        jclass clazz = env->FindClass(name);                                            \
+                                                                                        \
+        if (!clazz) return nullptr;                                                     \
+                                                                                        \
+        return (jclass)env->NewGlobalRef(clazz);                                        \
+    }                                                                                   \
+                                                                                        \
+    static lua_State * getluathread (JNIEnv * env, jobject javastate)                   \
+    {                                                                                   \
+        return (lua_State *) (uintptr_t) env->GetLongField(javastate, sLuaThreadID);    \
+    }                                                                                   \
+                                                                                        \
+    extern "C" {                                                                        \
+        JNIEXPORT jint JNICALL Java_plugin_##PLUGIN##_LuaLoader_OpenLib (               \
+            JNIEnv * env, jobject thiz, jobject javastate                               \
+        ) {                                                                             \
+            lua_State * L = getluathread(env, javastate);                               \
+                                                                                        \
+            lua_pushcfunction(L, luaopen_plugin_##PLUGIN);   /* ..., open_PLUGIN */     \
+            lua_call(L, 0, 1);  /* ..., plugin */                                       \
+                                                                                        \
+            return 1;                                                                   \
+        }                                                                               \
+                                                                                        \
+        JNIEXPORT void JNICALL Java_plugin_Bytemap_LuaLoader_SetAssets (                \
+            JNIEnv * env, jobject thiz, jobject assets                                  \
+        ) {                                                                             \
+            PathXS::Directories::SetAssets(AAssetManager_fromJava(env, assets));        \
+        }                                                                               \
+                                                                                        \
+        JNIEXPORT jint JNICALL JNI_OnLoad (JavaVM * vm, void *)                         \
+        {                                                                               \
+            JNIEnv * env;                                                               \
+                                                                                        \
+            jint result = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6); \
+                                                                                        \
+            if (result != JNI_OK) return JNI_VERSION_1_6;                               \
+                                                                                        \
+            jclass luastate_class;                                                      \
+                                                                                        \
+            if (!(luastate_class = referenceclass(env, "com/naef/jnlua/LuaState")) ||   \
+                !(sLuaThreadID = env->GetFieldID(luastate_class, "luaThread", "J")))    \
+                return JNI_VERSION_1_6;                                                 \
+                                                                                        \
+            return JNI_VERSION_1_6;                                                     \
+        }                                                                               \
+    }
+#else
+    #define ASSETS_JNI_BOILERPLATE(PLUGIN)
 #endif
 
 namespace PathXS {
@@ -45,16 +102,17 @@ namespace PathXS {
 		int mIO_Open;	// Reference to io.open
 		int mPathForFile;	// Reference to pathForFile
 		int mResourceDir;	// Reference to resource directory
-
+        bool mCanonicalize{true};   // Canonicalize file names before fetching content?
+        bool mWantText{false};  // Read in text mode?
 	#ifdef __ANDROID__
-		static void InitAssets (JavaVM * vm);
+		static void SetAssets (AAssetManager * am);
 	#endif
         
 		static Directories * Instantiate (lua_State * L);
-
+        
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
 		bool IsDir (lua_State * L, int arg);
-        bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1, bool bWantText = false);
+        bool ReadFileContents (lua_State * L, std::vector<unsigned char> & contents, int arg = 1);
 	};
 
 	struct LibLoader {
