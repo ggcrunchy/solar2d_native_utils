@@ -385,7 +385,7 @@ namespace LuaXS {
 
 		TransferAndPush(L);	// ..., t, ... ud / nil
 
-		lua_rawseti(L, arr, lua_objlen(L, arr) + 1);// ..., t = { ..., ud }, ...
+		lua_rawseti(L, arr, int(lua_objlen(L, arr)) + 1);   // ..., t = { ..., ud }, ...
 	}
 
 	void LibEntry::TransferAndPush (lua_State * L)
@@ -460,7 +460,7 @@ namespace LuaXS {
 
 		lua_getref(L, arr);// ..., mt, gc, arr
 
-		for (int i = 1, n = lua_objlen(L, -1); i <= n; ++i, lua_pop(L, 1))
+		for (int i = 1, n = int(lua_objlen(L, -1)); i <= n; ++i, lua_pop(L, 1))
 		{
 			lua_rawgeti(L, -1, i);	// ..., mt, gc, arr, lib
 			lua_pushvalue(L, -4);	// ..., mt, gc, arr, lib, mt
@@ -468,7 +468,7 @@ namespace LuaXS {
 		}
 		// ^^^ TODO: did this serve any purpose?
 
-		for (int i = 1, n = lua_objlen(L, -1); i <= n; ++i, lua_pop(L, 1))
+		for (int i = 1, n = int(lua_objlen(L, -1)); i <= n; ++i, lua_pop(L, 1))
 		{
 			lua_rawgeti(L, -1, i);	// ..., mt, gc, arr, lib
 			lua_pushvalue(L, -3);	// ..., mt, gc, arr, lib, gc

@@ -46,10 +46,18 @@ namespace PathXS {
         
 		static Directories * Instantiate (lua_State * L);
         
+        struct FileContentsRAII {
+            lua_State * mL{nullptr};
+            int mPos{0};
+            
+            ~FileContentsRAII (void);
+        };
+        
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
 		bool IsDir (lua_State * L, int arg);
         bool UsesResourceDir (lua_State * L, int arg);
         void ReadFileContents (lua_State * L, int arg = 1);
+        FileContentsRAII WithFileContents (lua_State * L, int arg = 1);
 	};
 
 	struct LibLoader {

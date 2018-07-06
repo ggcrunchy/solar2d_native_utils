@@ -179,6 +179,36 @@ namespace PathXS {
 		}
     }
 
+    Directories::FileContentsRAII Directories::WithFileContents (lua_State * L, int arg)
+    {
+        ReadFileContents(L, arg);   // ..., filename, ..., contents / nil
+
+        FileContentsRAII fc;
+
+    #ifdef __ANDROID__
+        if (!lua_isnil(L, -1))
+        {
+            fc.mL = L;
+            fc.mPos = CoronaLuaNormalize(L, -1);
+        }
+    #endif
+
+        return fc;
+    }
+
+    Directories::FileContentsRAII::~FileContentsRAII (void)
+    {
+    #ifdef __ANDROID__
+        if (mPos)
+        {
+            lua_pushvalue(mL, mPos);// ..., proxy, ..., proxy
+            lua_getfield(mL, -1, "Clear");  // ..., proxy, ..., proxy, proxy:Clear
+            lua_insert(mL, -2); // ..., proxy, ..., proxy:Clear, proxy
+            lua_pcall(mL, 1, 0, 0); // ..., proxy, ...
+        }
+    #endif
+    }
+
 	void LibLoader::Close (void)
 	{
 		if (IsLoaded())
