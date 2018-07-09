@@ -41,6 +41,9 @@ namespace PathXS {
 		int mIO_Open;	// Reference to io.open
 		int mPathForFile;	// Reference to pathForFile
 		int mResourceDir;	// Reference to resource directory
+    #ifdef __ANDROID__
+        int mProxy; // Asset reader proxy
+    #endif
         bool mCanonicalize{true};   // Canonicalize file names before fetching content?
         bool mWantText{false};  // Read in text mode?
         
@@ -52,7 +55,7 @@ namespace PathXS {
             
             ~FileContentsRAII (void);
         };
-        
+
 		const char * Canonicalize (lua_State * L, bool bRead, int arg = 1);
 		bool IsDir (lua_State * L, int arg);
         bool UsesResourceDir (lua_State * L, int arg);

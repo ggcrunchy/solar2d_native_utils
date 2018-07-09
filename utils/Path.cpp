@@ -39,6 +39,17 @@ namespace PathXS {
 	{
 		Directories * dirs = LuaXS::NewTyped<Directories>(L);	// ..., dirs
 
+    #ifdef __ANDROID__
+        lua_getglobal(L, "require");// ..., dirs, require
+        lua_pushliteral(L, "plugin.AssetReader");   // ..., dirs, require, "plugin.AssetReader"
+        lua_call(L, 1, 1);  // ..., dirs, AssetReader
+        lua_getfield(L, -1, "NewProxy");// ..., dirs, AssetReader, AssetReader.NewProxy
+        lua_call(L, 0, 1);  // ..., dirs, AssetReader, proxy
+        lua_remove(L, -2);  // ..., dirs, proxy
+
+        dirs->mProxy = lua_ref(L, 1);   // ..., dirs
+    #endif
+
 		lua_getglobal(L, "system");	// ..., dirs, system
 
 		dirs->mPathForFile = FromSystem(L, "pathForFile");
@@ -134,18 +145,24 @@ namespace PathXS {
     }
     
 #ifdef __ANDROID__
-	static bool CheckAssets (Directories * dirs, lua_State * L, /*std::vector<unsigned char> & contents, */int arg)
+	static bool CheckAssets (Directories * dirs, lua_State * L, int arg)
 	{
         if (dirs->UsesResourceDir(L, arg + 1))
         {
-            /*
-			AssetRequest ar{luaL_checkstring(L, arg), contents};
+            if (dirs->IsDir(L, arg + 1)) lua_remove(L, arg + 1);// ..., filename, ...
 
-            LuaXS::CallInMainState(L, GetAsset, &ar);
+            lua_getref(L, dirs->mProxy);// ..., filename, ..., proxy
+            lua_getfield(L, -1, "Bind");// ..., filename, ..., proxy, proxy:Bind
+            lua_insert(L, -2);  // ..., filename, ..., proxy:Bind, proxy
+            lua_pushvalue(L, arg);  // ..., filename, ..., proxy:Bind, proxy, filename
+            lua_call(L, 2, 1);  // ..., filename, ..., ok
+
+            if (lua_toboolean(L, -1)) lua_getref(L, dirs->mProxy);  // ..., filename, ..., true, proxy
+            else lua_pushnil(L);// ..., filename, ..., false, nil
             
-            if (IsDir(L, arg + 1)) lua_remove(L, arg + 1);  // ..., str, ...
+            lua_remove(L, -2);  // ..., filename, ..., proxy / nil
 
-			return ar.mOK;*/
+            return true;
         }
 
 		return false;
@@ -157,7 +174,7 @@ namespace PathXS {
         arg = CoronaLuaNormalize(L, arg);
 
     #ifdef __ANDROID__
-        if (CheckAssets(this, L, arg)) return;
+        if (CheckAssets(this, L, arg)) return;  // ..., filename, ..., proxy / nil
 	#endif
 
         const char * filename;
