@@ -173,14 +173,13 @@ namespace PathXS {
     {
         arg = CoronaLuaNormalize(L, arg);
 
+        const char * filename = luaL_checkstring(L, arg);	// ensure string
+
     #ifdef __ANDROID__
         if (CheckAssets(this, L, arg)) return;  // ..., filename, ..., proxy / nil
 	#endif
 
-        const char * filename;
-
         if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename, ...
-        else filename = luaL_checkstring(L, arg);
 
         lua_getref(L, mIO_Open);// ..., filename, ..., io.open
 		lua_pushvalue(L, arg);	// ..., filename, ..., io.open, filename
