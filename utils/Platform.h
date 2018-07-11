@@ -71,13 +71,13 @@ namespace PlatformXS {
 		const bool is_win32 = false;
 	#endif
 
-    const bool has_accelerate = is_apple && !is_ios;
+    const bool has_accelerate = is_apple;// && !is_ios;
 	const bool has_neon = is_iphone && !is_iphone_simulator;
 	const bool might_have_neon = is_android || has_neon;
 }
 
 //
-#if defined(__APPLE__) && !TARGET_OS_IOS
+#if defined(__APPLE__)// && !TARGET_OS_IOS
     static_assert(PlatformXS::has_accelerate, "Broken Accelerate test");
 
     #include <Accelerate/Accelerate.h>

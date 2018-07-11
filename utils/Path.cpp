@@ -24,6 +24,7 @@
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
 #include "utils/Path.h"
+#include "utils/Platform.h"
 
 namespace PathXS {
 	static int FromSystem (lua_State * L, const char * name)
@@ -179,25 +180,25 @@ namespace PathXS {
         if (CheckAssets(this, L, arg)) return;  // ..., filename, ..., proxy / nil
 	#endif
 
-        if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename, ...
+        if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename[, base_dir], ...
 
-        lua_getref(L, mIO_Open);// ..., filename, ..., io.open
-		lua_pushvalue(L, arg);	// ..., filename, ..., io.open, filename
-		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename, ..., io.open, filename, mode
-		lua_call(L, 2, 1);	// ..., filename, ..., file / nil
+        lua_getref(L, mIO_Open);// ..., filename[, base_dir], ..., io.open
+		lua_pushvalue(L, arg);	// ..., filename[, base_dir], ..., io.open, filename
+		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename[, base_dir], ..., io.open, filename, mode
+		lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., file / nil
 
 		if (!lua_isnil(L, -1))
 		{
-			lua_getfield(L, -1, "read");// ..., filename, ..., file, file.read
-			lua_insert(L, -2);	// ..., filename, ..., file.read, file
-			lua_pushliteral(L, "*a");	// ..., filename, ..., file.read, file, "*a"
-			lua_call(L, 2, 1);	// ..., filename, ..., contents
+			lua_getfield(L, -1, "read");// ..., filename[, base_dir], ..., file, file.read
+			lua_insert(L, -2);	// ..., filename[, base_dir], ..., file.read, file
+			lua_pushliteral(L, "*a");	// ..., filename[, base_dir], ..., file.read, file, "*a"
+			lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., contents
 		}
     }
 
     Directories::FileContentsRAII Directories::WithFileContents (lua_State * L, int arg)
     {
-        ReadFileContents(L, arg);   // ..., filename, ..., contents / nil
+        ReadFileContents(L, arg);   // ..., filename[, base_dir], ..., contents / nil
 
         FileContentsRAII fc;
 
@@ -223,6 +224,11 @@ namespace PathXS {
             lua_pcall(mL, 1, 0, 0); // ..., proxy, ...
         }
     #endif
+    }
+
+    bool Directories::AbsolutePathsOK (void)
+    {
+        return PlatformXS::is_win32 || (PlatformXS::is_apple && !PlatformXS::is_iphone);
     }
 
 	void LibLoader::Close (void)

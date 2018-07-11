@@ -61,6 +61,28 @@ namespace PathXS {
         bool UsesResourceDir (lua_State * L, int arg);
         void ReadFileContents (lua_State * L, int arg = 1);
         FileContentsRAII WithFileContents (lua_State * L, int arg = 1);
+
+        static bool AbsolutePathsOK (void);
+
+        template<typename F> bool WithFileContentsDo (lua_State * L, int findex, int aindex, F && func)
+        {
+            bool bOldCanonicalize = mCanonicalize;
+            
+            if (lua_toboolean(L, aindex))
+            {
+                luaL_argcheck(L, AbsolutePathsOK(), aindex, "Absolute paths only allowed on desktop");
+
+                mCanonicalize = false;
+            }
+
+            auto fc = WithFileContents(L, findex);  // ..., contents / nil
+
+            mCanonicalize = bOldCanonicalize;
+            
+            ByteReader bytes{L, -1};
+
+            return bytes.mBytes ? func(bytes) : false;
+        }
 	};
 
 	struct LibLoader {
