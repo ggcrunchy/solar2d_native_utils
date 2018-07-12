@@ -51,6 +51,7 @@ namespace PathXS {
         
         struct FileContentsRAII {
             lua_State * mL{nullptr};
+			FILE * mFP{nullptr};
             int mPos{0};
             
             ~FileContentsRAII (void);
@@ -101,17 +102,17 @@ namespace PathXS {
 		{
 			if (!mLib) return false;
 
-	#ifdef _WIN32
+		#ifdef _WIN32
 			*func = (F)GetProcAddress(mLib, name);
 
 			return func != nullptr;
-	#else
+		#else
 			dlerror();
 
 			*(void **)&func = dlsym(RTLD_NEXT, name);
 
 			return func != nullptr || dlerror() == nullptr;
-	#endif
+		#endif
 		}
 	};
 

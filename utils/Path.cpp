@@ -222,8 +222,9 @@ namespace PathXS {
             lua_getfield(mL, -1, "Clear");  // ..., proxy, ..., proxy, proxy:Clear
             lua_insert(mL, -2); // ..., proxy, ..., proxy:Clear, proxy
             lua_pcall(mL, 1, 0, 0); // ..., proxy, ...
-        }
+        } else
     #endif
+		if (mFP) fclose(mFP);
     }
 
     bool Directories::AbsolutePathsOK (void)
