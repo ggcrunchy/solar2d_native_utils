@@ -77,7 +77,7 @@ namespace PlatformXS {
 }
 
 //
-#if defined(__APPLE__)// && !TARGET_OS_IOS
+#if defined(__APPLE__) && !TARGET_OS_IOS
     static_assert(PlatformXS::has_accelerate, "Broken Accelerate test");
 
     #include <Accelerate/Accelerate.h>

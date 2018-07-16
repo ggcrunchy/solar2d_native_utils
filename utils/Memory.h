@@ -142,7 +142,6 @@ namespace MemoryXS {
 		void * AddToStack (size_t size);
 		unsigned char * PointPast (void * ptr, size_t size);
 		std::vector<Item>::iterator Find (void * ptr);
-		void EnsureCapacity (void);
 		void TryToRewind (const Item & item);
 
 		enum { eStackSize = 8192 };

@@ -40,17 +40,6 @@ namespace PathXS {
 	{
 		Directories * dirs = LuaXS::NewTyped<Directories>(L);	// ..., dirs
 
-    #ifdef __ANDROID__
-        lua_getglobal(L, "require");// ..., dirs, require
-        lua_pushliteral(L, "plugin.AssetReader");   // ..., dirs, require, "plugin.AssetReader"
-        lua_call(L, 1, 1);  // ..., dirs, AssetReader
-        lua_getfield(L, -1, "NewProxy");// ..., dirs, AssetReader, AssetReader.NewProxy
-        lua_call(L, 0, 1);  // ..., dirs, AssetReader, proxy
-        lua_remove(L, -2);  // ..., dirs, proxy
-
-        dirs->mProxy = lua_ref(L, 1);   // ..., dirs
-    #endif
-
 		lua_getglobal(L, "system");	// ..., dirs, system
 
 		dirs->mPathForFile = FromSystem(L, "pathForFile");
@@ -146,10 +135,35 @@ namespace PathXS {
     }
     
 #ifdef __ANDROID__
+    static bool HasProxy (Directories * dirs, lua_State * L)
+    {
+        if (dirs->mProxy != LUA_NOREF) return true;
+
+        lua_getglobal(L, "require");// ..., require
+        lua_pushliteral(L, "plugin.AssetReader");   // ..., require, "plugin.AssetReader"
+
+        if (lua_pcall(L, 1, 1, 0) == 0) // ..., AssetReader / err
+        {
+            lua_getfield(L, -1, "NewProxy");// ..., AssetReader, AssetReader.NewProxy
+            lua_call(L, 0, 1);  // ..., AssetReader, proxy
+            lua_remove(L, -2);  // ..., proxy
+
+            dirs->mProxy = lua_ref(L, 1);   // ...
+
+            return true;
+        }
+
+        lua_pop(L, 1);  // ...; n.b. eat the error
+
+        return false;
+    }
+
 	static bool CheckAssets (Directories * dirs, lua_State * L, int arg)
-	{
+    {
         if (dirs->UsesResourceDir(L, arg + 1))
         {
+            if (!HasProxy(dirs, L)) return false;
+
             if (dirs->IsDir(L, arg + 1)) lua_remove(L, arg + 1);// ..., filename, ...
 
             lua_getref(L, dirs->mProxy);// ..., filename, ..., proxy
@@ -160,7 +174,7 @@ namespace PathXS {
 
             if (lua_toboolean(L, -1)) lua_getref(L, dirs->mProxy);  // ..., filename, ..., true, proxy
             else lua_pushnil(L);// ..., filename, ..., false, nil
-            
+
             lua_remove(L, -2);  // ..., filename, ..., proxy / nil
 
             return true;
@@ -181,18 +195,20 @@ namespace PathXS {
 	#endif
 
         if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename[, base_dir], ...
-
+        CoronaLog("FILENAME %s", luaL_checkstring(L, arg));
         lua_getref(L, mIO_Open);// ..., filename[, base_dir], ..., io.open
 		lua_pushvalue(L, arg);	// ..., filename[, base_dir], ..., io.open, filename
 		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename[, base_dir], ..., io.open, filename, mode
 		lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., file / nil
-
+        CoronaLog("WHAT? %s", luaL_typename(L, -1));
 		if (!lua_isnil(L, -1))
 		{
 			lua_getfield(L, -1, "read");// ..., filename[, base_dir], ..., file, file.read
 			lua_insert(L, -2);	// ..., filename[, base_dir], ..., file.read, file
 			lua_pushliteral(L, "*a");	// ..., filename[, base_dir], ..., file.read, file, "*a"
+            CoronaLog("A");
 			lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., contents
+            CoronaLog("B");
 		}
     }
 
@@ -206,7 +222,8 @@ namespace PathXS {
         if (!lua_isnil(L, -1))
         {
             fc.mL = L;
-            fc.mPos = CoronaLuaNormalize(L, -1);
+
+            if (mProxy != LUA_NOREF) fc.mPos = CoronaLuaNormalize(L, -1);
         }
     #endif
 

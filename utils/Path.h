@@ -42,7 +42,7 @@ namespace PathXS {
 		int mPathForFile;	// Reference to pathForFile
 		int mResourceDir;	// Reference to resource directory
     #ifdef __ANDROID__
-        int mProxy; // Asset reader proxy
+        int mProxy{LUA_NOREF}; // Asset reader proxy
     #endif
         bool mCanonicalize{true};   // Canonicalize file names before fetching content?
         bool mWantText{false};  // Read in text mode?
@@ -151,10 +151,9 @@ namespace PathXS {
 
 		WriteData (lua_State * L, Directories * dirs = nullptr, Extra extra = None) : mData{nullptr}, mExtra{0}, mAsUserdata{false}
 		{
-			//
 			WriteAuxReader waux{L, 2, 5, dirs};
 
-			mFilename = waux.mFilename;
+            mFilename = waux.mFilename;
 			mComp = luaL_checkint(L, 4);
 			mW = waux.mW;
 			mH = waux.mH;
@@ -173,8 +172,6 @@ namespace PathXS {
 			else if (extra == Quality && mExtra == 0) mExtra = 90;
 
 			mData = waux.GetBytes<T>(L, w);
-		}
-
-		operator const T * (void) { return mData; }
+        }
 	};
 }

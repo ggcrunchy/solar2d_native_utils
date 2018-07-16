@@ -321,22 +321,18 @@ void MemoryXS::ScopedSystem::FailAssert (const char * what)
 
 void * MemoryXS::ScopedSystem::Malloc (size_t size)
 {
-	mCurrent->EnsureCapacity();
-
 	void * mem = mCurrent->AddToStack(size);
 
 	if (!mem) mem = malloc(size);
 	if (!mem) luaL_error(mL, "Out of memory");
 
-	mCurrent->mAllocs.emplace_back(MemoryXS::Scoped::Item{mem, size});
+	mCurrent->mAllocs.push_back(MemoryXS::Scoped::Item{mem, size});
 
 	return mem;
 }
 
 void * MemoryXS::ScopedSystem::Calloc (size_t num, size_t size)
 {
-	mCurrent->EnsureCapacity();
-
 	void * mem = mCurrent->AddToStack(num * size);
 
 	if (mem) memset(mem, 0, num * size);
@@ -345,7 +341,7 @@ void * MemoryXS::ScopedSystem::Calloc (size_t num, size_t size)
 
 	if (!mem) luaL_error(mL, "Out of memory");
 
-	mCurrent->mAllocs.emplace_back(MemoryXS::Scoped::Item{mem, num * size});
+	mCurrent->mAllocs.push_back(MemoryXS::Scoped::Item{mem, num * size});
 
 	return mem;
 }
@@ -367,35 +363,15 @@ void * MemoryXS::ScopedSystem::Realloc (void * ptr, size_t size)
 		//
 		if (iter != mCurrent->mAllocs.end())
 		{
-			if (size <= iter->mSize) return ptr;
-
-			// 
 			bool bWasInStack = mCurrent->InStack(ptr);
 
-			if (bWasInStack && mCurrent->mPos == mCurrent->PointPast(ptr, iter->mSize))
-			{
-				auto pos = mCurrent->mPos;
+            if (bWasInStack) mCurrent->TryToRewind(*iter);
 
-				mCurrent->mPos = static_cast<unsigned char *>(iter->mPtr);
-
-				if (mCurrent->AddToStack(size))
-				{
-					iter->mSize = size;
-
-					return ptr;
-				}
-
-				else mCurrent->mPos = pos;
-			}
-
-			//
 			void * mem = mCurrent->AddToStack(size);
 
 			if (!mem) mem = realloc(!bWasInStack ? ptr : nullptr, size);
-
-			if (bWasInStack) memcpy(mem, ptr, iter->mSize);
-
-			if (!mem) luaL_error(mL, "Out of memory");
+            if (!mem) luaL_error(mL, "Out of memory");
+            if (bWasInStack && mem != ptr) memcpy(mem, ptr, (std::min)(iter->mSize, size));
 
 			// Replace the allocation entry. (Old stack space will be tombstoned.)
 			iter->mPtr = mem;
@@ -443,15 +419,15 @@ bool MemoryXS::Scoped::InStack (void * ptr) const
 {
 	unsigned char * uc = static_cast<unsigned char *>(ptr);
 	
-	return uc >= mStack && uc < mStack + eStackSize;
+    return uc >= mStack && uc < mStack + eStackSize;
 }
 
 void * MemoryXS::Scoped::AddToStack (size_t size)
 {
-	size_t space = size_t(mStack + eStackSize - mPos);
+    size_t space = size_t(mStack + eStackSize - mPos);
 	void * ptr = mPos, * aligned = Align(8U, size, ptr, &space);
 
-	if (aligned) mPos = PointPast(ptr, size);
+    if (aligned) mPos = PointPast(ptr, size);
 
 	return aligned;
 }
@@ -468,17 +444,12 @@ std::vector<MemoryXS::Scoped::Item>::iterator MemoryXS::Scoped::Find (void * ptr
 	return std::find_if(mAllocs.begin(), mAllocs.end(), [ptr](const Item & item) { return item.mPtr == ptr; });
 }
 
-void MemoryXS::Scoped::EnsureCapacity (void)
-{
-	if (mAllocs.capacity() == mAllocs.size()) mAllocs.reserve(mAllocs.size() + 20U);
-}
-
 void MemoryXS::Scoped::TryToRewind (const MemoryXS::Scoped::Item & item)
 {
 	if (mPos == PointPast(item.mPtr, item.mSize)) mPos = static_cast<unsigned char *>(item.mPtr);
 }
 
-MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mPos{mStack}, mAllocs{}
+MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mPos{mStack}, mAllocs()
 {
 	system.mCurrent = this;
 }
