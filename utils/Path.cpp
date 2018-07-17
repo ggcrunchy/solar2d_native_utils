@@ -195,20 +195,18 @@ namespace PathXS {
 	#endif
 
         if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename[, base_dir], ...
-        CoronaLog("FILENAME %s", luaL_checkstring(L, arg));
+
         lua_getref(L, mIO_Open);// ..., filename[, base_dir], ..., io.open
 		lua_pushvalue(L, arg);	// ..., filename[, base_dir], ..., io.open, filename
 		lua_pushstring(L, mWantText ? "r" : "rb"); // ..., filename[, base_dir], ..., io.open, filename, mode
 		lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., file / nil
-        CoronaLog("WHAT? %s", luaL_typename(L, -1));
+
 		if (!lua_isnil(L, -1))
 		{
 			lua_getfield(L, -1, "read");// ..., filename[, base_dir], ..., file, file.read
 			lua_insert(L, -2);	// ..., filename[, base_dir], ..., file.read, file
 			lua_pushliteral(L, "*a");	// ..., filename[, base_dir], ..., file.read, file, "*a"
-            CoronaLog("A");
 			lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., contents
-            CoronaLog("B");
 		}
     }
 
