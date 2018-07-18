@@ -27,6 +27,7 @@
 #include "ByteReader.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
+#include <utility>
 
 #ifdef _WIN32
 	#include <Windows.h>
@@ -65,10 +66,20 @@ namespace PathXS {
 
         static bool AbsolutePathsOK (void);
 
+        template<typename F> bool AuxWithFileContentsDo (lua_State * L, int findex, F && func, bool bOldCanonicalize)
+        {
+            auto fc = WithFileContents(L, findex);  // ..., proxy / contents / nil
+            mCanonicalize = bOldCanonicalize;
+            
+            ByteReader bytes{L, -1};
+
+            return bytes.mBytes ? func(bytes) : false;
+        }
+
         template<typename F> bool WithFileContentsDo (lua_State * L, int findex, int aindex, F && func)
         {
             bool bOldCanonicalize = mCanonicalize;
-            
+
             if (lua_toboolean(L, aindex))
             {
                 luaL_argcheck(L, AbsolutePathsOK(), aindex, "Absolute paths only allowed on desktop");
@@ -76,13 +87,7 @@ namespace PathXS {
                 mCanonicalize = false;
             }
 
-            auto fc = WithFileContents(L, findex);  // ..., contents / nil
-
-            mCanonicalize = bOldCanonicalize;
-            
-            ByteReader bytes{L, -1};
-
-            return bytes.mBytes ? func(bytes) : false;
+            return AuxWithFileContentsDo(L, findex, std::forward<F>(func), bOldCanonicalize);
         }
 	};
 
@@ -113,6 +118,7 @@ namespace PathXS {
 
 			return func != nullptr || dlerror() == nullptr;
 		#endif
+            // TODO: these checks ^^^ should be against *func, no?
 		}
 	};
 
