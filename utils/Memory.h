@@ -140,7 +140,7 @@ namespace MemoryXS {
 
 		bool InStack (void * ptr) const;
 		void * AddToStack (size_t size);
-		unsigned char * PointPast (void * ptr, size_t size);
+		unsigned char * PointPast (void * ptr, size_t size) const;
 		std::vector<Item>::iterator Find (void * ptr);
 		void TryToRewind (const Item & item);
 
@@ -173,4 +173,38 @@ namespace MemoryXS {
 		size_t GetSize (void * ptr);
 		void Push (void * ptr, bool bRemove = true);
 	};
+
+    //
+    struct ScopedListSystem;
+
+    struct ScopedList {
+        bool Exists (void * ptr) const;
+        void Add (void * ptr);
+        void Remove (void * ptr);
+        void RemoveAll (void);
+        std::vector<void *>::iterator Find (void * ptr);
+
+        ScopedListSystem & mSystem; // System that owns this
+        ScopedList * mPrev{nullptr};// Previous entry, if any
+        std::vector<void *> mPtrs;  // List of pointers
+
+        ScopedList (ScopedListSystem & system);
+        ~ScopedList (void);
+    };
+
+    struct ScopedListSystem {
+        lua_State * mL{nullptr};// Main Lua state for this
+        ScopedList * mCurrent{nullptr}; // Entry currently on stack
+
+        static ScopedListSystem * New (lua_State * L);
+
+        ScopedList Bookmark (void) { return ScopedList{*this}; }
+
+        // Interface
+        void FailAssert (const char * what);
+        void * Malloc (size_t size);
+        void * Calloc (size_t num, size_t size);
+        void * Realloc (void * ptr, size_t size);
+        void Free (void * ptr);
+    };
 }

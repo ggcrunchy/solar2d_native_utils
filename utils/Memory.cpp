@@ -432,7 +432,7 @@ void * MemoryXS::Scoped::AddToStack (size_t size)
 	return aligned;
 }
 
-unsigned char * MemoryXS::Scoped::PointPast (void * ptr, size_t size)
+unsigned char * MemoryXS::Scoped::PointPast (void * ptr, size_t size) const
 {
 	return static_cast<unsigned char *>(ptr) + size;
 }
@@ -462,4 +462,102 @@ MemoryXS::Scoped::~Scoped (void)
 	}
 
 	mSystem.mCurrent = mPrev;
+}
+
+bool MemoryXS::ScopedList::Exists (void * ptr) const
+{
+    return ptr != nullptr && std::find(mPtrs.begin(), mPtrs.end(), ptr) != mPtrs.end();
+}
+
+void MemoryXS::ScopedList::Add (void * ptr)
+{
+    auto iter = std::find(mPtrs.begin(), mPtrs.end(), nullptr);
+
+    if (iter != mPtrs.end()) *iter = ptr;
+    else if (ptr) mPtrs.push_back(ptr);
+}
+
+void MemoryXS::ScopedList::Remove (void * ptr)
+{
+    auto iter = std::find(mPtrs.begin(), mPtrs.end(), ptr);
+
+    if (iter != mPtrs.end()) *iter = nullptr;
+}
+
+void MemoryXS::ScopedList::RemoveAll (void)
+{
+    mPtrs.clear();
+}
+
+std::vector<void *>::iterator MemoryXS::ScopedList::Find (void * ptr)
+{
+    if (!ptr) return mPtrs.end();
+
+    return std::find(mPtrs.begin(), mPtrs.end(), ptr);
+}
+
+MemoryXS::ScopedList::ScopedList (MemoryXS::ScopedListSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mPtrs()
+{
+    system.mCurrent = this;
+}
+
+MemoryXS::ScopedList::~ScopedList (void)
+{
+    for (auto iter : mPtrs) free(iter);
+}
+
+MemoryXS::ScopedListSystem * MemoryXS::ScopedListSystem::New (lua_State * L)
+{
+    ScopedListSystem * system = LuaXS::NewTyped<ScopedListSystem>(L);// ..., system
+    
+    system->mL = L;
+    
+    lua_pushlightuserdata(L, system);    // ..., system, system_ptr
+    lua_insert(L, -2);    // ..., system_ptr, system
+    lua_rawset(L, LUA_REGISTRYINDEX);    // ...; registry = { ..., [system_ptr] = system }
+    
+    return system;
+}
+
+void MemoryXS::ScopedListSystem::FailAssert (const char * what)
+{
+    luaL_error(mL, what);
+}
+
+void * MemoryXS::ScopedListSystem::Malloc (size_t size)
+{
+    void * ptr = malloc(size);
+
+    mCurrent->Add(ptr);
+
+    return ptr;
+}
+
+void * MemoryXS::ScopedListSystem::Calloc (size_t num, size_t size)
+{
+    void * ptr = calloc(num, size);
+
+    mCurrent->Add(ptr);
+
+    return ptr;
+}
+
+void * MemoryXS::ScopedListSystem::Realloc (void * ptr, size_t size)
+{
+    void * mem = realloc(ptr, size);
+
+    if (mem != ptr)
+    {
+        mCurrent->Remove(ptr);
+        mCurrent->Add(mem);
+    }
+
+    return mem;
+}
+
+void MemoryXS::ScopedListSystem::Free (void * ptr)
+{
+    mCurrent->Remove(ptr);
+
+    free(ptr);
 }
