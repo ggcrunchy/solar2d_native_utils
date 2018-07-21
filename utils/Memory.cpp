@@ -504,6 +504,8 @@ MemoryXS::ScopedList::ScopedList (MemoryXS::ScopedListSystem & system) : mSystem
 MemoryXS::ScopedList::~ScopedList (void)
 {
     for (auto iter : mPtrs) free(iter);
+    
+    mSystem.mCurrent = mPrev;
 }
 
 MemoryXS::ScopedListSystem * MemoryXS::ScopedListSystem::New (lua_State * L)
@@ -546,6 +548,8 @@ void * MemoryXS::ScopedListSystem::Realloc (void * ptr, size_t size)
 {
     void * mem = realloc(ptr, size);
 
+    if (size == 0U) mem = nullptr;
+    
     if (mem != ptr)
     {
         mCurrent->Remove(ptr);
@@ -557,7 +561,7 @@ void * MemoryXS::ScopedListSystem::Realloc (void * ptr, size_t size)
 
 void MemoryXS::ScopedListSystem::Free (void * ptr)
 {
-    mCurrent->Remove(ptr);
+    if (mCurrent) mCurrent->Remove(ptr);
 
     free(ptr);
 }
