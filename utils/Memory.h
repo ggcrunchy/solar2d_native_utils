@@ -24,11 +24,12 @@
 #pragma once
 
 #include "CoronaLua.h"
+#include "utils/Namespace.h"
 #include "external/aligned_allocator.h"
 #include <vector>
 
 //
-namespace MemoryXS {
+namespace CEU_NAMESPACE(MemoryXS) {
 	//
 	struct LuaMemory {
 		lua_State * mL{nullptr};// Main Lua state for this 
@@ -208,3 +209,5 @@ namespace MemoryXS {
         void Free (void * ptr);
     };
 }
+
+using namespace CEU_NAMESPACE(MemoryXS);

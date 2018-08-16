@@ -25,6 +25,7 @@
 
 #include "CoronaLua.h"
 #include "CoronaGraphics.h"
+#include "utils/Namespace.h"
 #include <stdint.h>
 #include <functional>
 #include <limits>
@@ -33,7 +34,7 @@
 #include <vector>
 
 //
-namespace LuaXS {
+namespace CEU_NAMESPACE(LuaXS) {
 	//
 	struct AddParams {
 		int mFirstPos;
@@ -783,3 +784,5 @@ namespace LuaXS {
 		}, app);// ..., meta
 	}
 };
+
+using namespace CEU_NAMESPACE(LuaXS);

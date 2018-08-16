@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "utils/Namespace.h"
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -41,7 +42,7 @@
 	#error "Unsupported target"
 #endif
 
-namespace ThreadXS {
+namespace CEU_NAMESPACE(ThreadXS) {
 	// Macro to declare type with thread-local duration, preferring compiler support when available.
 	// Using `thread_local` would be even better, but seems to be pretty hit-and-miss.
 	#ifdef _WIN32
@@ -190,3 +191,5 @@ namespace ThreadXS {
 	// __gnu_parallel:: prefix_sum
 	// See also thrust, etc.
 }
+
+using namespace CEU_NAMESPACE(ThreadXS);

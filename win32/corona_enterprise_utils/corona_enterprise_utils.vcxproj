@@ -18,6 +18,7 @@
     <ClInclude Include="..\..\utils\Compat.h" />
     <ClInclude Include="..\..\utils\LuaEx.h" />
     <ClInclude Include="..\..\utils\Memory.h" />
+    <ClInclude Include="..\..\utils\Namespace.h" />
     <ClInclude Include="..\..\utils\Path.h" />
     <ClInclude Include="..\..\utils\Platform.h" />
     <ClInclude Include="..\..\utils\SIMD.h" />

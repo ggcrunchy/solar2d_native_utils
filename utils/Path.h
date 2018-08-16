@@ -27,6 +27,7 @@
 #include "ByteReader.h"
 #include "utils/Byte.h"
 #include "utils/LuaEx.h"
+#include "utils/Namespace.h"
 #include <utility>
 
 #ifdef _WIN32
@@ -35,7 +36,7 @@
 	#include <dlfcn.h>
 #endif
 
-namespace PathXS {
+namespace CEU_NAMESPACE(PathXS) {
 	struct Directories {
 		int mDirsList;	// List to compare arguments
 		int mDocumentsDir;	// Reference to documents directory
@@ -181,3 +182,5 @@ namespace PathXS {
         }
 	};
 }
+
+using namespace CEU_NAMESPACE(PathXS);

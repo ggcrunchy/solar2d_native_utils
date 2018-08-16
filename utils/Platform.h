@@ -23,11 +23,13 @@
 
 #pragma once
 
+#include "utils/Namespace.h"
+
 #ifdef __APPLE__
 	#include "TargetConditionals.h"
 #endif
 
-namespace PlatformXS {
+namespace CEU_NAMESPACE(PlatformXS) {
 	#ifdef __ANDROID__
 		const bool is_android = true;
 	#else
@@ -93,3 +95,5 @@ namespace PlatformXS {
 
     #define MIGHT_HAVE_NEON
 #endif
+
+using namespace CEU_NAMESPACE(PlatformXS);

@@ -26,10 +26,11 @@
 #include "CoronaLua.h"
 #include "ByteReader.h"
 #include "utils/LuaEx.h"
+#include "utils/Namespace.h"
 #include "external/aligned_allocator.h"
 #include <vector>
 
-namespace ByteXS {
+namespace CEU_NAMESPACE(ByteXS) {
     //
     struct ByteWriter {
         luaL_Buffer mB;	// Buffer, when not writing to a blob
@@ -138,3 +139,5 @@ namespace ByteXS {
 		return LuaXS::PCallWithStackThenReturn(L, wrapped, falsy);
 	}
 }
+
+using namespace CEU_NAMESPACE(ByteXS);
