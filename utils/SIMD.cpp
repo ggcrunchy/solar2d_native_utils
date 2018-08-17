@@ -45,7 +45,7 @@
 	#include <cpu-features.h>
 #endif
 
-namespace SimdXS {
+CEU_BEGIN_NAMESPACE(SimdXS) {
 	bool CanUseNeon (void)
 	{
 	#ifdef __ANDROID__
@@ -292,4 +292,4 @@ namespace SimdXS {
 	{
 		AuxUnorm8sToFloats(u8, pfloats, n, bNoTile);
 	}
-}
+CEU_CLOSE_NAMESPACE()

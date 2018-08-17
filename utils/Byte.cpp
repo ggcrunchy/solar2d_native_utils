@@ -26,7 +26,7 @@
 #include "utils/LuaEx.h"
 #include "utils/SIMD.h"
 
-namespace ByteXS {
+CEU_BEGIN_NAMESPACE(ByteXS) {
 	//
 	template<typename F> float * LoadFloats (lua_State * L, int arg, F func, size_t n, size_t size, float * afloats, size_t na)
 	{
@@ -150,4 +150,4 @@ namespace ByteXS {
 
 		lua_setmetatable(L, -2);// ..., ud
 	}
-}
+CEU_CLOSE_NAMESPACE()

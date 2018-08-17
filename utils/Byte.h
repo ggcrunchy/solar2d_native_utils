@@ -30,7 +30,7 @@
 #include "external/aligned_allocator.h"
 #include <vector>
 
-namespace CEU_NAMESPACE(ByteXS) {
+CEU_BEGIN_NAMESPACE(ByteXS) {
     //
     struct ByteWriter {
         luaL_Buffer mB;	// Buffer, when not writing to a blob
@@ -138,6 +138,4 @@ namespace CEU_NAMESPACE(ByteXS) {
 
 		return LuaXS::PCallWithStackThenReturn(L, wrapped, falsy);
 	}
-}
-
-using namespace CEU_NAMESPACE(ByteXS);
+CEU_END_NAMESPACE(ByteXS)

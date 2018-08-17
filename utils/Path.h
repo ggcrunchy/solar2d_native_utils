@@ -36,7 +36,7 @@
 	#include <dlfcn.h>
 #endif
 
-namespace CEU_NAMESPACE(PathXS) {
+CEU_BEGIN_NAMESPACE(PathXS) {
 	struct Directories {
 		int mDirsList;	// List to compare arguments
 		int mDocumentsDir;	// Reference to documents directory
@@ -181,6 +181,4 @@ namespace CEU_NAMESPACE(PathXS) {
 			mData = waux.GetBytes<T>(L, w);
         }
 	};
-}
-
-using namespace CEU_NAMESPACE(PathXS);
+CEU_END_NAMESPACE(PathXS)

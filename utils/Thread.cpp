@@ -25,7 +25,7 @@
 #include <pthread.h>
 #include <map>
 
-namespace ThreadXS {
+CEU_BEGIN_NAMESPACE(ThreadXS) {
 	//
 	using map_type = std::map<size_t, Slot::storage_type>;
 
@@ -107,4 +107,4 @@ namespace ThreadXS {
 
 		Assign((*tls)[mIndex], var, mData.size());
 	}
-}
+CEU_CLOSE_NAMESPACE()

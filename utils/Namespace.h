@@ -24,7 +24,14 @@
 #pragma once
 
 #ifdef CEU_NAMESPACE_PREFIX
-	#define CEU_NAMESPACE(name) CEU_NAMESPACE_PREFIX ## name
+    #define CEU_BEGIN_NAMESPACE(name) namespace CEU_NAMESPACE_PREFIX {  \
+                                        namespace name
+    #define CEU_CLOSE_NAMESPACE()       }   \
+                                    }
+    #define CEU_END_NAMESPACE(name) CEU_CLOSE_NAMESPACE()                       \
+                                    namespace name = CEU_NAMESPACE_PREFIX::name;
 #else
-	#define CEU_NAMESPACE(name) name
+	#define CEU_BEGIN_NAMESPACE(name) namespace name
+    #define CEU_CLOSE_NAMESPACE() }
+    #define CEU_END_NAMESPACE(name) CEU_CLOSE_NAMESPACE()
 #endif

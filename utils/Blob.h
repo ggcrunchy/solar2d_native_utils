@@ -28,7 +28,7 @@
 #include "external/aligned_allocator.h"
 #include <vector>
 
-namespace CEU_NAMESPACE(BlobXS) {
+CEU_BEGIN_NAMESPACE(BlobXS) {
 	//
 	template<size_t N, typename T = unsigned char> struct VectorType {
 		typedef std::vector<T, simdpp::SIMDPP_ARCH_NAMESPACE::aligned_allocator<T, N>> type;
@@ -171,6 +171,4 @@ namespace CEU_NAMESPACE(BlobXS) {
 	inline BlobPimpl::storage_id GetID (lua_State * L, int arg) { return UsingPimpl(L).GetID(L, arg); }
 	inline bool Exists (lua_State * L, BlobPimpl::storage_id id) { return UsingPimpl(L).Exists(id); }
 	inline bool Sync (lua_State * L, int arg, BlobPimpl::storage_id id, void * key = nullptr) { return UsingPimpl(L).Sync(L, arg, id, key); }
-}
-
-using namespace CEU_NAMESPACE(BlobXS);
+CEU_END_NAMESPACE(BlobXS)

@@ -29,11 +29,9 @@
 #include <utility>
 #include <vector>
 
-namespace CEU_NAMESPACE(SimdXS) {
+CEU_BEGIN_NAMESPACE(SimdXS) {
 	bool CanUseNeon (void);
 
 	void FloatsToUnorm8s (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n, bool bNoTile = false);
 	void Unorm8sToFloats (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n, bool bNoTile = false);
-}
-
-using namespace CEU_NAMESPACE(SimdXS);
+CEU_END_NAMESPACE(SimdXS)

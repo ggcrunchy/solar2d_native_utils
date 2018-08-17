@@ -24,7 +24,7 @@
 #include "utils/LuaEx.h"
 #include <vector>
 
-namespace LuaXS {
+CEU_BEGIN_NAMESPACE(LuaXS) {
 	std::mutex symbols_mutex;
 
 	bool IsMainState (lua_State * L)
@@ -612,4 +612,4 @@ namespace LuaXS {
 		
 		return lua_pcall(L, lua_gettop(L) - 1, nresults, 0) == 0;	// ..., ok[, results / err]
 	}
-}
+CEU_CLOSE_NAMESPACE()

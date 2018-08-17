@@ -42,7 +42,7 @@
 	#error "Unsupported target"
 #endif
 
-namespace CEU_NAMESPACE(ThreadXS) {
+CEU_BEGIN_NAMESPACE(ThreadXS) {
 	// Macro to declare type with thread-local duration, preferring compiler support when available.
 	// Using `thread_local` would be even better, but seems to be pretty hit-and-miss.
 	#ifdef _WIN32
@@ -190,6 +190,4 @@ namespace CEU_NAMESPACE(ThreadXS) {
 	// parallel_scan: GCD?
 	// __gnu_parallel:: prefix_sum
 	// See also thrust, etc.
-}
-
-using namespace CEU_NAMESPACE(ThreadXS);
+CEU_END_NAMESPACE(ThreadXS)

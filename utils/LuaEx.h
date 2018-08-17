@@ -34,7 +34,7 @@
 #include <vector>
 
 //
-namespace CEU_NAMESPACE(LuaXS) {
+CEU_BEGIN_NAMESPACE(LuaXS) {
 	//
 	struct AddParams {
 		int mFirstPos;
@@ -783,6 +783,4 @@ namespace CEU_NAMESPACE(LuaXS) {
 			return 1;
 		}, app);// ..., meta
 	}
-};
-
-using namespace CEU_NAMESPACE(LuaXS);
+CEU_END_NAMESPACE(LuaXS)

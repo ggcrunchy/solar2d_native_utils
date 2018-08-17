@@ -29,7 +29,7 @@
 #include <vector>
 
 //
-namespace CEU_NAMESPACE(MemoryXS) {
+CEU_BEGIN_NAMESPACE(MemoryXS) {
 	//
 	struct LuaMemory {
 		lua_State * mL{nullptr};// Main Lua state for this 
@@ -208,6 +208,4 @@ namespace CEU_NAMESPACE(MemoryXS) {
         void * Realloc (void * ptr, size_t size);
         void Free (void * ptr);
     };
-}
-
-using namespace CEU_NAMESPACE(MemoryXS);
+CEU_END_NAMESPACE(MemoryXS)

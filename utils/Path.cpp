@@ -26,7 +26,7 @@
 #include "utils/Path.h"
 #include "utils/Platform.h"
 
-namespace PathXS {
+CEU_BEGIN_NAMESPACE(PathXS) {
 	static int FromSystem (lua_State * L, const char * name)
 	{
 		if (lua_isnil(L, -1)) return LUA_NOREF;
@@ -284,4 +284,4 @@ namespace PathXS {
 	{
 		if (!mReader.mBytes) lua_error(L);
 	}
-}
+CEU_CLOSE_NAMESPACE()

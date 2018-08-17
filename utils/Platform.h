@@ -29,7 +29,7 @@
 	#include "TargetConditionals.h"
 #endif
 
-namespace CEU_NAMESPACE(PlatformXS) {
+CEU_BEGIN_NAMESPACE(PlatformXS) {
 	#ifdef __ANDROID__
 		const bool is_android = true;
 	#else
@@ -76,7 +76,7 @@ namespace CEU_NAMESPACE(PlatformXS) {
     const bool has_accelerate = is_apple;// && !is_ios;
 	const bool has_neon = is_iphone && !is_iphone_simulator;
 	const bool might_have_neon = is_android || has_neon;
-}
+CEU_END_NAMESPACE(PlatformXS)
 
 //
 #if defined(__APPLE__) && !TARGET_OS_IOS
@@ -95,5 +95,3 @@ namespace CEU_NAMESPACE(PlatformXS) {
 
     #define MIGHT_HAVE_NEON
 #endif
-
-using namespace CEU_NAMESPACE(PlatformXS);
