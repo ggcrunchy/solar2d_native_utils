@@ -135,14 +135,36 @@ CEU_BEGIN_NAMESPACE(PathXS) {
     }
     
 #ifdef __ANDROID__
+	static bool GetAssetReaderLib (lua_State * L)
+	{
+        lua_getglobal(L, "package");// ..., package
+		lua_getfield(L, -2, "loaded");	// ..., package, package.loaded
+		lua_pushliteral(L, "plugin.AssetReader");	// ..., package, package.loaded, "plugin.AssetReader"; n.b. not sure if one of these can be relied on :/
+		lua_pushliteral(L, "plugin_AssetReader");	// ..., package, package.loaded, "plugin.AssetReader", "plugin_AssetReader"
+
+		for (int i = 0; i < 2; ++i, lua_pop(L, 1))
+		{
+			lua_rawget(L, -3 + i);	// ..., package, package.loaded[, "plugin.AssetReader"], lib?
+
+			if (lua_isnil(L, -1)) continue;
+
+			luaL_checktype(L, -1, LUA_TTABLE);
+			lua_replace(L, -4 + i);	// ..., lib, package.loaded[, "plugin.AssetReader"]
+			lua_pop(L, 2 - i);	// ..., lib
+
+			return true;
+		}
+
+		lua_pop(L, 2);	// ...
+
+		return false;
+	}
+
     static bool HasProxy (Directories * dirs, lua_State * L)
     {
         if (dirs->mProxy != LUA_NOREF) return true;
 
-        lua_getglobal(L, "require");// ..., require
-        lua_pushliteral(L, "plugin.AssetReader");   // ..., require, "plugin.AssetReader"
-
-        if (lua_pcall(L, 1, 1, 0) == 0) // ..., AssetReader / err
+        if (GetAssetReaderLib(L))	// ...[, AssetReader]
         {
             lua_getfield(L, -1, "NewProxy");// ..., AssetReader, AssetReader.NewProxy
             lua_call(L, 0, 1);  // ..., AssetReader, proxy
@@ -152,8 +174,6 @@ CEU_BEGIN_NAMESPACE(PathXS) {
 
             return true;
         }
-
-        lua_pop(L, 1);  // ...; n.b. eat the error
 
         return false;
     }
@@ -203,10 +223,14 @@ CEU_BEGIN_NAMESPACE(PathXS) {
 
 		if (!lua_isnil(L, -1))
 		{
-			lua_getfield(L, -1, "read");// ..., filename[, base_dir], ..., file, file.read
-			lua_insert(L, -2);	// ..., filename[, base_dir], ..., file.read, file
-			lua_pushliteral(L, "*a");	// ..., filename[, base_dir], ..., file.read, file, "*a"
-			lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., contents
+			lua_getfield(L, -1, "close");	// ..., filename[, base_dir], ..., file, file.close
+			lua_getfield(L, -2, "read");// ..., filename[, base_dir], ..., file, file.close, file.read
+			lua_pushvalue(L, -3);	// ..., filename[, base_dir], ..., file, file.close, file.read, file
+			lua_pushliteral(L, "*a");	// ..., filename[, base_dir], ..., file, file.close, file.read, file, "*a"
+			lua_call(L, 2, 1);	// ..., filename[, base_dir], ..., file, file.close, contents
+			lua_insert(L, -3);	// ..., filename[, base_dir], ..., contents, file, file.close
+			lua_insert(L, -2);	// ..., filename[, base_dir], ..., contents, file.close, file
+			lua_call(L, 1, 0);	// ..., filename[, base_dir], ..., contents
 		}
     }
 
