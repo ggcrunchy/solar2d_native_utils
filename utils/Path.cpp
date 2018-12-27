@@ -138,26 +138,26 @@ CEU_BEGIN_NAMESPACE(PathXS) {
 	static bool GetAssetReaderLib (lua_State * L)
 	{
         lua_getglobal(L, "package");// ..., package
-		lua_getfield(L, -2, "loaded");	// ..., package, package.loaded
-		lua_pushliteral(L, "plugin.AssetReader");	// ..., package, package.loaded, "plugin.AssetReader"; n.b. not sure if one of these can be relied on :/
-		lua_pushliteral(L, "plugin_AssetReader");	// ..., package, package.loaded, "plugin.AssetReader", "plugin_AssetReader"
+		lua_getfield(L, -1, "loaded");	// ..., package, package.loaded
 
-		for (int i = 0; i < 2; ++i, lua_pop(L, 1))
-		{
-			lua_rawget(L, -3 + i);	// ..., package, package.loaded[, "plugin.AssetReader"], lib?
+        const char * names[] = { "plugin.AssetReader", "plugin_AssetReader" };
+        
+        for (int i = 0; i < 2; ++i, lua_pop(L, 1))
+        {
+            lua_getfield(L, -1, names[i]);  // ..., package, package.loaded, lib?
 
-			if (lua_isnil(L, -1)) continue;
+            if (lua_isnil(L, -1)) continue;
 
-			luaL_checktype(L, -1, LUA_TTABLE);
-			lua_replace(L, -4 + i);	// ..., lib, package.loaded[, "plugin.AssetReader"]
-			lua_pop(L, 2 - i);	// ..., lib
+            luaL_checktype(L, -1, LUA_TTABLE);
+            lua_replace(L, -3); // ..., lib, package.loaded
+            lua_pop(L, 1);  // ..., lib
 
-			return true;
-		}
+            return true;
+        }
+        
+        lua_pop(L, 2);	// ...
 
-		lua_pop(L, 2);	// ...
-
-		return false;
+        return false;
 	}
 
     static bool HasProxy (Directories * dirs, lua_State * L)
@@ -212,7 +212,7 @@ CEU_BEGIN_NAMESPACE(PathXS) {
 
     #ifdef __ANDROID__
         if (CheckAssets(this, L, arg)) return;  // ..., filename, ..., proxy / nil
-	#endif
+    #endif
 
         if (mCanonicalize) filename = Canonicalize(L, true, arg);	// ..., filename[, base_dir], ...
 
@@ -245,7 +245,11 @@ CEU_BEGIN_NAMESPACE(PathXS) {
         {
             fc.mL = L;
 
-            if (mProxy != LUA_NOREF) fc.mPos = CoronaLuaNormalize(L, -1);
+            if (mProxy != LUA_NOREF)
+            {
+                fc.mPos = CoronaLuaNormalize(L, -1);
+                fc.mProxy = mProxy;
+            }
         }
     #endif
 
@@ -257,8 +261,7 @@ CEU_BEGIN_NAMESPACE(PathXS) {
     #ifdef __ANDROID__
         if (mPos)
         {
-            lua_pushvalue(mL, mPos);// ..., proxy, ..., proxy
-            lua_getfield(mL, -1, "Clear");  // ..., proxy, ..., proxy, proxy:Clear
+            lua_getref(mL, mProxy); // ..., proxy, ..., proxy
             lua_insert(mL, -2); // ..., proxy, ..., proxy:Clear, proxy
             lua_pcall(mL, 1, 0, 0); // ..., proxy, ...
         } else

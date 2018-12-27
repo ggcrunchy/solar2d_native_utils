@@ -55,7 +55,9 @@ CEU_BEGIN_NAMESPACE(PathXS) {
             lua_State * mL{nullptr};
 			FILE * mFP{nullptr};
             int mPos{0};
-            
+#ifdef __ANDROID__
+            int mProxy{LUA_NOREF};
+#endif
             ~FileContentsRAII (void);
         };
 
