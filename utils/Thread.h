@@ -37,7 +37,6 @@
     #include <atomic>
 	#include <thread>
 	#include <numeric>
-	#include <parallel/algorithm>
 #else
 	#error "Unsupported target"
 #endif
@@ -113,6 +112,38 @@ CEU_BEGIN_NAMESPACE(ThreadXS) {
 	#endif
 	};
 
+    // https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
+    template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f)
+    {
+#ifdef _WIN32
+        Concurrency::parallel_for_each(a, b, std::forward<F>(f));
+#elif __APPLE__
+        using data_t = std::pair<It, F>;
+        
+        size_t count = std::distance(a, b);
+        data_t helper = data_t{a, std::forward<F>(f)};
+        
+        dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
+                         {
+                             data_t * d = static_cast<data_t *>(ctx);
+                             auto elem_it = d->first;
+                             
+                             std::advance(elem_it, count);
+                             
+                             (*d).second(*(elem_it));
+                         });
+#elif __ANDROID__
+        std::for_each(a, b, std::forward<F>(f));
+#endif
+    }
+    
+    template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
+    {
+        if (bParallel) parallel_for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
+        
+        else std::for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
+    }
+
 	// Adapted from parallel_for_each, which follows
 	template<typename I1, typename I2, typename F> inline void parallel_for (I1 a, I2 b, F && f)
 	{
@@ -151,38 +182,6 @@ CEU_BEGIN_NAMESPACE(ThreadXS) {
 		if (bParallel) parallel_for(a, b, std::forward<F>(f));
 
 		else while (a != b) f(a++);
-	}
-
-	// https://xenakios.wordpress.com/2014/09/29/concurrency-in-c-the-cross-platform-way/
-	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f)
-	{
-	#ifdef _WIN32
-		Concurrency::parallel_for_each(a, b, std::forward<F>(f));
-	#elif __APPLE__
-		using data_t = std::pair<It, F>;
-
-		size_t count = std::distance(a, b);
-		data_t helper = data_t{a, std::forward<F>(f)};
-
-		dispatch_apply_f(count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), &helper, [](void * ctx, size_t cnt)
-		{
-			data_t * d = static_cast<data_t *>(ctx);
-            auto elem_it = d->first;
-
-            std::advance(elem_it, count);
-
-			(*d).second(*(elem_it));
-		});
-	#elif __ANDROID__
-		__gnu_parallel::for_each(a, b, std::forward<F>(f));
-	#endif
-	}
-
-	template<typename It, typename F> inline void parallel_for_each (It a, It b, F && f, bool bParallel)
-	{
-        if (bParallel) parallel_for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
-
-		else std::for_each(std::forward<It>(a), std::forward<It>(b), std::forward<F>(f));
 	}
 
 	// parallel_reduce: http://www.idryman.org/blog/2012/08/05/grand-central-dispatch-vs-openmp/ and https://gist.github.com/m0wfo/1101546

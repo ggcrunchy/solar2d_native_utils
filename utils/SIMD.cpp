@@ -28,7 +28,7 @@
 #ifdef _WIN32
 	#include "DirectXMath/Inc/DirectXMath.h"
 	#include "DirectXMath/Inc/DirectXPackedVector.h"
-#elif !defined(__ANDROID__) // ??? :/
+#elif defined(__ANDROID__)
     #ifdef MIGHT_HAVE_NEON
         #define _XM_ARM_NEON_NO_ALIGN_
         #define _XM_NO_CALL_CONVENTION_
@@ -64,7 +64,7 @@ CEU_BEGIN_NAMESPACE(SimdXS) {
 	#endif
 	}
 
-#ifdef __ANDROID__ // *grumble*
+#if defined(__ANDROID__) && defined(__ARM_NEON) // *grumble*
     namespace ns_f2u8 {	// Everything here is pared down from DirectXMath
 		typedef float32x4_t XMVECTOR;
 		typedef const XMVECTOR FXMVECTOR;
@@ -149,7 +149,7 @@ CEU_BEGIN_NAMESPACE(SimdXS) {
 	namespace ns_pv = DirectX::PackedVector;
 #else
 	namespace ns_f2u8 = XMath;
-	namespace  ns_pv = ns_f2u8;
+	namespace ns_pv = ns_f2u8;
 #endif
 
 #ifdef HAS_ACCELERATE
