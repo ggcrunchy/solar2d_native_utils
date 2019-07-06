@@ -162,7 +162,7 @@ CEU_BEGIN_NAMESPACE(ThreadXS) {
 		});
 	#elif __ANDROID__
 		unsigned int n = std::thread::hardware_concurrency();
-		I1 count = (std::max)(b - a, static_cast<I1>(n)) / n;
+		I1 count = (std::max)(static_cast<I1>(b - a), static_cast<I1>(n)) / n;
 
 		std::vector<I1> splits(n);
 		
@@ -170,7 +170,7 @@ CEU_BEGIN_NAMESPACE(ThreadXS) {
 
 		parallel_for_each(splits.begin(), splits.end(), [=](I1 range)
 		{
-			I1 from = a + range * count, to = (std::min)(from + count, b);
+			I1 from = a + range * count, to = (std::min)(from + count, static_cast<I1>(b));
 
 			while (from < to) f(from++);
 		}, n > 0U && count > I1(0));
