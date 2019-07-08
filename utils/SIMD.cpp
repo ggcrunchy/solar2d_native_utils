@@ -28,7 +28,7 @@
 #ifdef _WIN32
 	#include "DirectXMath/Inc/DirectXMath.h"
 	#include "DirectXMath/Inc/DirectXPackedVector.h"
-#elif defined(__ANDROID__)
+#else
     #ifdef MIGHT_HAVE_NEON
         #define _XM_ARM_NEON_NO_ALIGN_
         #define _XM_NO_CALL_CONVENTION_
