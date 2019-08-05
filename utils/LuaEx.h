@@ -312,14 +312,14 @@ CEU_BEGIN_NAMESPACE(LuaXS) {
 
 		else
 		{
-			lua_pushlightuserdata(L, &counter);	// ..., nil, counter, index
+			lua_pushlightuserdata(L, &counter);	// ..., nil, counter
 
-			index = NewTyped<uint64_t>(L);	// ..., nil, index
+			index = NewTyped<uint64_t>(L);	// ..., nil, counter, index
 
 			if (cache)
 			{
-				lua_createtable(L, 0, 1);	// ..., nil, index, mt
-				lua_pushlightuserdata(L, cache);// ..., nil, index, mt, cache
+				lua_createtable(L, 0, 1);	// ..., nil, counter, index, mt
+				lua_pushlightuserdata(L, cache);// ..., nil, counter, index, mt, cache
 				lua_pushcclosure(L, [](lua_State * L)
 				{
 					lua_pushvalue(L, lua_upvalueindex(1));	// index, cache
@@ -329,9 +329,9 @@ CEU_BEGIN_NAMESPACE(LuaXS) {
 					UD<std::vector<uint64_t>>(L, 2)->push_back(*UD<uint64_t>(L, 1));
 
 					return 0;
-				}, 1);	// ..., nil, index, mt, gc
-				lua_setfield(L, -2, "__gc");// ..., nil, index, mt = { __gc = gc }
-				lua_setmetatable(L, -2);// ..., nil, index
+				}, 1);	// ..., nil, counter, index, mt, gc
+				lua_setfield(L, -2, "__gc");// ..., nil, counter, index, mt = { __gc = gc }
+				lua_setmetatable(L, -2);// ..., nil, counter, index
 			}
 
 			lua_rawset(L, LUA_REGISTRYINDEX);	// ..., nil; registry = { ..., [counter] = index }
