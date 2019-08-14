@@ -357,7 +357,7 @@ CEU_BEGIN_NAMESPACE(LuaXS) {
 
 		lua_pop(L, 1);	// ...
 
-		return std::hash<uint64_t>{}(*index++);
+		return std::hash<uint64_t>{}((*index)++);
 	}
 
 	template<typename T> bool BytesToValue (lua_State * L, int arg, T & value)
