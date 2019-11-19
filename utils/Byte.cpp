@@ -52,6 +52,24 @@ CEU_BEGIN_NAMESPACE(ByteXS) {
 		return EnsureFloatsN(L, arg, nfloats, nullptr, 0U, as_bytes);
 	}
 
+	template<bool = false> struct Unorms8ToFloats {
+		template<typename F> float * operator() (lua_State * L, int, F &&, const ByteReader &, size_t, float *, size_t)
+		{
+			luaL_error(L, "SIMD not available for unorms8 -> floats conversion");
+
+			return nullptr;
+		}
+	};
+
+	template<> struct Unorms8ToFloats<true> {
+		template<typename F> float * operator() (lua_State * L, int arg, F && func, const ByteReader & reader, size_t nfloats, float * afloats, size_t na)
+		{
+			return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
+				SimdXS::Unorm8sToFloats(static_cast<const unsigned char *>(reader.mBytes), pfloats, n);
+			}, reader.mCount, nfloats, afloats, na);
+		}
+	};
+
 	const float * EnsureFloatsN (lua_State * L, int arg, size_t nfloats, float * afloats, size_t na, bool as_bytes)
 	{
 		if (!lua_istable(L, arg))
@@ -60,9 +78,9 @@ CEU_BEGIN_NAMESPACE(ByteXS) {
 
 			if (!reader.mBytes) lua_error(L);
 
-			if (as_bytes) return LoadFloats(L, arg, [=](float * pfloats, size_t n) {
+			if (as_bytes) return Unorms8ToFloats<SimdXS::HasSIMD<>::value>{}(L, arg, [=](float * pfloats, size_t n) {
 				SimdXS::Unorm8sToFloats(static_cast<const unsigned char *>(reader.mBytes), pfloats, n);
-			}, reader.mCount, nfloats, afloats, na);
+			}, reader, nfloats, afloats, na);
 
 			else return EnsureN<float>(L, reader, nfloats);
 		}

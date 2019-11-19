@@ -21,7 +21,6 @@
 * [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 */
 
-#include "utils/Byte.h"
 #include "utils/LuaEx.h"
 #include "utils/Path.h"
 #include "utils/Platform.h"
@@ -262,6 +261,7 @@ CEU_BEGIN_NAMESPACE(PathXS) {
         if (mPos)
         {
             lua_getref(mL, mProxy); // ..., proxy, ..., proxy
+			lua_getfield(mL, -1, "Clear");	// ..., proxy, ..., proxy, proxy:Clear
             lua_insert(mL, -2); // ..., proxy, ..., proxy:Clear, proxy
             lua_pcall(mL, 1, 0, 0); // ..., proxy, ...
         } else

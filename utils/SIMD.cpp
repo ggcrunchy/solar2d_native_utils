@@ -292,4 +292,6 @@ CEU_BEGIN_NAMESPACE(SimdXS) {
 	{
 		AuxUnorm8sToFloats(u8, pfloats, n, bNoTile);
 	}
+
+	template<> struct HasSIMD<false> : std::true_type {};
 CEU_CLOSE_NAMESPACE()

@@ -34,4 +34,6 @@ CEU_BEGIN_NAMESPACE(SimdXS) {
 
 	void FloatsToUnorm8s (const float * _RESTRICT pfloats, unsigned char * _RESTRICT u8, size_t n, bool bNoTile = false);
 	void Unorm8sToFloats (const unsigned char * _RESTRICT u8, float * _RESTRICT pfloats, size_t n, bool bNoTile = false);
+
+	template<bool = false> struct HasSIMD : public std::false_type {};
 CEU_END_NAMESPACE(SimdXS)
