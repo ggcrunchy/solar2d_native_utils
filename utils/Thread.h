@@ -95,7 +95,7 @@ CEU_BEGIN_NAMESPACE(ThreadXS) {
 
 		operator T ()
 		{
-            std::aligned_storage<sizeof(T), std::alignment_of<T>::value> value;  // Use POD data so that T need not be trivially constructible
+            typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type value;  // Use POD data so that T need not be trivially constructible
 
 			mSlot.GetVar(&value);
 
