@@ -26,6 +26,7 @@
 #include "CoronaLua.h"
 #include "utils/Namespace.h"
 #include "external/aligned_allocator.h"
+#include <list>
 #include <vector>
 
 //
@@ -149,8 +150,9 @@ CEU_BEGIN_NAMESPACE(MemoryXS) {
 
 		ScopedSystem & mSystem;	// System that owns this
 		Scoped * mPrev{nullptr};// Previous entry, if any
-		unsigned char mStack[eStackSize], * mPos;	// Stack for small allocators; next position in stack
+		unsigned char * mPos{nullptr};	// Next position in stack
 		std::vector<Item> mAllocs;	// Allocations and their info
+		std::vector<unsigned char> mStack;	// Stack for small allocations
 
 		Scoped (ScopedSystem & system);
 		~Scoped (void);
@@ -160,6 +162,7 @@ CEU_BEGIN_NAMESPACE(MemoryXS) {
 	struct ScopedSystem {
 		lua_State * mL{nullptr};// Main Lua state for this
 		Scoped * mCurrent{nullptr};	// Entry currently on stack
+		std::list<std::vector<unsigned char>> mStacks;	// Cached stacks
 
 		static ScopedSystem * New (lua_State * L);
 

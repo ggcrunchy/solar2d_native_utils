@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <utility>
 
 MemoryXS::LuaMemory::BookmarkDualTables MemoryXS::LuaMemory::BindTable (void)
 {
@@ -417,14 +418,17 @@ void MemoryXS::ScopedSystem::Push (void * ptr, bool bRemove)
 
 bool MemoryXS::Scoped::InStack (void * ptr) const
 {
+	if (mStack.empty()) return false;
+
+	const unsigned char * stack = mStack.data();
 	unsigned char * uc = static_cast<unsigned char *>(ptr);
 	
-    return uc >= mStack && uc < mStack + eStackSize;
+    return uc >= stack && uc < stack + eStackSize;
 }
 
 void * MemoryXS::Scoped::AddToStack (size_t size)
 {
-    size_t space = size_t(mStack + eStackSize - mPos);
+    size_t space = size_t(mStack.data() + eStackSize - mPos);
 	void * ptr = mPos, * aligned = Align(8U, size, ptr, &space);
 
     if (aligned) mPos = PointPast(ptr, size);
@@ -449,9 +453,25 @@ void MemoryXS::Scoped::TryToRewind (const MemoryXS::Scoped::Item & item)
 	if (mPos == PointPast(item.mPtr, item.mSize)) mPos = static_cast<unsigned char *>(item.mPtr);
 }
 
-MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mPos{mStack}, mAllocs()
+MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, /*mPos{mStack}, */mAllocs()
 {
 	system.mCurrent = this;
+
+	if (system.mStacks.empty())
+	{
+		try {
+			mStack.resize(eStackSize);
+		} catch (std::bad_alloc &) {}
+	}
+
+	else
+	{
+		mStack.swap(system.mStacks.back());
+
+		system.mStacks.pop_back();
+	}
+
+	if (!mStack.empty()) mPos = mStack.data();
 }
 
 MemoryXS::Scoped::~Scoped (void)
@@ -462,6 +482,12 @@ MemoryXS::Scoped::~Scoped (void)
 	}
 
 	mSystem.mCurrent = mPrev;
+
+	if (mStack.empty()) return;
+
+	try {
+		mSystem.mStacks.push_back(std::move(mStack));
+	} catch (std::bad_alloc &) {}
 }
 
 bool MemoryXS::ScopedList::Exists (void * ptr) const
