@@ -453,7 +453,7 @@ void MemoryXS::Scoped::TryToRewind (const MemoryXS::Scoped::Item & item)
 	if (mPos == PointPast(item.mPtr, item.mSize)) mPos = static_cast<unsigned char *>(item.mPtr);
 }
 
-MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, /*mPos{mStack}, */mAllocs()
+MemoryXS::Scoped::Scoped (MemoryXS::ScopedSystem & system) : mSystem{system}, mPrev{system.mCurrent}, mAllocs(), mStack()
 {
 	system.mCurrent = this;
 

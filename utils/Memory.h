@@ -26,7 +26,6 @@
 #include "CoronaLua.h"
 #include "utils/Namespace.h"
 #include "external/aligned_allocator.h"
-#include <list>
 #include <vector>
 
 //
@@ -162,7 +161,7 @@ CEU_BEGIN_NAMESPACE(MemoryXS) {
 	struct ScopedSystem {
 		lua_State * mL{nullptr};// Main Lua state for this
 		Scoped * mCurrent{nullptr};	// Entry currently on stack
-		std::list<std::vector<unsigned char>> mStacks;	// Cached stacks
+		std::vector<std::vector<unsigned char>> mStacks;	// Cached stacks
 
 		static ScopedSystem * New (lua_State * L);
 
