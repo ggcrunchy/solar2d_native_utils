@@ -37,7 +37,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BF4DE651-2791-489F-9246-E70BD64F314E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>corona_enterprise_utils</RootNamespace>
+    <RootNamespace>solar2d_native_utils</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,7 +71,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(CORONA_ENTERPRISE)/Corona/shared/include/Corona;$(CORONA_ENTERPRISE)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../corona_enterprise_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CORONA_ENTERPRISE)/Corona/shared/include/Corona;$(CORONA_ENTERPRISE)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../solar2d_native_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -87,7 +87,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(CORONA_ROOT)/Corona/shared/include/Corona;$(CORONA_ROOT)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../corona_enterprise_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CORONA_ROOT)/Corona/shared/include/Corona;$(CORONA_ROOT)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../solar2d_native_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -1,2 +1,2 @@
-# corona_enterprise_utils
+# solar2d_native_utils
 Miscellaneous recurring utilities for implementing Corona plugins
