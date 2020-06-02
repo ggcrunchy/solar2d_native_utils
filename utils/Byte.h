@@ -93,7 +93,8 @@ CEU_BEGIN_NAMESPACE(ByteXS) {
 
 	struct BytesMetatableOpts {
 		const char * mMetatableName{nullptr};
-		void (*mMore)(lua_State * L){nullptr};
+		void (*mMore)(lua_State * L, void * context){nullptr};
+		void * mContext{nullptr};
 	};
 
 	void AddBytesMetatable (lua_State * L, const char * type, const BytesMetatableOpts * opts = nullptr);

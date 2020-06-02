@@ -11,28 +11,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\ByteReader\ByteReader.h" />
-    <ClInclude Include="..\..\external\aligned_allocator.h" />
-    <ClInclude Include="..\..\utils\Blob.h" />
-    <ClInclude Include="..\..\utils\Byte.h" />
-    <ClInclude Include="..\..\utils\Compat.h" />
-    <ClInclude Include="..\..\utils\LuaEx.h" />
-    <ClInclude Include="..\..\utils\Memory.h" />
-    <ClInclude Include="..\..\utils\Namespace.h" />
-    <ClInclude Include="..\..\utils\Path.h" />
-    <ClInclude Include="..\..\utils\Platform.h" />
-    <ClInclude Include="..\..\utils\SIMD.h" />
-    <ClInclude Include="..\..\utils\Thread.h" />
+    <ClInclude Include="..\..\ByteReader\ByteReader.h" />
+    <ClInclude Include="..\external\aligned_allocator.h" />
+    <ClInclude Include="..\utils\Blob.h" />
+    <ClInclude Include="..\utils\Byte.h" />
+    <ClInclude Include="..\utils\Compat.h" />
+    <ClInclude Include="..\utils\LuaEx.h" />
+    <ClInclude Include="..\utils\Memory.h" />
+    <ClInclude Include="..\utils\Namespace.h" />
+    <ClInclude Include="..\utils\Path.h" />
+    <ClInclude Include="..\utils\Platform.h" />
+    <ClInclude Include="..\utils\SIMD.h" />
+    <ClInclude Include="..\utils\Thread.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\ByteReader\ByteReader.cpp" />
-    <ClCompile Include="..\..\utils\Blob.cpp" />
-    <ClCompile Include="..\..\utils\Byte.cpp" />
-    <ClCompile Include="..\..\utils\LuaEx.cpp" />
-    <ClCompile Include="..\..\utils\Path.cpp" />
-    <ClCompile Include="..\..\utils\SIMD.cpp" />
-    <ClCompile Include="..\..\utils\Memory.cpp" />
-    <ClCompile Include="..\..\utils\Thread.cpp" />
+    <ClCompile Include="..\..\ByteReader\ByteReader.cpp" />
+    <ClCompile Include="..\utils\Blob.cpp" />
+    <ClCompile Include="..\utils\Byte.cpp" />
+    <ClCompile Include="..\utils\LuaEx.cpp" />
+    <ClCompile Include="..\utils\Memory.cpp" />
+    <ClCompile Include="..\utils\Path.cpp" />
+    <ClCompile Include="..\utils\SIMD.cpp" />
+    <ClCompile Include="..\utils\Thread.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BF4DE651-2791-489F-9246-E70BD64F314E}</ProjectGuid>
@@ -43,13 +43,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -71,7 +71,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(CORONA_ENTERPRISE)/Corona/shared/include/Corona;$(CORONA_ENTERPRISE)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../solar2d_native_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CORONA_ROOT)/Corona/shared/include/Corona;$(CORONA_ROOT)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../solar2d_native_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -86,7 +86,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TIMESPEC_DEFINED;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(CORONA_ROOT)/Corona/shared/include/Corona;$(CORONA_ROOT)/Corona/shared/include/lua;$(SolutionDir)../../ByteReader;$(SolutionDir)../../solar2d_native_utils;$(SolutionDir)../../math_libraries;$(SolutionDir)../../pthreads</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

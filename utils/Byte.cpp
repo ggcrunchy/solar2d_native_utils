@@ -163,7 +163,7 @@ CEU_BEGIN_NAMESPACE(ByteXS) {
 
 			LuaXS::SetField(L, -1, "__metatable", name);// ..., ud, mt = { __bytes, __len, __metatable = name }
 
-			if (opts && opts->mMore) opts->mMore(L);
+			if (opts && opts->mMore) opts->mMore(L, opts->mContext);
 		}
 
 		lua_setmetatable(L, -2);// ..., ud
