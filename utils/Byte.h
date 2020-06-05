@@ -50,7 +50,7 @@ CEU_BEGIN_NAMESPACE(ByteXS) {
 	{
 		int top = lua_gettop(L);
 
-		ByteReader reader{L, arg, false}; // ..., reader args
+		ByteReader reader{L, arg, ByteReaderOpts{}.SetReplace(false)};	// ..., reader args
 
 		lua_settop(L, top);	// ...
 
