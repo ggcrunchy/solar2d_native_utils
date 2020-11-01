@@ -79,6 +79,15 @@ CEU_BEGIN_NAMESPACE(PathXS) {
             return bytes.mBytes ? func(bytes) : false;
         }
 
+		template<typename F> bool AuxWithContentsDo (lua_State* L, int findex, F && func, bool)
+		{
+			lua_pushvalue(L, findex);	// ..., proxy / contents / nil
+
+			ByteReader bytes{ L, -1 };
+
+			return bytes.mBytes ? func(bytes) : false;
+		}
+
         template<typename F> bool WithFileContentsDo (lua_State * L, int findex, int aindex, F && func)
         {
             bool bOldCanonicalize = mCanonicalize;
@@ -89,6 +98,8 @@ CEU_BEGIN_NAMESPACE(PathXS) {
 
                 mCanonicalize = false;
             }
+
+			if (static_cast<Directories*>(lua_touserdata(L, aindex)) == this) return AuxWithContentsDo(L, findex, std::forward<F>(func), false);
 
             return AuxWithFileContentsDo(L, findex, std::forward<F>(func), bOldCanonicalize);
         }
