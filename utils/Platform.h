@@ -79,9 +79,14 @@ CEU_BEGIN_NAMESPACE(PlatformXS) {
 	#else
 		const bool is_win32 = false;
 	#endif
+	#if TARGET_CPU_ARM64 && TARGET_OS_MAC
+		const bool is_apple_silicon = true;
+	#else
+		const bool is_apple_silicon = false;
+	#endif
 
     const bool has_accelerate = is_apple;// && !is_ios;
-	const bool has_neon = is_iphone && !is_iphone_simulator;
+	const bool has_neon = (is_iphone && !is_iphone_simulator) || is_apple_silicon;
     const bool might_have_neon = (is_android && neon_defined) || has_neon;
 CEU_END_NAMESPACE(PlatformXS)
 
@@ -95,7 +100,7 @@ CEU_END_NAMESPACE(PlatformXS)
 #endif
 
 //
-#if (defined(__ANDROID__) && defined(__ARM_NEON)) || (TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR)
+#if (defined(__ANDROID__) && defined(__ARM_NEON)) || (TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR) || (TARGET_CPU_ARM64 && TARGET_OS_MAC)
     static_assert(PlatformXS::might_have_neon, "Broken NEON test");
 
     #include <arm_neon.h>
