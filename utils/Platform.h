@@ -27,6 +27,12 @@
 
 #ifdef __APPLE__
 	#include "TargetConditionals.h"
+
+    #if TARGET_OS_MAC
+        #if !defined(__x86_64__)
+            #define IS_APPLE_SILICON
+        #endif
+    #endif
 #endif
 
 CEU_BEGIN_NAMESPACE(PlatformXS) {

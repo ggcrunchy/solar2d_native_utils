@@ -33,8 +33,11 @@
         #define _XM_ARM_NEON_NO_ALIGN_
         #define _XM_NO_CALL_CONVENTION_
         #define _XM_ARM_NEON_INTRINSICS_
-    #else
+    #elif !defined(IS_APPLE_SILICON)
         #define _XM_SSE_INTRINSICS_
+    #else
+        #define _XM_NO_INTRINSICS_
+        #define _XM_NO_CALL_CONVENTION_
     #endif
 
     #include "XMath/Inc/XMath.h"
