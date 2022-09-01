@@ -260,7 +260,11 @@ CEU_BEGIN_NAMESPACE(LuaXS) {
 	{
         static_assert(std::is_nothrow_default_constructible<T>::value, "NewArray() type must be nothrow default-constructible");
 
-		return static_cast<T *>(lua_newuserdata(L, n * sizeof(T)));	// ..., ud
+		T * arr = static_cast<T *>(lua_newuserdata(L, n * sizeof(T)));	// ..., ud
+
+		for (size_t i = 0; i < n; ++i) new (&arr[i]) T;
+
+		return arr;
 	}
 
 	template<typename T> T * AllocTyped (lua_State * L)
